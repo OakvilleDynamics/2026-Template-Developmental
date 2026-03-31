@@ -1,17 +1,30 @@
 package frc.robot.subsystems.swerveDrive;
 
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.config.ModuleConfig;
+import com.pathplanner.lib.config.PIDConstants;
+import com.pathplanner.lib.config.RobotConfig;
+import com.pathplanner.lib.controllers.PPHolonomicDriveController;
+
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.MatBuilder;
+import edu.wpi.first.math.Nat;
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.*;
+import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
 import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.constants.pathplannerConstants;
 import frc.robot.constants.swerveConstants;
+import frc.robot.constants.visionConstants;
 import frc.robot.util.units;
 
 /**
@@ -74,10 +87,10 @@ public class swerveDrive extends SubsystemBase {
     private final ADIS16470_IMU  imu = new ADIS16470_IMU();
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Kinematics and odometry
+    // Kinematics and pose estimation
     // ─────────────────────────────────────────────────────────────────────────
-    private final SwerveDriveKinematics kinematics;
-    private final SwerveDriveOdometry   odometry;
+    private final SwerveDriveKinematics    kinematics;
+    private final SwerveDrivePoseEstimator poseEstimator;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Heading-lock PID
@@ -138,7 +151,20 @@ public class swerveDrive extends SubsystemBase {
         Translation2d brPos = new Translation2d(-wheelBaseM[0] / 2.0, -wheelBaseM[1] / 2.0);
 
         kinematics = new SwerveDriveKinematics(flPos, frPos, blPos, brPos);
-        odometry   = new SwerveDriveOdometry(kinematics, getYaw(), getModulePositions(), new Pose2d());
+        poseEstimator = new SwerveDrivePoseEstimator(
+            kinematics,
+            getYaw(),
+            getModulePositions(),
+            new Pose2d(),
+            MatBuilder.fill(Nat.N3(), Nat.N1(),
+                swerveConstants.ODOMETRY_STD_DEV_X,
+                swerveConstants.ODOMETRY_STD_DEV_Y,
+                swerveConstants.ODOMETRY_STD_DEV_THETA),
+            MatBuilder.fill(Nat.N3(), Nat.N1(),
+                visionConstants.VISION_STD_DEV_X,
+                visionConstants.VISION_STD_DEV_Y,
+                visionConstants.VISION_STD_DEV_THETA)
+        );
 
         // Heading PID — continuous input handles 0/2π wrap cleanly
         this.headingPID = new PIDController(headingPID[0], headingPID[1], headingPID[2]);
@@ -159,7 +185,7 @@ public class swerveDrive extends SubsystemBase {
 
     @Override
     public void periodic() {
-        odometry.update(getYaw(), getModulePositions());
+        poseEstimator.update(getYaw(), getModulePositions());
 
         double now = Timer.getFPGATimestamp();
         double dt  = Math.max(now - prevTimestamp, 1e-4);
@@ -277,6 +303,82 @@ public class swerveDrive extends SubsystemBase {
         drive(driveInput.stopped());
     }
 
+    /**
+     * Commands the drivetrain using robot-relative ChassisSpeeds.
+     * Called exclusively by PathPlanner via the AutoBuilder lambda — not by driver commands.
+     * Unlike drive(), no field-relative yaw rotation is applied; speeds go straight to modules.
+     *
+     * Note: this is an intentional exception to the driveInput-only command pattern.
+     * PathPlanner outputs robot-relative speeds directly; routing through driveInput would
+     * require a coordinate-frame roundtrip for no benefit. See CLAUDE.md.
+     *
+     * @param speeds Robot-relative ChassisSpeeds from PathPlanner
+     */
+    public void driveRobotRelative(ChassisSpeeds speeds) {
+        commandModules(speeds, new Translation2d());
+    }
+
+    /**
+     * Returns current robot-relative ChassisSpeeds derived from wheel encoder velocities.
+     * Called exclusively by PathPlanner via the AutoBuilder lambda for its feedback loop.
+     *
+     * @return Robot-relative vx (m/s), vy (m/s), omega (rad/s)
+     */
+    public ChassisSpeeds getRobotRelativeSpeeds() {
+        return kinematics.toChassisSpeeds(getModuleStates());
+    }
+
+    /**
+     * Configures PathPlanner's AutoBuilder using this subsystem's own geometry and state.
+     * Call once from RobotContainer after swerveDrive is constructed, before any path commands.
+     *
+     * Module positions are recomputed from wheelBaseM — same math as the constructor.
+     * All PathPlanner dependencies are contained within swerveDrive; RobotContainer
+     * remains unaware of PathPlanner internals.
+     */
+    public void configureForAutoBuilder() {
+        Translation2d flPos = new Translation2d( wheelBaseM[0] / 2.0,  wheelBaseM[1] / 2.0);
+        Translation2d frPos = new Translation2d( wheelBaseM[0] / 2.0, -wheelBaseM[1] / 2.0);
+        Translation2d blPos = new Translation2d(-wheelBaseM[0] / 2.0,  wheelBaseM[1] / 2.0);
+        Translation2d brPos = new Translation2d(-wheelBaseM[0] / 2.0, -wheelBaseM[1] / 2.0);
+
+        ModuleConfig moduleConfig = new ModuleConfig(
+            units.inches_m(swerveConstants.WHEEL_DIAMETER_INCHES / 2.0),
+            pathplannerConstants.MAX_PATH_VEL_MPS,
+            pathplannerConstants.WHEEL_COF,
+            DCMotor.getKrakenX60(1),
+            pathplannerConstants.DRIVE_CURRENT_LIMIT_AMPS,
+            1
+        );
+
+        RobotConfig robotConfig = new RobotConfig(
+            pathplannerConstants.ROBOT_MASS_KG,
+            pathplannerConstants.ROBOT_MOI_KGM2,
+            moduleConfig,
+            flPos, frPos, blPos, brPos
+        );
+
+        AutoBuilder.configure(
+            this::getPose,
+            this::resetPose,
+            this::getRobotRelativeSpeeds,
+            this::driveRobotRelative,
+            new PPHolonomicDriveController(
+                new PIDConstants(pathplannerConstants.TRANSLATION_PID_kP,
+                                 pathplannerConstants.TRANSLATION_PID_kI,
+                                 pathplannerConstants.TRANSLATION_PID_kD),
+                new PIDConstants(pathplannerConstants.ROTATION_PID_kP,
+                                 pathplannerConstants.ROTATION_PID_kI,
+                                 pathplannerConstants.ROTATION_PID_kD)
+            ),
+            robotConfig,
+            () -> DriverStation.getAlliance()
+                    .filter(a -> a == DriverStation.Alliance.Red)
+                    .isPresent(),
+            this
+        );
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Geometry query
     // ─────────────────────────────────────────────────────────────────────────
@@ -303,13 +405,35 @@ public class swerveDrive extends SubsystemBase {
     /** Returns the full odometry state from last loop. Safe to call from anywhere. */
     public driveOdometryState getOdometryState() { return currentState; }
 
-    public Pose2d    getPose()              { return odometry.getPoseMeters(); }
+    public Pose2d    getPose()              { return poseEstimator.getEstimatedPosition(); }
     public Rotation2d getYaw()             { return Rotation2d.fromDegrees(-imu.getAngle(IMUAxis.kZ)); }
     public boolean   isPointedAtTarget()   { return headingPID.atSetpoint(); }
     public boolean   isHeadingLockActive() { return headingLockActive; }
 
     public void resetPose(Pose2d pose) {
-        odometry.resetPosition(getYaw(), getModulePositions(), pose);
+        poseEstimator.resetPosition(getYaw(), getModulePositions(), pose);
+    }
+
+    /**
+     * Injects a vision-derived pose measurement into the Kalman filter.
+     * Called from RobotContainer.updatePoseEstimator() every loop when vision has a fresh pose.
+     * Std devs are scaled by tag count — more tags = higher trust = lower std devs.
+     *
+     * @param pose            2D robot pose from PhotonVision (meters, field-relative)
+     * @param timestampSecs   FPGA timestamp of the frame the estimate came from
+     * @param tagCount        Number of AprilTags used to produce this estimate
+     */
+    public void addVisionMeasurement(Pose2d pose, double timestampSecs, int tagCount) {
+        int idx = Math.min(tagCount - 1, visionConstants.VISION_STD_DEV_TAG_SCALE.length - 1);
+        double scale = visionConstants.VISION_STD_DEV_TAG_SCALE[idx];
+        poseEstimator.addVisionMeasurement(
+            pose,
+            timestampSecs,
+            MatBuilder.fill(Nat.N3(), Nat.N1(),
+                visionConstants.VISION_STD_DEV_X     * scale,
+                visionConstants.VISION_STD_DEV_Y     * scale,
+                visionConstants.VISION_STD_DEV_THETA * scale)
+        );
     }
 
     public void zeroYaw() { imu.reset(); }

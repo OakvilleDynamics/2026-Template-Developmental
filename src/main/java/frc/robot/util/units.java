@@ -63,4 +63,12 @@ public final class units {
 
     public static double deg_rad(double degrees)   { return Math.toRadians(degrees); }
     public static double rad_deg(double radians)   { return Math.toDegrees(radians); }
+
+    // ── Mass ──────────────────────────────────────────────────────────────────
+
+    public static double lbs_kg(double lbs)        { return lbs * 0.453592; }
+
+    // ── Moment of inertia ─────────────────────────────────────────────────────
+
+    public static double lbIn2_kgM2(double lbIn2)  { return lbIn2 * 2.92639e-4; }
 }

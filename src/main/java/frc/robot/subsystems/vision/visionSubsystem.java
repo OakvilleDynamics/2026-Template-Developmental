@@ -154,6 +154,35 @@ public class visionSubsystem extends SubsystemBase {
     public boolean           hasValidPose()    { return bestPose.isValid; }
     public boolean           bothCamerasValid(){ return frontPose.isValid && rearPose.isValid; }
 
+    // ── 3D pose components — available when relevant (climbing, shooting, etc.) ──
+
+    /**
+     * Robot height above floor from best vision estimate (meters).
+     * Useful when robot is on an elevated surface or climbing structure.
+     * Returns 0.0 if no valid pose.
+     */
+    public double getBestPoseZ() {
+        return bestPose.isValid ? bestPose.pose.getZ() : 0.0;
+    }
+
+    /**
+     * Robot pitch angle from best vision estimate (radians, positive = nose up).
+     * Useful for detecting tilt during climbing or on uneven surfaces.
+     * Returns 0.0 if no valid pose.
+     */
+    public double getBestPosePitch() {
+        return bestPose.isValid ? bestPose.pose.getRotation().getY() : 0.0;
+    }
+
+    /**
+     * Robot roll angle from best vision estimate (radians, positive = right side up).
+     * Useful for detecting tilt during climbing or on uneven surfaces.
+     * Returns 0.0 if no valid pose.
+     */
+    public double getBestPoseRoll() {
+        return bestPose.isValid ? bestPose.pose.getRotation().getX() : 0.0;
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Public API — per-tag readings (for AprilTagFieldCalTab)
     // ─────────────────────────────────────────────────────────────────────────

@@ -9,9 +9,12 @@ import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import frc.robot.commands.driveWithJoysticks;
 import frc.robot.commands.xLockCommand;
 import frc.robot.constants.swerveConstants;
+import frc.robot.pathplanning.FieldTargets;
+import frc.robot.pathplanning.pathfindCommand;
 import frc.robot.subsystems.swerveDrive.swerveDrive;
 import frc.robot.subsystems.swerveDrive.swerveModule;
 import frc.robot.subsystems.vision.AprilTagFieldCalTab;
+import frc.robot.subsystems.vision.robotPoseEstimate;
 import frc.robot.subsystems.vision.visionSubsystem;
 
 /**
@@ -96,6 +99,7 @@ public class RobotContainer {
 
     private final JoystickButton lockToTargetButton = new JoystickButton(rightStick, 2);
     private final JoystickButton xLockButton        = new JoystickButton(rightStick, 3);
+    private final JoystickButton pathfindButton     = new JoystickButton(rightStick, 4);
 
     // ═════════════════════════════════════════════════════════════════════════
     // Subsystems, commands, calibration tab
@@ -105,6 +109,7 @@ public class RobotContainer {
     private final visionSubsystem    vision;
     private final driveWithJoysticks driveCommand;
     private final xLockCommand       xLock;
+    private final pathfindCommand    pathfind;
     private final AprilTagFieldCalTab calTab;
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -149,6 +154,13 @@ public class RobotContainer {
         );
         xLock = new xLockCommand(drive);
 
+        drive.configureForAutoBuilder();
+
+        pathfind = new pathfindCommand(
+            drive, vision,
+            () -> FieldTargets.get("speaker") // TODO: wire to button/selector for target choice
+        );
+
         configureDefaultCommands();
         configureButtonBindings();
     }
@@ -163,6 +175,7 @@ public class RobotContainer {
             () -> driveCommand.disablePointAt()
         ));
         xLockButton.whileTrue(xLock);
+        pathfindButton.whileTrue(pathfind);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -174,6 +187,21 @@ public class RobotContainer {
 
     /** Called from Robot.java's robotPeriodic() every loop */
     public void updateCalibrationTab() { calTab.update(); }
+
+    /**
+     * Fuses the latest valid vision pose into the swerve drive Kalman filter.
+     * Called from Robot.java's robotPeriodic() every loop, after the scheduler runs.
+     * No-ops silently when vision has no valid pose — filter continues on odometry alone.
+     */
+    public void updatePoseEstimator() {
+        if (!vision.hasValidPose()) return;
+        robotPoseEstimate best = vision.getBestPose();
+        drive.addVisionMeasurement(
+            best.pose.toPose2d(),
+            best.timestampSecs,
+            best.tagCount
+        );
+    }
 
     public Command getAutonomousCommand() { return Commands.none(); }
 }

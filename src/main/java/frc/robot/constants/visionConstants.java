@@ -182,6 +182,27 @@ public final class visionConstants {
     public static final String OFFSETS_ROBORIO_PATH = "/home/lvuser/field_offsets_latest.java";
 
     // ═════════════════════════════════════════════════════════════════════════
+    // Pose estimator — vision measurement trust
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Base standard deviations for vision measurements [x (m), y (m), theta (rad)].
+     * These are scaled per-measurement by VISION_STD_DEV_TAG_SCALE based on tag count.
+     * Larger = trust vision less. Vision is reliable globally but noisy frame-to-frame.
+     * TODO: tune on carpet with actual camera placement.
+     */
+    public static final double VISION_STD_DEV_X     = 0.9;
+    public static final double VISION_STD_DEV_Y     = 0.9;
+    public static final double VISION_STD_DEV_THETA = 0.9;
+
+    /**
+     * Multipliers applied to base std devs based on number of tags visible.
+     * Index 0 = 1 tag, index 1 = 2 tags, index 2 = 3+ tags.
+     * More tags → lower multiplier → higher trust in that measurement.
+     */
+    public static final double[] VISION_STD_DEV_TAG_SCALE = { 2.0, 1.0, 0.5 };
+
+    // ═════════════════════════════════════════════════════════════════════════
     // Complementary filter blend weight
     // ═════════════════════════════════════════════════════════════════════════
 

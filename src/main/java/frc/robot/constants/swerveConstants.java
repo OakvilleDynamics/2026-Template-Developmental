@@ -103,6 +103,16 @@ public final class swerveConstants {
      */
     public static final double ODOMETRY_BLEND_ALPHA = 0.7;
 
+    // ── Pose estimator — odometry trust ──────────────────────────────────────
+    /**
+     * State standard deviations for SwerveDrivePoseEstimator [x (m), y (m), theta (rad)].
+     * Smaller = trust wheel odometry more, larger = trust it less.
+     * Odometry is reliable short-term; keep these small.
+     */
+    public static final double ODOMETRY_STD_DEV_X     = 0.1;
+    public static final double ODOMETRY_STD_DEV_Y     = 0.1;
+    public static final double ODOMETRY_STD_DEV_THETA = 0.1;
+
     // ── Point-at-target heading PID defaults ──────────────────────────────────
     /**
      * Default gains for the heading-lock PID controller in swerveDrive.
