@@ -1,0 +1,196 @@
+package frc.robot.constants;
+
+import edu.wpi.first.apriltag.AprilTagFields;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation3d;
+import frc.robot.util.units;
+
+/**
+ * visionConstants.java
+ * PATH: src/main/java/frc/robot/constants/visionConstants.java
+ *
+ * All PhotonVision and field vision configuration in one place.
+ *
+ * ─── SEASON SETUP CHECKLIST ──────────────────────────────────────────────────
+ * Each new season, update:
+ *   1. GAME_YEAR_FIELD  — change the AprilTagFields enum value in RobotContainer
+ *                         (not here — visionConstants holds the default reference only)
+ *   2. Camera transforms — remeasure if robot geometry changed
+ *   3. Stream URLs       — verify port numbers in PhotonVision UI
+ *   4. AprilTagIgnore.java — review tag IDs for new field layout
+ *
+ * ─── EVENT SETUP CHECKLIST ───────────────────────────────────────────────────
+ * At each competition event:
+ *   1. Verify stream URLs are reachable from driver station laptop
+ *   2. Confirm camera names match exactly what is set in PhotonVision UI
+ *   3. Run field calibration procedure via "Field Calibration" Shuffleboard tab
+ *   4. Apply any needed tag offsets and generate the offsets file
+ *
+ * ─── CAMERA TRANSFORM COORDINATE FRAME ───────────────────────────────────────
+ * Robot center (0,0,0) is at floor level, geometric center of frame.
+ * X = forward, Y = left, Z = up (WPILib right-hand rule)
+ * Rotation: roll (X axis), pitch (Y axis), yaw (Z axis) — all in radians
+ * Negative pitch = camera tilted downward toward field (typical mounting)
+ * Yaw of 180° = camera faces rearward
+ *
+ * ─── COPROCESSOR NETWORK ─────────────────────────────────────────────────────
+ * OrangePi 5 static IP: 10.87.19.11
+ * Replace 87.19 with your team number digits (team 8719 → 87.19)
+ * PhotonVision UI: http://10.87.19.11:5800
+ * Stream ports assigned sequentially by PhotonVision: 1182, 1184, etc.
+ * Verify exact ports in the PhotonVision UI under camera settings.
+ */
+public final class visionConstants {
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // GAME YEAR — reference value
+    // The authoritative value lives in RobotContainer as GAME_YEAR_FIELD.
+    // This constant is kept here for reference and as a fallback default.
+    //
+    // 2026 REBUILT:   AprilTagFields.kDefaultField (update when published)
+    // 2025 Reefscape: AprilTagFields.k2025Reefscape
+    // 2024 Crescendo: AprilTagFields.k2024Crescendo
+    // ═════════════════════════════════════════════════════════════════════════
+
+    public static final AprilTagFields GAME_YEAR_FIELD = AprilTagFields.kDefaultField;
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Camera names
+    // Must match the camera name set in PhotonVision UI exactly (case-sensitive)
+    // Set in PhotonVision UI first, then update these to match
+    // ═════════════════════════════════════════════════════════════════════════
+
+    public static final String FRONT_CAMERA_NAME = "front_cam";
+    public static final String REAR_CAMERA_NAME  = "rear_cam";
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Camera MJPEG stream URLs for Shuffleboard display
+    // Displayed on the "Field Calibration" tab via AprilTagFieldCalTab
+    // Verify port numbers in PhotonVision UI → camera settings
+    // ═════════════════════════════════════════════════════════════════════════
+
+    public static final String FRONT_CAMERA_STREAM_URL = "http://10.87.19.11:1182/stream.mjpg";
+    public static final String REAR_CAMERA_STREAM_URL  = "http://10.87.19.11:1184/stream.mjpg";
+
+    /** PhotonVision web UI — useful reference for pit display and diagnostics */
+    public static final String PHOTONVISION_UI_URL = "http://10.87.19.11:5800";
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Camera transforms — robot-relative mounting positions
+    //
+    // TODO: Measure on your actual robot and update before first use.
+    // These placeholder values assume cameras mounted on centerline,
+    // 12" forward/rear of robot center, 18" above floor, 15° down tilt.
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /** Front camera — faces forward, mounted toward robot front */
+    public static final Transform3d FRONT_CAMERA_TRANSFORM = new Transform3d(
+        new Translation3d(
+            units.inches_m( 12.0),   // X:  12" forward of robot center
+            units.inches_m(  0.0),   // Y:  on centerline
+            units.inches_m( 18.0)    // Z:  18" above floor
+        ),
+        new Rotation3d(
+            0.0,                     // roll:  level
+            units.deg_rad(-15.0),    // pitch: 15° down toward field
+            0.0                      // yaw:   facing straight forward
+        )
+    );
+
+    /** Rear camera — faces backward (yaw = 180°), mounted toward robot rear */
+    public static final Transform3d REAR_CAMERA_TRANSFORM = new Transform3d(
+        new Translation3d(
+            units.inches_m(-12.0),   // X:  12" behind robot center
+            units.inches_m(  0.0),   // Y:  on centerline
+            units.inches_m( 18.0)    // Z:  18" above floor
+        ),
+        new Rotation3d(
+            0.0,
+            units.deg_rad(-15.0),    // pitch: 15° down toward field
+            units.deg_rad(180.0)     // yaw:   facing rearward
+        )
+    );
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Pose estimation filtering
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Maximum pose ambiguity accepted from PhotonVision (0.0–1.0).
+     * Estimates above this value are discarded as unreliable.
+     * Start at 0.2. Loosen to 0.3 if losing valid detections in
+     * challenging lighting conditions at competition.
+     */
+    public static final double MAX_AMBIGUITY = 0.2;
+
+    /**
+     * Maximum distance (meters) a new pose estimate can jump from the
+     * last accepted estimate before being rejected as an outlier.
+     * Protects against single-frame misdetections.
+     */
+    public static final double MAX_POSE_JUMP_M = 1.5;
+
+    /**
+     * Minimum number of AprilTags that must be visible for a pose estimate
+     * to be accepted.
+     * 1 = accept single-tag estimates (less reliable, more coverage)
+     * 2 = multi-tag only (more reliable, less coverage)
+     */
+    public static final int MIN_TAGS_FOR_ESTIMATE = 1;
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Field calibration thresholds
+    // These are DEFAULT values. All are overridable live from the
+    // "Field Calibration" Shuffleboard tab without redeploying.
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Threshold (inches) below which a tag delta is considered within tolerance.
+     * Used by AprilTagFieldCalTab recommendation logic.
+     *
+     * Above threshold — recommendation depends on camera agreement:
+     *   Both cameras agree but both off from WPILib → apply field offset
+     *   Cameras disagree with each other → check camera transform
+     *
+     * Default: 1.0 inch. Adjustable live from "Cal Tolerance (in)" slider
+     * on the Field Calibration Shuffleboard tab.
+     */
+    public static final double CALIBRATION_TOLERANCE_INCHES = 1.0;
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // NetworkTables keys for offset file generation
+    // Must match the keys watched by aprilTagFieldCalWatch.py
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Key where generated Java snippet is published.
+     * aprilTagFieldCalWatch.py watches this key and saves to file on laptop.
+     */
+    public static final String OFFSETS_OUTPUT_NT_KEY = "/FieldCalibration/GeneratedOffsets";
+
+    /**
+     * Key where generated snippet is also published for clipboard copy.
+     * aprilTagFieldCalWatch.py copies this to system clipboard.
+     */
+    public static final String OFFSETS_CLIPBOARD_NT_KEY = "/FieldCalibration/ClipboardOffsets";
+
+    /**
+     * Path on the roboRIO where a backup copy of the offsets file is written.
+     * Recoverable via FTP/WinSCP if laptop copy is lost.
+     */
+    public static final String OFFSETS_ROBORIO_PATH = "/home/lvuser/field_offsets_latest.java";
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Complementary filter blend weight
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Alpha weight for blended pose in driveOdometryState.
+     * 0.0 = pure IMU, 1.0 = pure encoder.
+     * Linear velocity/accel: encoder-dominant (alpha weight).
+     * Angular velocity/accel: IMU-dominant (1-alpha weight).
+     * Tunable live from SmartDashboard: "Drive/Blend Alpha"
+     */
+    public static final double ODOMETRY_BLEND_ALPHA = 0.7;
+}
