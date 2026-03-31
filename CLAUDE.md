@@ -1,112 +1,322 @@
 # CLAUDE.md — FRC Team 8719 Robot Codebase Context
 
 This file provides persistent context for AI-assisted development on the team 8719 robot codebase.
-Place this file in the project root so Claude Code picks it up automatically.
+It is loaded automatically by Claude Code at the start of every session. Keep it current as the codebase evolves.
 
 ---
 
 ## Project Overview
 
-This is a from-scratch swerve drive robot codebase for **FRC Team 8719**, built using:
+From-scratch swerve drive robot codebase for **FRC Team 8719**, built using:
 - **WPILib 2026** (Java)
-- **Phoenix 6** vendor library (CTRE motors/sensors)
-- **PhotonVision** for vision processing
-- **VSCode** as the development environment
+- **Phoenix 6** — CTRE motor/sensor library (Kraken X60 drive, Minion steer)
+- **PhotonVision** — dual-camera AprilTag pose estimation (OrangePi 5 coprocessor)
+- **PathPlannerLib 2026.1.2** — on-the-fly AD* pathfinding
 
 ---
 
 ## Hardware
 
 ### Drivetrain
-- **Swerve modules:** Thrifty Narrow swerve modules
-- **Drive motors:** Kraken X60 (CTRE, controlled via Phoenix 6)
-- **Steering motors:** Minion (CTRE)
-- **Absolute encoders:** Analog absolute encoders (for swerve module steering)
+- **Modules:** Thrifty Narrow swerve (×4 — FL, FR, BL, BR)
+- **Drive motors:** Kraken X60 (TalonFX, Phoenix 6)
+- **Steer motors:** Minion (TalonFX, Phoenix 6)
+- **Steer encoders:** Thrifty absolute analog encoders (0–3.3V, roboRIO analog ports)
 - **IMU:** ADIS16470
 
 ### Vision
-- **Cameras:** Dual PhotonVision cameras
-- **Coprocessor:** OrangePi 5
-- **Use:** AprilTag pose estimation
+- **Cameras:** Dual PhotonVision cameras (front + rear)
+- **Coprocessor:** OrangePi 5 — static IP 10.87.19.11
+- **Use:** AprilTag pose estimation, fused into Kalman filter
 
 ---
 
-## Codebase Architecture
+## Package Structure
 
-### Key Classes
+```
+src/main/java/frc/robot/
+├── Main.java
+├── Robot.java
+├── RobotContainer.java
+├── Constants.java                          (minimal — OperatorConstants only)
+│
+├── commands/
+│   ├── driveWithJoysticks.java
+│   ├── xLockCommand.java
+│   └── Autos.java
+│
+├── constants/
+│   ├── swerveConstants.java
+│   ├── visionConstants.java
+│   ├── pathplannerConstants.java           (new — PathPlanner config)
+│   └── AprilTagIgnore.java
+│
+├── pathplanning/                           (new package)
+│   ├── FieldTargets.java
+│   └── pathfindCommand.java
+│
+├── subsystems/
+│   ├── swerveDrive/
+│   │   ├── swerveDrive.java
+│   │   ├── swerveModule.java
+│   │   ├── driveInput.java
+│   │   └── driveOdometryState.java
+│   └── vision/
+│       ├── visionSubsystem.java
+│       ├── robotPoseEstimate.java
+│       ├── visionHealthMonitor.java
+│       └── AprilTagFieldCalTab.java
+│
+└── util/
+    ├── units.java
+    └── AprilTagFieldCal.java
+```
 
-| Class | Role |
-|---|---|
-| `swerveModule` | Low-level control of a single swerve module (drive + steer) |
-| `swerveDrive` | Manages all four modules; exposes drive interface |
-| `driveInput` | **Sole public interface to `swerveDrive`** — all drive commands go through here |
-| `driveOdometryState` | Tracks robot pose via wheel odometry |
-| `visionSubsystem` | **Sole public interface to all vision internals** |
-| `units.java` | Unit conversion constants and helpers |
+---
 
-### Architectural Principles
+## Architectural Principles
 
-1. **`driveInput` is the only way in.** No subsystem or command should call `swerveDrive` directly — all drive commands are routed through `driveInput`. This enforces a clean separation between input handling and drive execution.
+### 1. `driveInput` is the only way into `swerveDrive` — with one documented exception
 
-   **Exception — PathPlanner:** `swerveDrive.driveRobotRelative(ChassisSpeeds)` is an intentional exception. PathPlanner outputs robot-relative `ChassisSpeeds` directly; routing through `driveInput` would require a coordinate-frame roundtrip for no benefit. This method is called exclusively via the `AutoBuilder` lambda registered in `swerveDrive.configureForAutoBuilder()` — never called directly by any command or subsystem.
+No command or subsystem should call `swerveDrive` drive methods directly. All driver-controlled motion routes through `driveInput` → `swerveDrive.drive()` or `swerveDrive.drivePointAt()`.
 
-2. **`visionSubsystem` is the only vision interface.** All camera access, pose estimation, and tag reading is encapsulated behind `visionSubsystem`. Nothing outside it should touch PhotonVision internals directly.
+**Exception — PathPlanner:** `swerveDrive.driveRobotRelative(ChassisSpeeds)` exists solely for PathPlanner's `AutoBuilder` lambda. PathPlanner outputs robot-relative `ChassisSpeeds` directly; routing through `driveInput` would require a coordinate-frame roundtrip for no benefit. This method is registered once in `configureForAutoBuilder()` and never called directly by any command or subsystem.
 
-3. **English units at interface boundaries, SI internally.** User-facing and robot-configuration values (speeds in ft/s, distances in inches, etc.) are expressed in English units at the interface. Internal calculations use SI units. Conversion is handled via `units.java`.
+### 2. `visionSubsystem` is the only vision interface
 
-4. **Single `GAME_YEAR_FIELD` constant.** The field geometry constant is defined once and propagates throughout the codebase. Never hardcode field dimensions elsewhere.
+All camera access, pose estimation, and tag reading is encapsulated behind `visionSubsystem`. Nothing outside it touches PhotonVision internals directly.
+
+### 3. English units at interface boundaries, SI internally
+
+User-facing and configuration values are in English units (ft/s, inches, lbs, lb·in²). Internal calculations use SI. All conversions happen at entry points via `units.java` — never inside control loops.
+
+### 4. Single `GAME_YEAR_FIELD` constant
+
+Defined once in `RobotContainer`. Propagates through the constructor chain to `visionSubsystem` → `AprilTagFieldCal` → PhotonPoseEstimators. Never hardcode field geometry elsewhere.
+
+### 5. Two-phase design before implementation
+
+Architectural decisions are discussed and agreed before any code is written. Explicit signal ("let's write the code" or similar) triggers implementation.
 
 ---
 
 ## Naming Conventions
 
-- **Subsystem classes that are robot-specific:** `camelCase` (e.g., `swerveDrive`, `swerveModule`, `driveInput`)
-- **Classes prefixed with a proper noun:** Uppercase-first (e.g., `PhotonVisionCamera`, `ADISGyro` — follow the proper noun's own capitalization)
-- **Constants:** `UPPER_SNAKE_CASE`
-- **Methods and variables:** `camelCase`
+| Pattern | Convention | Examples |
+|---|---|---|
+| Robot-specific subsystem classes | `camelCase` | `swerveDrive`, `driveInput`, `swerveModule` |
+| Proper-noun-prefixed classes | Follow proper noun | `AprilTagFieldCal`, `PhotonCamera` |
+| Constants | `UPPER_SNAKE_CASE` | `MAX_DRIVE_SPEED_MPS`, `WHEEL_COF` |
+| Methods and variables | `camelCase` | `getPose()`, `addVisionMeasurement()` |
+| New feature packages | `lowercase` | `pathplanning/` |
 
 ---
 
-## Joystick & Command Mapping
+## Unit Conventions
 
-- Joystick commands are mapped with **dynamic center of rotation**, bounded to the bumper corners of the robot. This allows the driver to shift the rotation pivot during maneuvers.
-- **X-lock defense** is implemented — commands the modules to an X pattern to resist being pushed.
-- **Point-at-target heading lock** is implemented via PID — holds a specific field-relative heading while allowing translational control.
+| Value type | Interface unit | Internal unit | Conversion |
+|---|---|---|---|
+| Linear velocity | ft/s | m/s | `units.ftps_mps()` |
+| Distance / geometry | inches | meters | `units.inches_m()` |
+| Field coordinates | feet | meters | `units.fieldFeet_m()` |
+| Angle | degrees | radians | `units.deg_rad()` |
+| Robot mass | lbs | kg | `units.lbs_kg()` |
+| Moment of inertia | lb·in² | kg·m² | `units.lbIn2_kgM2()` |
 
 ---
 
-## Vision System
+## Drivetrain Subsystem
 
-- Dual cameras provide overlapping AprilTag coverage.
-- Pose estimates from both cameras are fused into the odometry state.
-- The `buildTagReading()` method currently uses a **simplified delta calculation** for tag pose offset. This is a known approximation — full tag reprojection geometry is a noted future refinement.
-- A **field calibration system** is implemented, outputting offset files via three redundant paths:
-  1. Python script output to laptop
-  2. Backup copy to roboRIO
-  3. Clipboard copy
+### `swerveDrive`
+
+Owns all four modules and the IMU. The only way to move the robot.
+
+**Drive API:**
+| Method | Description |
+|---|---|
+| `drive(driveInput)` | Normal field-relative driver control |
+| `drivePointAt(input, x, y, offset)` | Translation from driver, heading PID locks to target |
+| `lockWheelsX()` | X-brace defense pattern |
+| `stop()` | Zero drive speed, hold steer angles |
+| `driveRobotRelative(ChassisSpeeds)` | PathPlanner-only — robot-relative, bypasses field-relative conversion |
+
+**Pose API:**
+| Method | Description |
+|---|---|
+| `getPose()` | Kalman-filtered pose (vision + odometry fused) |
+| `resetPose(Pose2d)` | Seed estimator with known position |
+| `getRobotRelativeSpeeds()` | Encoder-derived ChassisSpeeds — PathPlanner feedback |
+| `addVisionMeasurement(pose, timestamp, tagCount)` | Inject vision into Kalman filter, trust scaled by tag count |
+| `getOdometryState()` | Full `driveOdometryState` snapshot |
+| `getDimension(key)` | Geometry query: "wheel-base", "frame-perimeter", "bumper-perimeter" |
+
+**PathPlanner integration:**
+| Method | Description |
+|---|---|
+| `configureForAutoBuilder()` | One-time setup — call from RobotContainer after construction |
+
+**Pose estimation:**
+`SwerveDrivePoseEstimator` (Kalman filter) replaces `SwerveDriveOdometry`. Odometry (encoder + IMU) updates at 50Hz every loop. Vision measurements injected via `addVisionMeasurement()` from `RobotContainer.updatePoseEstimator()` each loop when valid. Trust is scaled by tag count using `visionConstants.VISION_STD_DEV_TAG_SCALE`.
+
+### `swerveModule`
+
+One Thrifty Narrow module. Kraken X60 drive (velocity control), Minion steer (position control). Analog encoder seeded at startup, Minion internal encoder used for closed-loop steering. All PID gains live-tunable from SmartDashboard.
+
+### `driveInput`
+
+Immutable value object. The sole public command interface into `swerveDrive`. Accepts ft/s, converts to m/s internally on construction. CoR in meters, robot-relative.
+
+### `driveOdometryState`
+
+Full motion state snapshot updated every 20ms. Three buckets:
+- `encoderState` — from wheel encoders + kinematics (reliable linear velocity)
+- `imuState` — from ADIS16470 (reliable angular velocity)
+- `blendedState` — complementary filter blend (alpha tunable live from SmartDashboard)
+
+All values SI internally. CoR tracked with velocity and acceleration.
+
+---
+
+## Vision Subsystem
+
+### `visionSubsystem`
+
+Single public interface for all vision data. Two PhotonVision cameras (front + rear).
+
+**Pose API:**
+| Method | Description |
+|---|---|
+| `getBestPose()` | Best accepted `robotPoseEstimate` (higher-confidence of front/rear) |
+| `getFrontPose()` / `getRearPose()` | Per-camera estimates |
+| `hasValidPose()` | True if best pose passed all filters |
+| `bothCamerasValid()` | True if both cameras have valid estimates |
+| `getBestPoseZ()` | Robot height above floor (meters) — for climbing/elevation detection |
+| `getBestPosePitch()` | Robot pitch angle (radians) — for tilt detection |
+| `getBestPoseRoll()` | Robot roll angle (radians) — for tilt detection |
+
+**Filtering pipeline** (each frame):
+1. Must have targets
+2. Must meet `MIN_TAGS_FOR_ESTIMATE` tag count
+3. Ambiguity below `MAX_AMBIGUITY`
+4. Pose jump below `MAX_POSE_JUMP_M` from last accepted estimate
+
+### `robotPoseEstimate`
+
+Immutable value record per camera. Fields: `pose` (Pose3d), `timestampSecs`, `ambiguity`, `tagCount`, `cameraName`, `isValid`. Static `best(a, b)` picks lower ambiguity. Static `invalid()` used as null-safe sentinel.
+
+### `visionHealthMonitor`
+
+Pre-match health validation and per-loop health tracking. Checks camera connectivity, tag visibility, and pose consistency. Exposed via `visionSubsystem.isHealthy()` and `getHealthStatus()`. Polled in `Robot.disabledPeriodic()` for pit/field readiness confirmation.
+
+### `AprilTagFieldCal` / `AprilTagFieldCalTab`
+
+Field calibration system. Measures per-tag position offsets vs. WPILib baseline. Outputs correction offsets three ways: Python script capture to laptop, backup to roboRIO, clipboard copy. Tab is live on Shuffleboard "Field Calibration" tab.
+
+---
+
+## Commands
+
+### `driveWithJoysticks`
+
+Default drive command on `swerveDrive`. Left stick = field-relative translation (ft/s). Right stick twist = rotation (rad/s). Right stick X/Y = dynamic center of rotation (bounded to bumper corners). `enablePointAt()` / `disablePointAt()` toggled by button binding — heading PID takes over omega.
+
+### `xLockCommand`
+
+X-brace defense. Commands all four modules to 45° X pattern, zero drive speed. Held while button is pressed.
+
+### `pathfindCommand` *(new)*
+
+On-the-fly AD* pathfinding to a field target using PathPlanner. Requires `swerveDrive` — preempts `driveWithJoysticks` via scheduler, restores it on end. Vision staleness is checked at initialize and logged to Shuffleboard "Pathfinding" tab (command still runs on odometry if stale). Currently uses `pathfindToPose()`. TODO: upgrade to `pathfindThenFollowPath()` once `.path` files are authored in PathPlanner GUI.
+
+### `Autos.java`
+
+Stub — returns `Commands.none()`. Autonomous path sequences to be built here once field targets and path files are ready.
+
+---
+
+## PathPlanner Integration
+
+### Architecture
+
+`AutoBuilder` is configured once in `swerveDrive.configureForAutoBuilder()`, called from `RobotContainer` after construction. All PathPlanner dependencies are contained within `swerveDrive` — `RobotContainer` is unaware of PathPlanner internals.
+
+**AutoBuilder lambda wiring:**
+| Lambda | Method |
+|---|---|
+| Pose supplier | `swerveDrive::getPose` (Kalman-filtered) |
+| Pose reset | `swerveDrive::resetPose` |
+| Speed feedback | `swerveDrive::getRobotRelativeSpeeds` |
+| Speed command | `swerveDrive::driveRobotRelative` |
+
+### `FieldTargets` *(new)*
+
+String-keyed `Pose2d` lookup. `FieldTargets.get("speaker")` etc. Throws `IllegalArgumentException` on unknown key. All poses defined from blue-origin; PathPlanner handles alliance flip. TODO: populate with real 2026 field coordinates.
+
+### `pathplannerConstants` *(new)*
+
+Robot mass (lbs → kg), MOI (lb·in² → kg·m²), wheel COF, path velocity/acceleration constraints, AutoBuilder translation/rotation PID defaults, vision staleness threshold, alliance zone exclusion stub.
+
+---
+
+## Robot Periodic Call Order
+
+Every 20ms, in `Robot.robotPeriodic()`:
+1. `CommandScheduler.getInstance().run()` — runs subsystem `periodic()` + all active commands
+2. `robotContainer.updatePoseEstimator()` — fuses latest valid vision pose into Kalman filter
+3. `robotContainer.updateCalibrationTab()` — updates field calibration Shuffleboard tab
+
+---
+
+## Button Map (current)
+
+| Button | Stick | Binding |
+|---|---|---|
+| Button 2 | Right | Lock-to-target heading (point-at while held) |
+| Button 3 | Right | X-lock defense (while held) |
+| Button 4 | Right | Pathfind to target (while held) — currently hardcoded to `"speaker"` |
+
+TODO: replace hardcoded pathfind target with a selector (SmartDashboard chooser or button set).
+
+---
+
+## Season Change Checklist
+
+Each new season:
+1. `RobotContainer.GAME_YEAR_FIELD` — update `AprilTagFields` enum value
+2. `FieldTargets.java` — replace stub coordinates with real field target poses
+3. `pathplannerConstants.ALLIANCE_ZONE_EXCLUSIONS` — populate with new field zone polygons
+4. `AprilTagIgnore.java` — review which tag IDs to suppress for known problem tags
+5. `visionConstants` — re-verify camera transforms if robot geometry changed
+6. PathPlanner GUI — re-author final approach `.path` files for each target
 
 ---
 
 ## WPILib 2026 Notes
 
-- `CommandBase` has been removed in WPILib 2026. All commands extend `Command` directly.
-- Phoenix 6 vendor library is installed and required for Kraken X60 and Minion motor control.
+- `CommandBase` removed — all commands extend `Command` directly
+- `Command.schedule()` deprecated — use `CommandScheduler.getInstance().schedule(cmd)`
+- Phoenix 6 required for Kraken X60 and Minion — no Phoenix 5 APIs
 
 ---
 
-## Development Conventions
+## Known TODOs / Open Items
 
-- **Explicit "let's write the code" signal** before implementation begins — used to separate design discussion from active coding sessions.
-- Prefer discussing architecture and tradeoffs first; only move to code when the approach is agreed upon.
-- When in doubt about a design decision, check this file and existing class interfaces for established patterns before introducing new ones.
+| Item | Location |
+|---|---|
+| Weigh robot (mass + MOI) | `pathplannerConstants.java` |
+| Tune PathPlanner translation/rotation PID | `pathplannerConstants.java` |
+| Tune vision std devs on carpet | `visionConstants.java` |
+| Populate 2026 field target coordinates | `FieldTargets.java` |
+| Author final approach `.path` files | PathPlanner GUI → `src/main/deploy/pathplanner/paths/` |
+| Switch `pathfindToPose()` → `pathfindThenFollowPath()` | `pathfindCommand.java` |
+| Alliance zone exclusion polygons | `pathplannerConstants.ALLIANCE_ZONE_EXCLUSIONS` |
+| Pathfind target selector (vs. hardcoded `"speaker"`) | `RobotContainer.java` |
+| Measure actual steer offset voltages | `swerveConstants.java` |
+| Confirm CAN IDs match physical wiring | `swerveConstants.java` |
+| Replace `buildTagReading()` delta calc with full reprojection geometry | `visionSubsystem.java` |
+| Update PhotonVision API (deprecated `getLatestResult()`, `update()`) | `visionSubsystem.java` |
+| Update `getPositionError()` (deprecated in WPILib 2026) | `swerveDrive.java` |
 
 ---
 
-## Known Future Work / Open Items
-
-- `buildTagReading()` — replace simplified delta calculation with full tag reprojection geometry for more accurate vision pose deltas.
-- Path planning integration (in progress — reason this file exists).
-
----
-
-*This file was generated to carry forward context from a web-based Claude conversation into Claude Code. Update it as the codebase evolves.*
+*Update this file as the codebase evolves. It is the single source of truth for AI-assisted development context.*
