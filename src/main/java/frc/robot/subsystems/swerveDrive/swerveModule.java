@@ -1,5 +1,6 @@
 package frc.robot.subsystems.swerveDrive;
 
+import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.controls.PositionVoltage;
@@ -14,6 +15,7 @@ import edu.wpi.first.wpilibj.AnalogInput;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 import frc.robot.constants.swerveConstants;
+import frc.robot.util.RobotLogger;
 
 /**
  * swerveModule.java
@@ -46,6 +48,7 @@ public class swerveModule {
 
     // ── Identity ──────────────────────────────────────────────────────────────
     private final String  name;
+    private final int     moduleIndex;  // 0=FL, 1=FR, 2=BL, 3=BR — for RobotLogger array indexing
     private final double  steerOffsetVolts;
     private final boolean driveInverted;
 
@@ -75,6 +78,7 @@ public class swerveModule {
      */
     public swerveModule(
             String name,
+            int moduleIndex,
             int driveCanId,
             int steerCanId,
             int analogPort,
@@ -84,6 +88,7 @@ public class swerveModule {
             double[] steerPID) {
 
         this.name             = name;
+        this.moduleIndex      = moduleIndex;
         this.steerOffsetVolts = steerOffsetVolts;
         this.driveInverted    = driveInverted;
 
@@ -123,6 +128,21 @@ public class swerveModule {
         config.ClosedLoopRamps.VoltageClosedLoopRampPeriod = 0.02;
         driveMotor.getConfigurator().apply(config);
         driveMotor.setPosition(0);
+
+        // Set signal update rates for logging — high rate for transient capture
+        BaseStatusSignal.setUpdateFrequencyForAll(swerveConstants.SIGNAL_UPDATE_HZ,
+            driveMotor.getVelocity(),
+            driveMotor.getPosition(),
+            driveMotor.getSupplyCurrent(),
+            driveMotor.getStatorCurrent(),
+            driveMotor.getSupplyVoltage(),
+            driveMotor.getMotorVoltage(),
+            driveMotor.getDutyCycle()
+        );
+        BaseStatusSignal.setUpdateFrequencyForAll(swerveConstants.SIGNAL_UPDATE_HZ_TEMP,
+            driveMotor.getDeviceTemp()
+        );
+        if (swerveConstants.OPTIMIZE_CAN_UTILIZATION) driveMotor.optimizeBusUtilization();
     }
 
     private void configureSteerMotor() {
@@ -137,6 +157,20 @@ public class swerveModule {
         config.CurrentLimits.StatorCurrentLimitEnable = true;
         config.ClosedLoopGeneral.ContinuousWrap = true;
         steerMotor.getConfigurator().apply(config);
+
+        BaseStatusSignal.setUpdateFrequencyForAll(swerveConstants.SIGNAL_UPDATE_HZ,
+            steerMotor.getVelocity(),
+            steerMotor.getPosition(),
+            steerMotor.getSupplyCurrent(),
+            steerMotor.getStatorCurrent(),
+            steerMotor.getSupplyVoltage(),
+            steerMotor.getMotorVoltage(),
+            steerMotor.getDutyCycle()
+        );
+        BaseStatusSignal.setUpdateFrequencyForAll(swerveConstants.SIGNAL_UPDATE_HZ_TEMP,
+            steerMotor.getDeviceTemp()
+        );
+        if (swerveConstants.OPTIMIZE_CAN_UTILIZATION) steerMotor.optimizeBusUtilization();
     }
 
     private void seedSteerEncoder() {
@@ -178,11 +212,15 @@ public class swerveModule {
     }
 
     public void publishTelemetry() {
-        SmartDashboard.putNumber("Swerve/" + name + "/Raw Volts",  steerEncoder.getVoltage());
+        double steerVolts = steerEncoder.getVoltage();
+        SmartDashboard.putNumber("Swerve/" + name + "/Raw Volts",  steerVolts);
         SmartDashboard.putNumber("Swerve/" + name + "/Angle Deg",  getSteerAngle().getDegrees());
         SmartDashboard.putNumber("Swerve/" + name + "/Speed MPS",  getState().speedMetersPerSecond);
         SmartDashboard.putNumber("Swerve/" + name + "/Drive Amps", driveMotor.getSupplyCurrent().getValueAsDouble());
         SmartDashboard.putNumber("Swerve/" + name + "/Steer Amps", steerMotor.getSupplyCurrent().getValueAsDouble());
+
+        // Analog steer encoder — not on CAN, must be logged manually
+        RobotLogger.moduleSteerVolts[moduleIndex].append(steerVolts);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

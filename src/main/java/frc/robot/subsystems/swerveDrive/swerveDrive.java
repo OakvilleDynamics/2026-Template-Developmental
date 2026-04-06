@@ -25,6 +25,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.pathplannerConstants;
 import frc.robot.constants.swerveConstants;
 import frc.robot.constants.visionConstants;
+import frc.robot.util.RobotLogger;
 import frc.robot.util.units;
 
 /**
@@ -113,6 +114,9 @@ public class swerveDrive extends SubsystemBase {
 
     // Blend weight (encoder vs IMU)
     private double blendAlpha = swerveConstants.ODOMETRY_BLEND_ALPHA;
+
+    // Last commanded speeds — captured in commandModules() for logging
+    private ChassisSpeeds lastCommandedSpeeds = new ChassisSpeeds();
 
     // ─────────────────────────────────────────────────────────────────────────
     // Constructor
@@ -443,6 +447,7 @@ public class swerveDrive extends SubsystemBase {
     // ─────────────────────────────────────────────────────────────────────────
 
     private void commandModules(ChassisSpeeds speeds, Translation2d cor) {
+        lastCommandedSpeeds = speeds;
         SwerveModuleState[] desired = kinematics.toSwerveModuleStates(speeds, cor);
         SwerveDriveKinematics.desaturateWheelSpeeds(desired, swerveConstants.MAX_DRIVE_SPEED_MPS);
         for (int i = 0; i < modules.length; i++) {
@@ -569,5 +574,31 @@ public class swerveDrive extends SubsystemBase {
             units.m_inches(s.blendedState.centerOfRotation[1]));
 
         for (swerveModule m : modules) m.publishTelemetry();
+
+        // ── DataLog ───────────────────────────────────────────────────────────
+        RobotLogger.drivePoseX.append(pose.getX());
+        RobotLogger.drivePoseY.append(pose.getY());
+        RobotLogger.drivePoseHeadingDeg.append(getYaw().getDegrees());
+
+        RobotLogger.driveCommandedVx.append(lastCommandedSpeeds.vxMetersPerSecond);
+        RobotLogger.driveCommandedVy.append(lastCommandedSpeeds.vyMetersPerSecond);
+        RobotLogger.driveCommandedOmega.append(lastCommandedSpeeds.omegaRadiansPerSecond);
+
+        ChassisSpeeds actual = getRobotRelativeSpeeds();
+        RobotLogger.driveActualVx.append(actual.vxMetersPerSecond);
+        RobotLogger.driveActualVy.append(actual.vyMetersPerSecond);
+        RobotLogger.driveActualOmega.append(actual.omegaRadiansPerSecond);
+
+        RobotLogger.driveEncLinVel.append(s.encoderState.linearVelocityMagnitude);
+        RobotLogger.driveEncAngVel.append(s.encoderState.angularVelocity);
+        RobotLogger.driveEncLinAccel.append(s.encoderState.linearAccelerationMagnitude);
+
+        RobotLogger.driveImuLinVel.append(s.imuState.linearVelocityMagnitude);
+        RobotLogger.driveImuAngVel.append(s.imuState.angularVelocity);
+        RobotLogger.driveImuLinAccel.append(s.imuState.linearAccelerationMagnitude);
+
+        RobotLogger.driveBlendedLinVel.append(s.blendedState.linearVelocityMagnitude);
+        RobotLogger.driveBlendedAngVel.append(s.blendedState.angularVelocity);
+        RobotLogger.driveBlendedLinAccel.append(s.blendedState.linearAccelerationMagnitude);
     }
 }

@@ -13,6 +13,8 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.constants.pathplannerConstants;
 import frc.robot.subsystems.swerveDrive.swerveDrive;
 import frc.robot.subsystems.vision.visionSubsystem;
+import frc.robot.util.RobotLogger;
+import frc.robot.util.units;
 
 import java.util.function.Supplier;
 
@@ -83,9 +85,14 @@ public class pathfindCommand extends Command {
 
     @Override
     public void initialize() {
-        checkVisionStaleness();
+        boolean visionStale = checkVisionStaleness();
+        RobotLogger.pathfindVisionStale.append(visionStale);
+        RobotLogger.pathfindActive.append(true);
 
         Pose2d target = targetSupplier.get();
+        RobotLogger.pathfindTargetX.append(target.getX());
+        RobotLogger.pathfindTargetY.append(target.getY());
+        RobotLogger.pathfindTargetHeadingDeg.append(target.getRotation().getDegrees());
 
         // TODO: replace pathfindToPose with pathfindThenFollowPath once
         // final-approach .path files are authored in PathPlanner GUI.
@@ -97,10 +104,16 @@ public class pathfindCommand extends Command {
     public void execute() {
         // PathPlanner drives the robot via the AutoBuilder lambdas registered in
         // RobotContainer. Nothing to do here — isFinished() polls for completion.
+        Pose2d current = drive.getPose();
+        Pose2d target  = targetSupplier.get();
+        RobotLogger.pathfindPoseErrorM.append(
+            current.getTranslation().getDistance(target.getTranslation()));
     }
 
     @Override
     public void end(boolean interrupted) {
+        RobotLogger.pathfindActive.append(false);
+        RobotLogger.pathfindPoseErrorM.append(0.0);
         if (pathfinder != null) {
             pathfinder.cancel();
             pathfinder = null;
@@ -117,16 +130,19 @@ public class pathfindCommand extends Command {
     // Vision staleness check
     // ─────────────────────────────────────────────────────────────────────────
 
-    private void checkVisionStaleness() {
+    /** Returns true if vision is stale or unavailable. */
+    private boolean checkVisionStaleness() {
         if (!vision.hasValidPose()) {
             tab.add("Vision Warning", "No valid pose — running on odometry only");
-            return;
+            return true;
         }
         double age = Timer.getFPGATimestamp() - vision.getBestPose().timestampSecs;
         if (age > pathplannerConstants.VISION_STALENESS_THRESHOLD_S) {
             tab.add("Vision Warning",
                 String.format("Stale pose: %.2fs old (threshold %.2fs) — odometry only",
                     age, pathplannerConstants.VISION_STALENESS_THRESHOLD_S));
+            return true;
         }
+        return false;
     }
 }

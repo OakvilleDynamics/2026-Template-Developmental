@@ -103,6 +103,32 @@ public final class swerveConstants {
      */
     public static final double ODOMETRY_BLEND_ALPHA = 0.7;
 
+    // ── CAN signal logging ────────────────────────────────────────────────────
+
+    /**
+     * Phoenix 6 signal update rate for drivetrain motor telemetry (Hz).
+     * Applied to velocity, position, current, voltage, duty cycle signals.
+     * 250Hz gives high-fidelity transient capture (wheel slip, current spikes).
+     * Lower this if CAN bus utilization becomes a problem at full robot scale.
+     */
+    public static final double SIGNAL_UPDATE_HZ = 250.0;
+
+    /**
+     * Phoenix 6 signal update rate for temperature signals (Hz).
+     * Temperatures change slowly — 4Hz is sufficient and saves CAN bandwidth.
+     * At 20 motors, 4Hz temps vs. 250Hz saves meaningful headroom.
+     */
+    public static final double SIGNAL_UPDATE_HZ_TEMP = 4.0;
+
+    /**
+     * When true, calls optimizeBusUtilization() on each TalonFX after configuring
+     * its signals. This silences all un-registered signals — reducing CAN traffic
+     * significantly at full robot scale, but hiding any signal not explicitly
+     * registered. Set to false during initial bring-up so nothing fails silently.
+     * Flip to true per-mechanism once that mechanism is fully validated on robot.
+     */
+    public static final boolean OPTIMIZE_CAN_UTILIZATION = false;
+
     // ── Pose estimator — odometry trust ──────────────────────────────────────
     /**
      * State standard deviations for SwerveDrivePoseEstimator [x (m), y (m), theta (rad)].

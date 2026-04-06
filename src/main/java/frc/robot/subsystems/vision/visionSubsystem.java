@@ -9,6 +9,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.AprilTagIgnore;
 import frc.robot.constants.visionConstants;
 import frc.robot.util.AprilTagFieldCal;
+import frc.robot.util.RobotLogger;
 import frc.robot.util.units;
 
 import org.photonvision.PhotonCamera;
@@ -443,11 +444,16 @@ public class visionSubsystem extends SubsystemBase {
     // ─────────────────────────────────────────────────────────────────────────
 
     private void publishTelemetry() {
-        SmartDashboard.putBoolean("Vision/Best/Valid",     bestPose.isValid);
+        boolean hasValid      = bestPose.isValid;
+        boolean bothValid     = frontPose.isValid && rearPose.isValid;
+        boolean healthy       = healthMonitor.isOverallHealthy();
+        String  healthStatus  = healthMonitor.getOverallStatus().name();
+
+        SmartDashboard.putBoolean("Vision/Best/Valid",     hasValid);
         SmartDashboard.putString( "Vision/Best/Source",    bestPose.cameraName);
         SmartDashboard.putNumber( "Vision/Best/Tag Count", bestPose.tagCount);
 
-        if (bestPose.isValid) {
+        if (hasValid) {
             Pose3d p = bestPose.pose;
             SmartDashboard.putNumber("Vision/Best/X (ft)",      units.m_feet(p.getX()));
             SmartDashboard.putNumber("Vision/Best/Y (ft)",      units.m_feet(p.getY()));
@@ -455,6 +461,43 @@ public class visionSubsystem extends SubsystemBase {
             SmartDashboard.putNumber("Vision/Best/Yaw (deg)",   units.rad_deg(p.getRotation().getZ()));
             SmartDashboard.putNumber("Vision/Best/Pitch (deg)", units.rad_deg(p.getRotation().getY()));
             SmartDashboard.putNumber("Vision/Best/Roll (deg)",  units.rad_deg(p.getRotation().getX()));
+        }
+
+        // ── DataLog ───────────────────────────────────────────────────────────
+        RobotLogger.visionHasValidPose.append(hasValid);
+        RobotLogger.visionBothCamerasValid.append(bothValid);
+        RobotLogger.visionHealthy.append(healthy);
+        RobotLogger.visionHealthStatus.append(healthStatus);
+
+        RobotLogger.visionBestAmbiguity.append(bestPose.ambiguity);
+        RobotLogger.visionBestTagCount.append(bestPose.tagCount);
+        RobotLogger.visionBestCameraName.append(bestPose.cameraName);
+        RobotLogger.visionBestTimestampSecs.append(bestPose.timestampSecs);
+
+        if (hasValid) {
+            Pose3d p = bestPose.pose;
+            RobotLogger.visionBestPoseX.append(p.getX());
+            RobotLogger.visionBestPoseY.append(p.getY());
+            RobotLogger.visionBestPoseHeadingDeg.append(units.rad_deg(p.getRotation().getZ()));
+            RobotLogger.visionBestPoseZ.append(p.getZ());
+            RobotLogger.visionBestPosePitchDeg.append(units.rad_deg(p.getRotation().getY()));
+            RobotLogger.visionBestPoseRollDeg.append(units.rad_deg(p.getRotation().getX()));
+        }
+
+        RobotLogger.visionFrontValid.append(frontPose.isValid);
+        RobotLogger.visionFrontAmbiguity.append(frontPose.ambiguity);
+        RobotLogger.visionFrontTagCount.append(frontPose.tagCount);
+        if (frontPose.isValid) {
+            RobotLogger.visionFrontPoseX.append(frontPose.pose.getX());
+            RobotLogger.visionFrontPoseY.append(frontPose.pose.getY());
+        }
+
+        RobotLogger.visionRearValid.append(rearPose.isValid);
+        RobotLogger.visionRearAmbiguity.append(rearPose.ambiguity);
+        RobotLogger.visionRearTagCount.append(rearPose.tagCount);
+        if (rearPose.isValid) {
+            RobotLogger.visionRearPoseX.append(rearPose.pose.getX());
+            RobotLogger.visionRearPoseY.append(rearPose.pose.getY());
         }
     }
 }

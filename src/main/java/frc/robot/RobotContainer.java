@@ -118,22 +118,22 @@ public class RobotContainer {
 
     public RobotContainer() {
 
-        swerveModule flModule = new swerveModule("FL",
+        swerveModule flModule = new swerveModule("FL", 0,
             swerveConstants.FL_DRIVE_CAN_ID, swerveConstants.FL_STEER_CAN_ID,
             swerveConstants.FL_ANALOG_PORT,  swerveConstants.FL_STEER_OFFSET_VOLTS,
             true,  FL_DRIVE_PID, FL_STEER_PID);
 
-        swerveModule frModule = new swerveModule("FR",
+        swerveModule frModule = new swerveModule("FR", 1,
             swerveConstants.FR_DRIVE_CAN_ID, swerveConstants.FR_STEER_CAN_ID,
             swerveConstants.FR_ANALOG_PORT,  swerveConstants.FR_STEER_OFFSET_VOLTS,
             false, FR_DRIVE_PID, FR_STEER_PID);
 
-        swerveModule blModule = new swerveModule("BL",
+        swerveModule blModule = new swerveModule("BL", 2,
             swerveConstants.BL_DRIVE_CAN_ID, swerveConstants.BL_STEER_CAN_ID,
             swerveConstants.BL_ANALOG_PORT,  swerveConstants.BL_STEER_OFFSET_VOLTS,
             true,  BL_DRIVE_PID, BL_STEER_PID);
 
-        swerveModule brModule = new swerveModule("BR",
+        swerveModule brModule = new swerveModule("BR", 3,
             swerveConstants.BR_DRIVE_CAN_ID, swerveConstants.BR_STEER_CAN_ID,
             swerveConstants.BR_ANALOG_PORT,  swerveConstants.BR_STEER_OFFSET_VOLTS,
             false, BR_DRIVE_PID, BR_STEER_PID);

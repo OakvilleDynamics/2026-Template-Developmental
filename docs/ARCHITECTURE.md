@@ -241,6 +241,55 @@ Mode-specific behavior:
 
 ---
 
+## Logging
+
+### Two parallel logging systems
+
+| System | Format | Tool | What it captures |
+|---|---|---|---|
+| Phoenix 6 `SignalLogger` | `.hoot` | AdvantageScope | All TalonFX motor signals — velocity, position, supply/stator current, supply voltage, motor voltage, duty cycle, temperature |
+| WPILib `DataLog` via `RobotLogger` | `.wpilog` | AdvantageScope | Computed quantities — robot pose, commanded vs. actual speeds, odometry buckets, vision estimates, pathfinding state, steer encoder voltages |
+
+Both files land on the same USB drive. AdvantageScope opens them simultaneously on a shared timeline.
+
+**AdvantageScope** must be installed on the driver station laptop before the first match. Download from Team 6328's GitHub (search "AdvantageScope FRC"). It is a desktop app — no vendordep, no robot-side installation.
+
+### USB drive requirements
+
+| Requirement | Spec |
+|---|---|
+| Format | **FAT32** — exFAT is not supported by the roboRIO |
+| Speed class | **Class 10 / UHS-I or faster** — slower drives can cause log write delays |
+| Capacity | **32GB or larger** — a full competition season generates several GB of logs |
+| Label | **`ROBOT_LOG`** recommended — easy to identify in the pit |
+
+### USB drive best practices
+
+- **Insert before power-on.** `SignalLogger` and `RobotLogger` both attempt to open `/u/` at `robotInit()`. A drive inserted after init will not be used until the next reboot.
+- **Check SmartDashboard before each match.** `Logger/Storage Path` shows the active path. If it reads `Internal (/home/lvuser/logs/) — INSERT USB`, the drive is missing or unreadable.
+- **Eject safely in the pit.** Power down the robot before removing the drive. The roboRIO does not support hot-eject for FAT32.
+- **Copy logs immediately after each match.** Don't wait until end of day — a robot reboot with a full internal fallback storage can overwrite earlier logs.
+- **One drive per event.** Label drives by event name (e.g. `ROBOT_LOG_DCMP`). Keep previous event drives as backups.
+- **Periodically verify drive health.** Run a filesystem check on the drive between events. FAT32 drives can develop errors after repeated hot-unplugs.
+
+### Signal update rates
+
+Drive motor signals (velocity, current, voltage, duty cycle) are logged at **250Hz** for high-fidelity transient capture — wheel slip events and current spikes are visible at this rate. Temperatures are logged at **4Hz** (they change slowly and 250Hz would waste significant CAN bandwidth at full robot scale).
+
+These rates are configured per-subsystem:
+- `swerveConstants.SIGNAL_UPDATE_HZ` — 250Hz
+- `swerveConstants.SIGNAL_UPDATE_HZ_TEMP` — 4Hz
+
+When adding future mechanisms (intake, shooter, climber), add matching constants to that subsystem's constants file. This lets you tune CAN bandwidth per-mechanism independently.
+
+### CAN bus optimization
+
+`swerveConstants.OPTIMIZE_CAN_UTILIZATION = false` by default. When `false`, all TalonFX signals are broadcast on the CAN bus regardless of whether they are registered — verbose and safe during bring-up. When `true`, `optimizeBusUtilization()` silences all un-registered signals, significantly reducing CAN traffic at full robot scale.
+
+**Flip to `true` per-mechanism only after that mechanism is fully validated on the robot.** Silencing un-registered signals means unexpected data gaps rather than visible errors — not something you want while debugging new hardware.
+
+---
+
 ## What's Still TODO
 
 These are known gaps — in priority order for competition readiness:
