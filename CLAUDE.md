@@ -69,7 +69,15 @@ src/main/java/frc/robot/
 │
 └── util/
     ├── units.java
-    └── AprilTagFieldCal.java
+    ├── AprilTagFieldCal.java
+    └── motors/                             (new — mechanism motor abstraction)
+        ├── ffProvider.java
+        ├── motorConstants.java
+        ├── mechanismConfig.java
+        ├── mechanismUnit.java
+        ├── CTREMechanismUnit.java
+        ├── REVMechanismUnit.java
+        └── NovaMechanismUnit.java
 ```
 
 ---
@@ -94,7 +102,13 @@ User-facing and configuration values are in English units (ft/s, inches, lbs, lb
 
 Defined once in `RobotContainer`. Propagates through the constructor chain to `visionSubsystem` → `AprilTagFieldCal` → PhotonPoseEstimators. Never hardcode field geometry elsewhere.
 
-### 5. Two-phase design before implementation
+### 5. Mechanism subsystems never touch vendor motor APIs directly
+
+All mechanism motor control routes through `mechanismUnit` in `util/motors/`. No subsystem imports `com.revrobotics`, `com.ctre`, or `com.thethriftybot` directly. Instantiate via `mechanismUnit.create(mechanismConfig)` — the factory returns the correct vendor implementation transparently.
+
+This makes swapping a motor controller a one-line config change. See `docs/ARCHITECTURE.md` — Mechanism Motor Abstraction for full details.
+
+### 6. Two-phase design before implementation
 
 Architectural decisions are discussed and agreed before any code is written. Explicit signal ("let's write the code" or similar) triggers implementation.
 
@@ -316,6 +330,7 @@ Each new season:
 | Replace `buildTagReading()` delta calc with full reprojection geometry | `visionSubsystem.java` |
 | Update PhotonVision API (deprecated `getLatestResult()`, `update()`) | `visionSubsystem.java` |
 | Update `getPositionError()` (deprecated in WPILib 2026) | `swerveDrive.java` |
+| Write first mechanism subsystem using `mechanismUnit` (validate abstraction on hardware) | new subsystem |
 
 ---
 

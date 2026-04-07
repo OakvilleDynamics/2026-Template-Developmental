@@ -64,7 +64,15 @@ src/main/java/frc/robot/
 │
 └── util/
     ├── units.java          ← All unit conversions (inches↔m, lbs↔kg, etc.)
-    └── AprilTagFieldCal    ← Field layout, per-tag offsets, geometry
+    ├── AprilTagFieldCal    ← Field layout, per-tag offsets, geometry
+    └── motors/             ← Vendor-agnostic mechanism motor abstraction
+        ├── ffProvider          ← @FunctionalInterface: (pos, vel, accel) → volts
+        ├── motorConstants      ← Vendor/FollowMode enums + package constants
+        ├── mechanismConfig     ← Immutable config (Builder pattern)
+        ├── mechanismUnit       ← Abstract base + static factory
+        ├── CTREMechanismUnit   ← TalonFX (Phoenix 6) implementation
+        ├── REVMechanismUnit    ← SparkMax / SparkFlex implementation
+        └── NovaMechanismUnit   ← ThriftyBot Nova implementation
 ```
 
 ---
@@ -181,6 +189,90 @@ PathPlanner is configured once at startup in `swerveDrive.configureForAutoBuilde
 - **Make it go this fast** → `swerveDrive.driveRobotRelative(ChassisSpeeds)` (the PathPlanner exception to the driveInput-only rule)
 
 The last one is the only place in the codebase that bypasses `driveInput`. PathPlanner outputs robot-relative speed commands directly — wrapping them in `driveInput` would require an unnecessary coordinate-frame roundtrip. It's intentional, documented in `CLAUDE.md`, and only ever called by PathPlanner's internals.
+
+---
+
+## Mechanism Motor Abstraction (`mechanismUnit`)
+
+### Why it exists
+
+The drivetrain is CTRE every year. Mechanisms are currently REV (SparkMax/SparkFlex + NEO), but the team is actively transitioning to ThriftyBot Nova over the next two seasons — while keeping REV NEO 550 + UltraPlanetary for small/lightweight mechanisms permanently (no Nova equivalent yet). Without an abstraction layer, every subsystem would contain vendor-specific API calls, and swapping a motor controller on a mechanism would require touching subsystem code everywhere.
+
+With `mechanismUnit`, upgrading a mechanism from NEO to Nova is one line change: the `Vendor` enum in its config. The subsystem is untouched.
+
+### The pattern
+
+`mechanismUnit` is an **abstract base class** holding all shared logic once. Vendor subclasses (`CTREMechanismUnit`, `REVMechanismUnit`, `NovaMechanismUnit`) only implement the ~10 hardware calls specific to their controller. A static factory method returns the correct implementation based on the config:
+
+```java
+mechanismUnit arm = mechanismUnit.create(
+    new mechanismConfig.Builder("Arm", Vendor.REV_SPARKMAX)
+        .canIds(new int[]{11})
+        .gearRatio(125.0)
+        .pid(new double[]{0.3, 0, 0.01, 0, 0.05, 0})
+        .withTier2FF(mechanismConfig.armFF(0.35))
+        .motionCruiseVelocityRps(20)
+        .motionAccelerationRpss(80)
+        .build()
+);
+```
+
+### Units at the public interface
+
+| Value | Unit |
+|---|---|
+| Position | **degrees** (mechanism shaft, after gear ratio) |
+| Velocity | rotations/second (mechanism shaft) |
+| Feed-forward | volts |
+| Duty cycle | -1.0 to 1.0 |
+
+Internally, positions are converted to rotations (`/360`) before any vendor call. All gear ratio conversion is applied in the vendor layer — subsystems always work in mechanism-shaft degrees/RPS.
+
+### Feed-forward model
+
+Three tiers, each additive:
+
+| Tier | Where it runs | What it covers |
+|---|---|---|
+| 1 — kS, kV, kA | On the motor controller | Static friction, velocity FF, acceleration FF |
+| 2 — lambda in config | Rio (self-contained) | Gravity compensation, spring loads, anything using only this mechanism's state |
+| 3 — lambda in RobotContainer | Rio (cross-subsystem) | Physics that depends on other subsystems — gyroscopic coupling, variable-mass elevators, etc. |
+
+Tier-2 and tier-3 are `ffProvider` lambdas: `(positionDeg, velocityRps, accelRpss) → volts`. They're called automatically each cycle and summed before injection. The same interface handles simple cases and arbitrarily complex physics:
+
+```java
+// Simple arm gravity compensation
+mechanismConfig.armFF(0.35)
+
+// Custom lambda capturing external state (built in RobotContainer)
+.withTier3FF((pos, vel, accel) -> {
+    double massKg = BASE_MASS + gamePieceTracker.getCount() * PIECE_MASS;
+    return massKg * 9.81 * Math.sin(Math.toRadians(intakeAngle.getPositionDeg())) / NEWTONS_PER_VOLT;
+})
+```
+
+### What each vendor supports
+
+| Feature | CTRE (TalonFX) | REV (SparkMax/Flex) | Nova |
+|---|---|---|---|
+| Native FF injection | `.withFeedForward(volts)` | `setSetpoint(..., arbFF, kVoltage)` | `setVelocity/Position(val, volts)` |
+| Motion profiling | MotionMagic (trapezoidal + S-curve) | MAXMotion (trapezoidal) | Software step-limiter (Rio) |
+| Stator current | ✓ | — (supply current only) | ✓ |
+| Hardware duty cycle ramp | ✓ | ✓ | ✓ |
+| ENCODER_SYNC following | ✓ | ✓ | ✗ (no independent encoder readback on follower) |
+| Gear ratio (native) | `SensorToMechanismRatio` | `positionConversionFactor` | Manual scaling in wrapper |
+
+### Live PID tuning
+
+All six gains (kP, kI, kD, kS, kV, kA) are published to SmartDashboard under `[MechanismName]/PID/` at construction. Each loop, `mechanismUnit` reads them back and calls `applyPIDToController()` only if a value changed — minimizing CAN traffic.
+
+### Logging
+
+Each instance writes per-mechanism DataLog entries under `/[MechanismName]/`:
+
+`CommandedVelocity_rps`, `ActualVelocity_rps`, `CommandedPosition_deg`, `ActualPosition_deg`, `DutyCycle`, `AppliedFF_volts`, `SupplyCurrent_A`, `StatorCurrent_A`, `MotorVoltage_V`, `Temp_C`, `ForwardLimit`, `ReverseLimit`
+
+Plus `EncoderSync/Error_rot` and `EncoderSync/Output` when using ENCODER_SYNC follower mode.
 
 ---
 
@@ -307,4 +399,4 @@ These are known gaps — in priority order for competition readiness:
 
 ---
 
-*Last updated: 2026 preseason — Ryan + Claude (Web + Code)*
+*Last updated: 2026 preseason — Ryan + Claude (Code) | mechanismUnit abstraction added*
