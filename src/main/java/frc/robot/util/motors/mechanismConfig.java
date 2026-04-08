@@ -38,7 +38,9 @@ package frc.robot.util.motors;
  *   Tier 2 (Rio-computed, self-contained): tier2FF lambda.
  *   Tier 3 (Rio-computed, cross-system): tier3FF lambda.
  *   See ffProvider.java for full documentation and examples.
- *   Convenience factories: mechanismConfig.armFF(), elevatorFF(), noFF().
+ *   Physics-based factories: mechanismUnit.FF.rotatingArm(), multiStageElevator(),
+ *     pivotingElevator(), springTurret().
+ *   Convenience factory for no-FF case: mechanismConfig.noFF().
  *
  * ─── MOTION PROFILE ──────────────────────────────────────────────────────────
  *   Set motionCruiseVelocityRps > 0 to activate motion profiling.
@@ -179,38 +181,17 @@ public final class mechanismConfig {
     public final double encoderSyncKp;
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Convenience FF factories
+    // Convenience FF factory
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Pre-built tier-2 FF for a rotating arm.
-     * FF = kG × cos(positionDeg → radians)
-     * Full compensation at horizontal (0°), zero at vertical (90°).
+     * FF provider that always returns zero.
+     * Use for flat mechanisms with no gravity component, or when
+     * tier-2/3 feed-forward is not needed.
      *
-     * @param kG gravity gain in volts — the voltage required to hold the arm
-     *           horizontal against gravity at the motor output
-     */
-    public static ffProvider armFF(double kG) {
-        return (pos, vel, accel) -> kG * Math.cos(Math.toRadians(pos));
-    }
-
-    /**
-     * Pre-built tier-2 FF for an elevator with direction-dependent gravity compensation.
-     * FF = kGup when commanding upward (vel >= 0), kGdown when commanding downward.
-     *
-     * For a single-stage elevator with symmetric loading, kGup == kGdown.
-     * For asymmetric friction or counterweighted stages, they will differ.
-     *
-     * @param kGup   volts to hold position against gravity while moving up or holding
-     * @param kGdown volts to hold position against gravity while moving down
-     */
-    public static ffProvider elevatorFF(double kGup, double kGdown) {
-        return (pos, vel, accel) -> vel >= 0 ? kGup : kGdown;
-    }
-
-    /**
-     * Pre-built FF that always returns zero.
-     * Use for flat mechanisms with no gravity component, or when tier-2/3 is not needed.
+     * For physics-based gravity and spring compensation, use the factories in
+     * {@link mechanismUnit.FF}: rotatingArm(), multiStageElevator(),
+     * pivotingElevator(), springTurret().
      */
     public static ffProvider noFF() {
         return (pos, vel, accel) -> 0.0;
@@ -267,11 +248,12 @@ public final class mechanismConfig {
      *     .withMotionProfile(80, 200, 0)
      *     .withSoftLimits(-10.0, 220.0)
      *     .withCurrentLimits(40, 80)
-     *     .withTier2FF(mechanismConfig.armFF(0.35))
+     *     .withTier2FF(mechanismUnit.FF.rotatingArm(
+     *         motorModels.NEO, 100.0, 3.5, 12.0, new double[0], new double[0], null))
      *     .build();
      * }</pre>
      *
-     * Example — two REV SparkMax followers (mechanical), elevator:
+     * Example — two REV SparkMax followers (mechanical), vertical elevator:
      * <pre>{@code
      * mechanismConfig cfg = new mechanismConfig.Builder(
      *         "Elevator",
@@ -281,7 +263,9 @@ public final class mechanismConfig {
      *     .withGearRatio(20.0)
      *     .withPID(new double[]{ 0.1, 0, 0, 0.1, 0, 0 })
      *     .withMotionProfile(40, 80, 0)
-     *     .withTier2FF(mechanismConfig.elevatorFF(0.5, 0.15))
+     *     .withTier3FF(mechanismUnit.FF.multiStageElevator(
+     *         motorModels.NEO, 20.0, 0.75, 8.0, new double[0], 0.0, 0.0,
+     *         new double[0], null, () -> 90.0))
      *     .build();
      * }</pre>
      */

@@ -68,8 +68,9 @@ src/main/java/frc/robot/
     └── motors/             ← Vendor-agnostic mechanism motor abstraction
         ├── ffProvider          ← @FunctionalInterface: (pos, vel, accel) → volts
         ├── motorConstants      ← Vendor/FollowMode enums + package constants
+        ├── motorModels         ← Motor datasheet constants (kT, stall, free speed)
         ├── mechanismConfig     ← Immutable config (Builder pattern)
-        ├── mechanismUnit       ← Abstract base + static factory
+        ├── mechanismUnit       ← Abstract base + static factory + FF library
         ├── CTREMechanismUnit   ← TalonFX (Phoenix 6) implementation
         ├── REVMechanismUnit    ← SparkMax / SparkFlex implementation
         └── NovaMechanismUnit   ← ThriftyBot Nova implementation
@@ -235,20 +236,44 @@ Three tiers, each additive:
 | Tier | Where it runs | What it covers |
 |---|---|---|
 | 1 — kS, kV, kA | On the motor controller | Static friction, velocity FF, acceleration FF |
-| 2 — lambda in config | Rio (self-contained) | Gravity compensation, spring loads, anything using only this mechanism's state |
-| 3 — lambda in RobotContainer | Rio (cross-subsystem) | Physics that depends on other subsystems — gyroscopic coupling, variable-mass elevators, etc. |
+| 2 — lambda in config | Rio (self-contained) | Gravity/spring loads using only this mechanism's own state |
+| 3 — lambda in RobotContainer | Rio (cross-subsystem) | Physics depending on other subsystems — variable-mass elevators, drivetrain coupling, etc. |
 
-Tier-2 and tier-3 are `ffProvider` lambdas: `(positionDeg, velocityRps, accelRpss) → volts`. They're called automatically each cycle and summed before injection. The same interface handles simple cases and arbitrarily complex physics:
+Tier-2 and tier-3 are `ffProvider` lambdas: `(positionDeg, velocityRps, accelRpss) → volts`. They're called automatically each cycle and summed before injection.
+
+**All physics-based lambdas are built from motor datasheet constants** via `mechanismUnit.FF` factories — no empirical holding-voltage calibration required. The formula used throughout is:
+
+```
+V_ff = τ_mechanism × 12V / (gearRatio × motor.stallTorqueNm)
+```
+
+Available factories in `mechanismUnit.FF`:
+
+| Factory | Tier | Use case |
+|---|---|---|
+| `springTurret(points)` | 2 | Piecewise-linear spring/surgical-tubing compensation |
+| `rotatingArm(motor, gearRatio, ...)` | 2 | Arm with variable CG (game pieces at different distances) |
+| `multiStageElevator(motor, gearRatio, ...)` | 3 | Multi-stage linear elevator; angle supplied at runtime |
+| `pivotingElevator(motor, gearRatio, ...)` | 3 | Elevator on a pivoting base + full drivetrain inertia/centripetal |
+
+Motor constants live in `motorModels.java` (sourced from vendor datasheets). Pass the appropriate constant as the first argument:
 
 ```java
-// Simple arm gravity compensation
-mechanismConfig.armFF(0.35)
+// Rotating arm with game piece CG shift — Tier 2
+.withTier2FF(mechanismUnit.FF.rotatingArm(
+    motorModels.NEO, 100.0,
+    3.5 /*armLbs*/, 12.0 /*armCgIn*/,
+    new double[]{ 1.5 } /*pieceLbs*/, new double[]{ 8.0 } /*pieceCgIn*/,
+    new Supplier[]{ indexer::getPieceCount }))
 
-// Custom lambda capturing external state (built in RobotContainer)
-.withTier3FF((pos, vel, accel) -> {
-    double massKg = BASE_MASS + gamePieceTracker.getCount() * PIECE_MASS;
-    return massKg * 9.81 * Math.sin(Math.toRadians(intakeAngle.getPositionDeg())) / NEWTONS_PER_VOLT;
-})
+// Vertical elevator with game pieces — Tier 3 (built in RobotContainer)
+.withTier3FF(mechanismUnit.FF.multiStageElevator(
+    motorModels.NEO, 20.0, 0.75 /*spoolIn*/,
+    8.0 /*carriageLbs*/, new double[]{ 3.0 } /*stageLbs*/,
+    0.05 /*frictionUp*/, -0.02 /*frictionDown*/,
+    new double[]{ 1.5 }, new Supplier[]{ indexer::getPieceCount },
+    () -> 90.0)) // fixed vertical elevator
+```
 ```
 
 ### What each vendor supports

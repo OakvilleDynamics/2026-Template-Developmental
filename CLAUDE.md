@@ -73,8 +73,9 @@ src/main/java/frc/robot/
     └── motors/                             (new — mechanism motor abstraction)
         ├── ffProvider.java
         ├── motorConstants.java
+        ├── motorModels.java                ← motor datasheet constants (kT, stall, free speed)
         ├── mechanismConfig.java
-        ├── mechanismUnit.java
+        ├── mechanismUnit.java              ← includes static nested class FF (physics FF library)
         ├── CTREMechanismUnit.java
         ├── REVMechanismUnit.java
         └── NovaMechanismUnit.java
@@ -105,6 +106,8 @@ Defined once in `RobotContainer`. Propagates through the constructor chain to `v
 ### 5. Mechanism subsystems never touch vendor motor APIs directly
 
 All mechanism motor control routes through `mechanismUnit` in `util/motors/`. No subsystem imports `com.revrobotics`, `com.ctre`, or `com.thethriftybot` directly. Instantiate via `mechanismUnit.create(mechanismConfig)` — the factory returns the correct vendor implementation transparently.
+
+Feed-forward voltages are computed from first principles using `mechanismUnit.FF` factories and motor constants from `motorModels.java`. Do not use empirical `kG` calibration constants — use the physics-based factories which derive voltages from `stallTorqueNm` and `gearRatio`.
 
 This makes swapping a motor controller a one-line config change. See `docs/ARCHITECTURE.md` — Mechanism Motor Abstraction for full details.
 
