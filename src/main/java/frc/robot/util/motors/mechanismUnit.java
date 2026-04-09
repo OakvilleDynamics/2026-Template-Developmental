@@ -4,9 +4,11 @@ import java.util.function.Supplier;
 
 import edu.wpi.first.util.datalog.*;
 import edu.wpi.first.wpilibj.DataLogManager;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 import frc.robot.subsystems.swerveDrive.driveOdometryState;
+import frc.robot.util.units;
 
 /**
  * mechanismUnit.java
@@ -31,10 +33,8 @@ import frc.robot.subsystems.swerveDrive.driveOdometryState;
  *   • SmartDashboard telemetry publishing
  *
  * ─── CALL PATTERN IN SUBSYSTEM PERIODIC ──────────────────────────────────────
- *   // Once per loop — in the subsystem's periodic():
- *   arm.updateEncoderSync();   // only if FollowMode.ENCODER_SYNC
+ *   // One call per loop — encoder sync, FF, PID tuning, and telemetry are automatic:
  *   arm.setPosition(targetDeg);
- *   arm.logTelemetry();
  *
  * ─── THREAD SAFETY ───────────────────────────────────────────────────────────
  *   All methods are intended to be called from the WPILib robot periodic thread
@@ -48,6 +48,11 @@ public abstract class mechanismUnit {
 
     // ── Live PID gains (read back from SmartDashboard each loop) ─────────────
     protected double kP, kI, kD, kS, kV, kA;
+
+    // ── Setpoint tracking (for isAtSetpoint) ─────────────────────────────────
+    private double  lastSetpoint              = 0.0;
+    private boolean lastSetpointIsVelocity    = false;
+    private boolean atSetpointWarningLogged   = false;
 
     // ── Acceleration estimation (finite difference) ───────────────────────────
     private double prevVelocityRps = 0.0;
@@ -133,6 +138,13 @@ public abstract class mechanismUnit {
 
         initLogEntries();
         publishPIDToDashboard();
+
+        if (config.setpointDeadband <= 0.0) {
+            DriverStation.reportWarning(
+                "[mechanismUnit] '" + config.name + "': setpointDeadband is not configured. "
+                + "isAtSetpoint() will always return false. "
+                + "Call withSetpointDeadband() in the mechanismConfig.Builder to enable it.", false);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -141,55 +153,65 @@ public abstract class mechanismUnit {
 
     /**
      * Command duty cycle output.
-     * Applies hardware ramp (if configured via openLoopRampSecs) or falls back
-     * to software ramp in this base class.
-     * Reads back SmartDashboard PID values and applies any changes.
+     * Runs encoder-sync correction, applies hardware or software ramp, then
+     * logs telemetry — all automatically. No additional calls needed in periodic().
      *
      * @param duty -1.0 to 1.0
      */
     public final void setDutyCycle(double duty) {
+        runEncoderSync();
         applyDashboardPIDUpdates();
         double ramped = usesHardwareDutyCycleRamp() ? duty : applyDutyCycleRamp(duty);
         applyDutyCycleImpl(ramped);
         logDutyCycle.append(ramped);
+        logTelemetry();
     }
 
     /**
      * Command velocity setpoint (mechanism shaft, rotations/second).
-     * Computes and injects tier-2 + tier-3 feed-forward each cycle.
-     * Reads back SmartDashboard PID values and applies any changes.
+     * Runs encoder-sync correction, computes and injects tier-2 + tier-3 FF,
+     * updates PID from SmartDashboard, and logs telemetry — all automatically.
+     * No additional calls needed in periodic().
      *
      * @param velocityRps target velocity (rotations/second, mechanism shaft)
      */
     public final void setVelocity(double velocityRps) {
+        runEncoderSync();
         applyDashboardPIDUpdates();
         updateAcceleration();
         double ffVolts = computeTotalFF();
         applyVelocityImpl(velocityRps, ffVolts);
+        lastSetpoint           = velocityRps;
+        lastSetpointIsVelocity = true;
         logCommandedVelocityRps.append(velocityRps);
         logAppliedFFVolts.append(ffVolts);
+        logTelemetry();
     }
 
     /**
      * Command position setpoint (mechanism shaft, degrees).
-     * Converts to rotations internally before passing to vendor implementation.
-     * Computes and injects tier-2 + tier-3 feed-forward each cycle.
-     * Reads back SmartDashboard PID values and applies any changes.
+     * Runs encoder-sync correction, computes and injects tier-2 + tier-3 FF,
+     * updates PID from SmartDashboard, and logs telemetry — all automatically.
+     * No additional calls needed in periodic().
      *
      * @param positionDeg target position (degrees, mechanism shaft)
      */
     public final void setPosition(double positionDeg) {
+        runEncoderSync();
         applyDashboardPIDUpdates();
         updateAcceleration();
         double ffVolts      = computeTotalFF();
         double positionRot  = positionDeg / 360.0;
         applyPositionImpl(positionRot, ffVolts);
+        lastSetpoint           = positionDeg;
+        lastSetpointIsVelocity = false;
         logCommandedPositionDeg.append(positionDeg);
         logAppliedFFVolts.append(ffVolts);
+        logTelemetry();
     }
 
     /**
-     * Stop the motor and reset ramp state.
+     * Stop the motor and reset ramp state. Logs final telemetry.
      * After calling stop(), the next duty cycle ramp will start from zero.
      */
     public final void stop() {
@@ -197,40 +219,19 @@ public abstract class mechanismUnit {
         rampedVelocitySetpoint   = 0.0;
         positionInitialized      = false;
         stopImpl();
-    }
-
-    /**
-     * Run encoder-sync correction for all ENCODER_SYNC followers.
-     * Call once per periodic() before the control command.
-     * No-op if followMode != ENCODER_SYNC.
-     */
-    public final void updateEncoderSync() {
-        if (config.followMode != motorConstants.FollowMode.ENCODER_SYNC) return;
-        double leaderPosRot = getPositionImpl();
-        for (int i = 1; i < config.canIds.length; i++) {
-            double followerPosRot = getFollowerPositionImpl(i);
-            double errorRot       = leaderPosRot - followerPosRot;
-            if (logSyncErrorRot != null) logSyncErrorRot.append(errorRot);
-            if (Math.abs(errorRot) > config.encoderSyncDeadbandRot) {
-                double correction = config.encoderSyncKp * errorRot;
-                correction = Math.max(-1.0, Math.min(1.0, correction));
-                applyFollowerCorrectionImpl(i, correction);
-                if (logSyncOutput != null) logSyncOutput.append(correction);
-            } else {
-                if (logSyncOutput != null) logSyncOutput.append(0.0);
-            }
-        }
+        logTelemetry();
     }
 
     /**
      * Log all telemetry for this mechanism to DataLog and SmartDashboard.
-     * Call once per periodic() — typically after the control command.
-     * Not called automatically to avoid double-logging when a subsystem
-     * issues multiple commands per loop.
+     * Called automatically by setDutyCycle(), setVelocity(), setPosition(),
+     * and stop() — no need to call this from subsystem periodic() directly.
+     * Available as public for any case where telemetry is needed without
+     * issuing a new command (e.g. reading state during disabled mode).
      */
     public final void logTelemetry() {
         double vel = getVelocityImpl();
-        double pos = getPositionImpl() * 360.0; // rotations → degrees
+        double pos = getPositionImpl() * 360.0;
 
         logActualVelocityRps.append(vel);
         logActualPositionDeg.append(pos);
@@ -247,6 +248,34 @@ public abstract class mechanismUnit {
         SmartDashboard.putNumber(dashPrefix + "MotorVoltage_V",  getMotorVoltageImpl());
         SmartDashboard.putBoolean(dashPrefix + "FwdLimit",       isForwardLimitHitImpl());
         SmartDashboard.putBoolean(dashPrefix + "RevLimit",       isReverseLimitHitImpl());
+    }
+
+    /**
+     * Run encoder-sync correction for all ENCODER_SYNC followers.
+     * Called automatically at the start of every set*() command.
+     * No-op when no followers use ENCODER_SYNC mode.
+     */
+    private void runEncoderSync() {
+        for (int i = 0; i < config.followerModes.length; i++) {
+            if (config.followerModes[i] != motorConstants.FollowMode.ENCODER_SYNC) continue;
+
+            int leaderIndex = config.followerLeaderIndices[i];
+            double leaderPosRot   = leaderIndex == 0
+                ? getPositionImpl()
+                : getFollowerPositionImpl(leaderIndex);
+            double followerPosRot = getFollowerPositionImpl(i + 1);
+            double errorRot       = leaderPosRot - followerPosRot;
+
+            if (logSyncErrorRot != null) logSyncErrorRot.append(errorRot);
+            if (Math.abs(errorRot) > config.encoderSyncDeadbandRot) {
+                double correction = config.encoderSyncKp * errorRot;
+                correction = Math.max(-1.0, Math.min(1.0, correction));
+                applyFollowerCorrectionImpl(i + 1, correction);
+                if (logSyncOutput != null) logSyncOutput.append(correction);
+            } else {
+                if (logSyncOutput != null) logSyncOutput.append(0.0);
+            }
+        }
     }
 
     // ── Getters ───────────────────────────────────────────────────────────────
@@ -271,6 +300,32 @@ public abstract class mechanismUnit {
 
     /** True if the reverse soft/hard limit is currently triggered. */
     public final boolean isReverseLimit()   { return isReverseLimitHitImpl(); }
+
+    /**
+     * Returns true when the mechanism is within its configured setpoint deadband.
+     * Uses the most recently commanded setpoint from setVelocity() or setPosition().
+     *
+     * Velocity mechanisms: compares actual RPS against the last setVelocity() value.
+     * Position mechanisms: compares actual degrees against the last setPosition() value.
+     *
+     * Always returns false if config.setpointDeadband was not set (default 0.0).
+     * A warning is logged to the driver station the first time this is called
+     * without a deadband configured — and once at construction time.
+     */
+    public final boolean isAtSetpoint() {
+        if (config.setpointDeadband <= 0.0) {
+            if (!atSetpointWarningLogged) {
+                DriverStation.reportWarning(
+                    "[mechanismUnit] '" + config.name + "': isAtSetpoint() called but "
+                    + "setpointDeadband is not configured — returning false. "
+                    + "Call withSetpointDeadband() in the mechanismConfig.Builder.", false);
+                atSetpointWarningLogged = true;
+            }
+            return false;
+        }
+        double actual = lastSetpointIsVelocity ? getVelocityImpl() : getPositionImpl() * 360.0;
+        return Math.abs(actual - lastSetpoint) <= config.setpointDeadband;
+    }
 
     /** The immutable config this unit was built from. */
     public final mechanismConfig getConfig() { return config; }
@@ -402,7 +457,11 @@ public abstract class mechanismUnit {
         logTempC                = new DoubleLogEntry(log,  p + "Temp_C");
         logForwardLimit         = new BooleanLogEntry(log, p + "ForwardLimit");
         logReverseLimit         = new BooleanLogEntry(log, p + "ReverseLimit");
-        if (config.followMode == motorConstants.FollowMode.ENCODER_SYNC) {
+        // Allocate sync log entries if any follower uses ENCODER_SYNC
+        boolean hasEncoderSync = false;
+        for (motorConstants.FollowMode m : config.followerModes)
+            if (m == motorConstants.FollowMode.ENCODER_SYNC) { hasEncoderSync = true; break; }
+        if (hasEncoderSync) {
             logSyncErrorRot = new DoubleLogEntry(log, p + "EncoderSync/Error_rot");
             logSyncOutput   = new DoubleLogEntry(log, p + "EncoderSync/Output");
         }
@@ -520,10 +579,15 @@ public abstract class mechanismUnit {
      */
     public static final class FF {
 
-        private static final double LBS_TO_KG  = 0.453592;
-        private static final double IN_TO_M    = 0.0254;
         private static final double G_MPS2     = 9.80665;
         private static final double V_NOMINAL  = 12.0;
+        /**
+         * Velocity below which the mechanism is considered "at rest" for friction
+         * offset direction selection. Prevents the friction addend from flipping sign
+         * due to encoder noise when the mechanism is holding position.
+         * Units: mechanism shaft rotations per second.
+         */
+        private static final double FRICTION_DEADBAND_RPS = 0.05;
 
         // No instances
         private FF() {}
@@ -549,17 +613,24 @@ public abstract class mechanismUnit {
          * Piecewise-linear feed-forward for a mechanism with a non-linear
          * restoring force (constant-force spring, surgical tubing, gas spring).
          *
-         * Calibration points are measured torques at the mechanism shaft in lb·in.
-         * Measure by holding a known force (e.g. a fish scale) at a known distance
-         * from the pivot at each angle, then multiply: torque = force_lbs × distance_in.
-         * The sign convention matches the motor output: positive torque = forward direction.
+         * Calibration points are measured torques at the mechanism shaft in lb·in,
+         * for the forward direction of rotation. When the motor rotates in reverse,
+         * the torque values are negated automatically — a spring that assists forward
+         * motion at a given angle inherently resists the same reverse motion by the
+         * same magnitude.
          *
-         * Internally converts lb·in → N·m, then uses the same torque-to-volts formula
-         * as all other FF factories: V = τ × 12V / (gearRatio × motor.stallTorqueNm).
-         *
-         * Between points: linear interpolation.
-         * Outside the calibrated range: returns 0.0 (intentionally conspicuous —
+         * Between calibration points: linear interpolation.
+         * Outside the calibrated angle range: returns 0.0 (intentionally conspicuous —
          * the PID will visibly fight the spring, flagging the gap during tuning).
+         * Within FRICTION_DEADBAND_RPS of zero velocity: applies forward-direction
+         * convention to prevent sign-flip jitter while holding position.
+         *
+         * Calibration procedure: hold a fish scale at a known distance from the pivot
+         * at each angle stop and record force_lbs × distance_in as torqueLbIn.
+         * Positive torque = spring assists the forward-rotation direction at that angle.
+         *
+         * Internally converts lb·in → N·m via units.lbIn_Nm(), then:
+         *   V = τ × 12V / (gearRatio × motor.stallTorqueNm)
          *
          * @param motor     motor model from motorModels (e.g. motorModels.NEO)
          * @param gearRatio motor rotations per mechanism shaft rotation
@@ -582,27 +653,31 @@ public abstract class mechanismUnit {
             }
 
             // Convert torques to N·m and defensive-copy angles — avoid repeated math per cycle
-            final double LB_IN_TO_NM = 0.112985;
             final double[] angles    = new double[points.length];
             final double[] torquesNm = new double[points.length];
             for (int i = 0; i < points.length; i++) {
                 angles[i]    = points[i][0];
-                torquesNm[i] = points[i][1] * LB_IN_TO_NM;
+                torquesNm[i] = units.lbIn_Nm(points[i][1]);
             }
 
             return (positionDeg, velocityRps, accelRpss) -> {
                 // Out of range → 0 intentionally (see javadoc)
                 if (positionDeg < angles[0] || positionDeg > angles[angles.length - 1]) return 0.0;
 
-                // Binary search for the containing bracket
+                // Binary search for the containing bracket, then linear interpolation
                 int lo = 0, hi = angles.length - 2;
                 while (lo < hi) {
                     int mid = (lo + hi + 1) / 2;
                     if (angles[mid] <= positionDeg) lo = mid; else hi = mid - 1;
                 }
+                double t        = (positionDeg - angles[lo]) / (angles[lo + 1] - angles[lo]);
+                double torqueNm = torquesNm[lo] + t * (torquesNm[lo + 1] - torquesNm[lo]);
 
-                double t          = (positionDeg - angles[lo]) / (angles[lo + 1] - angles[lo]);
-                double torqueNm   = torquesNm[lo] + t * (torquesNm[lo + 1] - torquesNm[lo]);
+                // Reverse rotation: negate — spring that assists forward inherently
+                // resists the same motion in reverse. Within the deadband, hold the
+                // forward convention to prevent jitter while holding position.
+                if (velocityRps < -FRICTION_DEADBAND_RPS) torqueNm = -torqueNm;
+
                 return torqueToVolts(torqueNm, gearRatio, motor);
             };
         }
@@ -650,13 +725,13 @@ public abstract class mechanismUnit {
                     "mechanismUnit.FF.rotatingArm: gamePieceTypesLbs, pieceCgDistancesIn, "
                     + "and pieceCountSuppliers must all be the same length.");
 
-            final double armKg   = armMassLbs * LBS_TO_KG;
-            final double armCgM  = armCgDistanceIn * IN_TO_M;
+            final double armKg   = units.lbs_kg(armMassLbs);
+            final double armCgM  = units.inches_m(armCgDistanceIn);
             final double[] pieceKg  = new double[gamePieceTypesLbs.length];
             final double[] pieceCgM = new double[pieceCgDistancesIn.length];
             for (int i = 0; i < pieceKg.length; i++) {
-                pieceKg[i]  = gamePieceTypesLbs[i] * LBS_TO_KG;
-                pieceCgM[i] = pieceCgDistancesIn[i] * IN_TO_M;
+                pieceKg[i]  = units.lbs_kg(gamePieceTypesLbs[i]);
+                pieceCgM[i] = units.inches_m(pieceCgDistancesIn[i]);
             }
             final Supplier<Integer>[] counts = pieceCountSuppliers;
 
@@ -666,6 +741,11 @@ public abstract class mechanismUnit {
                 for (int i = 0; i < pieceKg.length; i++) {
                     momentKgM += counts[i].get() * pieceKg[i] * pieceCgM[i];
                 }
+                // cos(positionDeg) produces the correct signed output automatically:
+                //   0°      → cos = +1.0 → positive volts (arm horizontal, full gravity load)
+                //   90°     → cos =  0.0 → zero volts (arm vertical, no gravity moment)
+                //   90–180° → cos negative → negative volts (arm past vertical; gravity now
+                //              pulls the other way, so FF must push back the other way too)
                 double torqueNm = momentKgM * G_MPS2 * Math.cos(Math.toRadians(positionDeg));
                 return torqueToVolts(torqueNm, gearRatio, motor);
             };
@@ -674,6 +754,50 @@ public abstract class mechanismUnit {
         // ─────────────────────────────────────────────────────────────────────
         // TIER 3 — Cross-system (require external subsystem references)
         // ─────────────────────────────────────────────────────────────────────
+
+        /**
+         * Gyroscopic resistance compensation for a turret that rotates a spinning flywheel.
+         *
+         * A spinning flywheel has angular momentum (L = I × ω). When the turret rotates,
+         * it changes the direction of that angular momentum vector, which requires a torque
+         * (the gyroscopic reaction torque). Without FF compensation, the turret PID must
+         * fight this load reactively, causing heading lag proportional to flywheel speed.
+         *
+         * Physics:
+         *   τ_gyro = I_flywheel × ω_flywheel × ω_turret
+         *   V_ff   = τ_gyro × 12V / (turretGearRatio × turretMotor.stallTorqueNm)
+         *
+         * Sign is self-consistent: positive turret velocity with positive flywheel spin
+         * produces positive τ (FF assists through the resistance). If flywheel direction
+         * reverses, FF sign flips automatically.
+         *
+         * I_flywheel is a fixed physical property of the flywheel assembly — provide it
+         * once at construction from a CAD model or measurement. Flywheel angular velocity
+         * is read each cycle via the supplier.
+         *
+         * This is Tier 3 because it closes over the flywheel mechanismUnit's velocity.
+         * Wire it in RobotContainer where both mechanism references exist.
+         *
+         * @param turretMotor              motor model for the turret (e.g. motorModels.MINION)
+         * @param turretGearRatio          turret motor rotations per turret shaft rotation
+         * @param flywheelMoiLbIn2         flywheel moment of inertia (lb·in²) — static, measured once
+         * @param flywheelVelocityRpsSupplier  supplies flywheel shaft RPS each cycle
+         */
+        public static ffProvider gyroscopicTurret(
+                motorModels.MotorModel turretMotor,
+                double turretGearRatio,
+                double flywheelMoiLbIn2,
+                Supplier<Double> flywheelVelocityRpsSupplier) {
+
+            final double flywheelMoiKgM2 = units.lbIn2_kgM2(flywheelMoiLbIn2);
+
+            return (positionDeg, velocityRps, accelRpss) -> {
+                double omegaFlywheel = flywheelVelocityRpsSupplier.get() * (2.0 * Math.PI);
+                double omegaTurret   = velocityRps * (2.0 * Math.PI);
+                double torqueNm      = flywheelMoiKgM2 * omegaFlywheel * omegaTurret;
+                return torqueToVolts(torqueNm, turretGearRatio, turretMotor);
+            };
+        }
 
         /**
          * Gravity compensation for a multi-stage linear elevator.
@@ -732,12 +856,12 @@ public abstract class mechanismUnit {
                     "mechanismUnit.FF.multiStageElevator: gamePieceTypesLbs and "
                     + "pieceCountSuppliers must be the same length.");
 
-            final double spoolM     = spoolRadiusIn * IN_TO_M;
-            final double carriageKg = carriageMassLbs * LBS_TO_KG;
+            final double spoolM     = units.inches_m(spoolRadiusIn);
+            final double carriageKg = units.lbs_kg(carriageMassLbs);
             final double[] stageKg  = new double[stageMassesLbs.length];
-            for (int i = 0; i < stageKg.length; i++) stageKg[i] = stageMassesLbs[i] * LBS_TO_KG;
+            for (int i = 0; i < stageKg.length; i++) stageKg[i] = units.lbs_kg(stageMassesLbs[i]);
             final double[] pieceKg  = new double[gamePieceTypesLbs.length];
-            for (int i = 0; i < pieceKg.length; i++) pieceKg[i] = gamePieceTypesLbs[i] * LBS_TO_KG;
+            for (int i = 0; i < pieceKg.length; i++) pieceKg[i] = units.lbs_kg(gamePieceTypesLbs[i]);
             final Supplier<Integer>[] counts = pieceCountSuppliers;
 
             return (positionDeg, velocityRps, accelRpss) -> {
@@ -751,7 +875,11 @@ public abstract class mechanismUnit {
                 double forceN       = totalKg * G_MPS2 * Math.sin(elevAngleRad);
                 double torqueNm     = forceN * spoolM;
                 double baseVolts    = torqueToVolts(torqueNm, gearRatio, motor);
-                double friction     = velocityRps >= 0 ? frictionOffsetVoltsUp : frictionOffsetVoltsDown;
+                // Deadband prevents the friction addend from flipping due to encoder
+                // noise while holding. Within ±FRICTION_DEADBAND_RPS, treat as holding
+                // and apply the up-direction bias.
+                double friction = velocityRps < -FRICTION_DEADBAND_RPS
+                                  ? frictionOffsetVoltsDown : frictionOffsetVoltsUp;
                 return baseVolts + friction;
             };
         }
@@ -818,13 +946,13 @@ public abstract class mechanismUnit {
                     "mechanismUnit.FF.pivotingElevator: gamePieceTypesLbs and "
                     + "pieceCountSuppliers must be the same length.");
 
-            final double cgDistM       = cgDistanceFromPivotIn * IN_TO_M;
-            final double cgOffsetM     = cgOffsetFromRobotCenterIn * IN_TO_M;
-            final double carriageKg    = carriageMassLbs * LBS_TO_KG;
+            final double cgDistM       = units.inches_m(cgDistanceFromPivotIn);
+            final double cgOffsetM     = units.inches_m(cgOffsetFromRobotCenterIn);
+            final double carriageKg    = units.lbs_kg(carriageMassLbs);
             final double[] stageKg     = new double[stageMassesLbs.length];
-            for (int i = 0; i < stageKg.length; i++) stageKg[i] = stageMassesLbs[i] * LBS_TO_KG;
+            for (int i = 0; i < stageKg.length; i++) stageKg[i] = units.lbs_kg(stageMassesLbs[i]);
             final double[] pieceKg     = new double[gamePieceTypesLbs.length];
-            for (int i = 0; i < pieceKg.length; i++) pieceKg[i] = gamePieceTypesLbs[i] * LBS_TO_KG;
+            for (int i = 0; i < pieceKg.length; i++) pieceKg[i] = units.lbs_kg(gamePieceTypesLbs[i]);
             final Supplier<Integer>[] counts = pieceCountSuppliers;
 
             return (positionDeg, velocityRps, accelRpss) -> {
@@ -836,7 +964,11 @@ public abstract class mechanismUnit {
                 double pivotRad = Math.toRadians(positionDeg);
 
                 // ── 1. Gravity ────────────────────────────────────────────────
-                // cos(pivot): max at 0° (horizontal), zero at 90° (vertical)
+                // cos(pivotRad) produces the correct signed output automatically:
+                //   0°      → cos = +1.0 → positive volts (horizontal, full gravity load)
+                //   90°     → cos =  0.0 → zero volts (vertical, no gravity moment)
+                //   90–180° → cos negative → negative volts (past vertical; gravity
+                //              now pulls the other way, FF must oppose it the other way)
                 double torqueGrav    = totalKg * G_MPS2 * cgDistM * Math.cos(pivotRad);
                 double voltsGrav     = torqueToVolts(torqueGrav, gearRatio, motor);
 
@@ -857,7 +989,11 @@ public abstract class mechanismUnit {
                 double torqueCentripetal = totalKg * aCentripetal * cgDistM * Math.sin(pivotRad);
                 double voltsCentripetal = torqueToVolts(torqueCentripetal, gearRatio, motor);
 
-                double friction = velocityRps >= 0 ? frictionOffsetVoltsUp : frictionOffsetVoltsDown;
+                // Deadband prevents the friction addend from flipping due to encoder
+                // noise while holding. Within ±FRICTION_DEADBAND_RPS, treat as holding
+                // and apply the up-direction bias.
+                double friction = velocityRps < -FRICTION_DEADBAND_RPS
+                                  ? frictionOffsetVoltsDown : frictionOffsetVoltsUp;
                 return voltsGrav + voltsInertia + voltsCentripetal + friction;
             };
         }

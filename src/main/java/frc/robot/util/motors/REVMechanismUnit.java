@@ -160,17 +160,23 @@ public class REVMechanismUnit extends mechanismUnit {
     private void configureFollowers() {
         for (int i = 0; i < followers.length; i++) {
             boolean invert = i < config.followerInverted.length && config.followerInverted[i];
+            motorConstants.FollowMode mode = i < config.followerModes.length
+                ? config.followerModes[i] : motorConstants.FollowMode.NONE;
+            // Resolve the SparkBase instance for this follower's designated leader.
+            // leaderIndex 0 → main leader; N → followers[N-1].
+            int leaderIndex = config.followerLeaderIndices[i];
+            SparkBase leaderMotor = leaderIndex == 0 ? leader : followers[leaderIndex - 1];
 
-            if (config.followMode == motorConstants.FollowMode.MECHANICAL) {
-                // Native REV hardware follow
+            if (mode == motorConstants.FollowMode.MECHANICAL) {
+                // Native REV hardware follow against designated leader motor instance.
                 SparkBaseConfig followerCfg = isFlex ? new SparkFlexConfig() : new SparkMaxConfig();
-                followerCfg.follow(leader, invert);
+                followerCfg.follow(leaderMotor, invert);
                 followers[i].configure(followerCfg,
                     ResetMode.kResetSafeParameters,
                     PersistMode.kPersistParameters);
 
-            } else if (config.followMode == motorConstants.FollowMode.ENCODER_SYNC) {
-                // Independent configuration — abstract base handles sync corrections
+            } else if (mode == motorConstants.FollowMode.ENCODER_SYNC) {
+                // Independent configuration — abstract base handles sync corrections.
                 SparkBaseConfig followerCfg = isFlex ? new SparkFlexConfig() : new SparkMaxConfig();
                 followerCfg.inverted(invert);
                 followerCfg.idleMode(config.brakeOnNeutral ? IdleMode.kBrake : IdleMode.kCoast);

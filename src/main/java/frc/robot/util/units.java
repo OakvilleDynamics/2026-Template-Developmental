@@ -71,4 +71,9 @@ public final class units {
     // ── Moment of inertia ─────────────────────────────────────────────────────
 
     public static double lbIn2_kgM2(double lbIn2)  { return lbIn2 * 2.92639e-4; }
+
+    // ── Torque ────────────────────────────────────────────────────────────────
+
+    /** Pound-inches → Newton-meters. Used for spring/mechanism FF calibration. */
+    public static double lbIn_Nm(double lbIn)       { return lbIn * 0.112985; }
 }

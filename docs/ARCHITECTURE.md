@@ -207,16 +207,63 @@ With `mechanismUnit`, upgrading a mechanism from NEO to Nova is one line change:
 
 ```java
 mechanismUnit arm = mechanismUnit.create(
-    new mechanismConfig.Builder("Arm", Vendor.REV_SPARKMAX)
-        .canIds(new int[]{11})
-        .gearRatio(125.0)
-        .pid(new double[]{0.3, 0, 0.01, 0, 0.05, 0})
-        .withTier2FF(mechanismConfig.armFF(0.35))
-        .motionCruiseVelocityRps(20)
-        .motionAccelerationRpss(80)
+    new mechanismConfig.Builder("Arm",
+            new int[]{ 11 },
+            new motorConstants.Vendor[]{ motorConstants.Vendor.REV_SPARKMAX })
+        .withGearRatio(125.0)
+        .withPID(new double[]{ 0.3, 0, 0.01, 0, 0.05, 0 })
+        .withSetpointDeadband(1.0)   // ±1°
+        .withTier2FF(mechanismUnit.FF.rotatingArm(
+            motorModels.NEO, 125.0,
+            3.5, 12.0,               // arm: 3.5 lbs, CG 12 in from pivot
+            new double[0], new double[0], new Supplier[0]))
+        .withMotionProfile(20, 80, 0)
         .build()
 );
 ```
+
+### Follower topology
+
+Followers are configured via `mechanismConfig.Builder`. Two builder methods are available:
+
+**`withFollowMode(mode, invertedArray)`** — convenience for simple topologies where all followers use the same mode and all follow the main leader (canIds[0]):
+
+```java
+// Two motors, both MECHANICAL followers of the leader
+.withFollowMode(motorConstants.FollowMode.MECHANICAL, new boolean[]{ false, true })
+```
+
+**`withFollowerConfig(modes[], inverted[], leaderIndices[])`** — full per-follower control. Each follower independently declares its mode and which motor in canIds[] it tracks. This enables mixed-mode topologies and follower-of-follower chains:
+
+```java
+// 4-motor flywheel:
+//   canIds[0]=10 (leader A)
+//   canIds[1]=11 (B — MECHANICAL to A)
+//   canIds[2]=12 (C — ENCODER_SYNC to A, non-rigid coupling on opposite side)
+//   canIds[3]=13 (D — MECHANICAL to C, rigidly coupled to C)
+new mechanismConfig.Builder("Flywheel",
+        new int[]{ 10, 11, 12, 13 },
+        new motorConstants.Vendor[]{ REV_SPARKFLEX, REV_SPARKFLEX,
+                                     REV_SPARKFLEX, REV_SPARKFLEX })
+    .withFollowerConfig(
+        new motorConstants.FollowMode[]{
+            motorConstants.FollowMode.MECHANICAL,    // B → A
+            motorConstants.FollowMode.ENCODER_SYNC,  // C → A
+            motorConstants.FollowMode.MECHANICAL },  // D → C
+        new boolean[]{ false, false, false },
+        new int[]{ 0, 0, 2 })  // B→canIds[0], C→canIds[0], D→canIds[2]
+```
+
+`withFollowMode()` is backward-compatible — it fills `followerModes[]` and `followerLeaderIndices[]` uniformly, so existing single-mode configs require no changes.
+
+**Follow mode semantics:**
+
+| Mode | Behavior | Use when |
+|---|---|---|
+| `MECHANICAL` | Hardware follow — controller mirrors leader output directly, zero Rio CPU after construction | Motors share a rigid mechanical linkage (same shaft, belt, or chain with no slip) |
+| `ENCODER_SYNC` | Software follow — Rio reads both encoders each loop, applies proportional duty cycle correction when drift exceeds deadband | Non-rigid coupling where slip is possible and must be detected/corrected |
+
+Nova does not support `ENCODER_SYNC` — its follow API does not expose independent encoder readback on following devices. A construction-time exception is thrown if attempted.
 
 ### Units at the public interface
 
@@ -251,10 +298,11 @@ Available factories in `mechanismUnit.FF`:
 
 | Factory | Tier | Use case |
 |---|---|---|
-| `springTurret(points)` | 2 | Piecewise-linear spring/surgical-tubing compensation |
-| `rotatingArm(motor, gearRatio, ...)` | 2 | Arm with variable CG (game pieces at different distances) |
-| `multiStageElevator(motor, gearRatio, ...)` | 3 | Multi-stage linear elevator; angle supplied at runtime |
-| `pivotingElevator(motor, gearRatio, ...)` | 3 | Elevator on a pivoting base + full drivetrain inertia/centripetal |
+| `springTurret(motor, gearRatio, points)` | 2 | Piecewise-linear spring/surgical-tubing compensation. Calibration table measured in one direction; reverse rotation auto-negates the torques. Returns 0V outside the calibrated angle range. Deadband prevents direction flip while holding. |
+| `rotatingArm(motor, gearRatio, ...)` | 2 | Arm with variable CG (game pieces at different distances). `cos(position)` produces correctly signed output: positive 0°–90°, zero at 90°, negative 90°–180°. |
+| `gyroscopicTurret(motor, gearRatio, moiLbIn2, velocitySupplier)` | 3 | Compensates gyroscopic resistance on a turret that rotates a spinning flywheel. τ = I_flywheel × ω_flywheel × ω_turret. Static flywheel MOI provided at construction; flywheel velocity read each cycle via supplier. Pairs additively with `springTurret` on the same mechanism. |
+| `multiStageElevator(motor, gearRatio, ...)` | 3 | Multi-stage linear elevator; angle supplied at runtime. Friction offset is deadbanded — holds up-direction bias within ±`FRICTION_DEADBAND_RPS`. |
+| `pivotingElevator(motor, gearRatio, ...)` | 3 | Elevator on a pivoting base + full drivetrain inertia/centripetal. Same signed gravity output and friction deadband as above. |
 
 Motor constants live in `motorModels.java` (sourced from vendor datasheets). Pass the appropriate constant as the first argument:
 
@@ -284,7 +332,8 @@ Motor constants live in `motorModels.java` (sourced from vendor datasheets). Pas
 | Motion profiling | MotionMagic (trapezoidal + S-curve) | MAXMotion (trapezoidal) | Software step-limiter (Rio) |
 | Stator current | ✓ | — (supply current only) | ✓ |
 | Hardware duty cycle ramp | ✓ | ✓ | ✓ |
-| ENCODER_SYNC following | ✓ | ✓ | ✗ (no independent encoder readback on follower) |
+| ENCODER_SYNC following | ✓ | ✓ | ✗ (Nova follow() API blocks independent readback) |
+| Per-follower mixed topology | ✓ | ✓ | ✓ (MECHANICAL only) |
 | Gear ratio (native) | `SensorToMechanismRatio` | `positionConversionFactor` | Manual scaling in wrapper |
 
 ### Live PID tuning
@@ -297,7 +346,7 @@ Each instance writes per-mechanism DataLog entries under `/[MechanismName]/`:
 
 `CommandedVelocity_rps`, `ActualVelocity_rps`, `CommandedPosition_deg`, `ActualPosition_deg`, `DutyCycle`, `AppliedFF_volts`, `SupplyCurrent_A`, `StatorCurrent_A`, `MotorVoltage_V`, `Temp_C`, `ForwardLimit`, `ReverseLimit`
 
-Plus `EncoderSync/Error_rot` and `EncoderSync/Output` when using ENCODER_SYNC follower mode.
+Plus `EncoderSync/Error_rot` and `EncoderSync/Output` when any follower uses ENCODER_SYNC mode.
 
 ---
 
@@ -327,6 +376,7 @@ When you're reading or writing values:
 | Field target positions | feet | meters |
 | Robot mass | lbs | kg |
 | Moment of inertia | lb·in² | kg·m² |
+| Mechanism torque (FF calibration) | lb·in | N·m |
 | Angles | degrees (at interface) | radians |
 
 All conversion functions live in `util/units.java`. Never convert inline — use those functions.
@@ -424,4 +474,4 @@ These are known gaps — in priority order for competition readiness:
 
 ---
 
-*Last updated: 2026 preseason — Ryan + Claude (Code) | mechanismUnit abstraction added*
+*Last updated: 2026 preseason — Ryan + Claude (Code) | mechanismUnit: per-follower mixed topology (withFollowerConfig), follower-of-follower leader indices; FF library: gyroscopicTurret, springTurret direction-aware, friction deadbanding, signed gravity output; shooterMechanism pre-packaged subsystem; setpointDeadband + isAtSetpoint on mechanismUnit*

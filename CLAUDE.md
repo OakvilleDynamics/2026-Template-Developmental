@@ -70,15 +70,17 @@ src/main/java/frc/robot/
 └── util/
     ├── units.java
     ├── AprilTagFieldCal.java
-    └── motors/                             (new — mechanism motor abstraction)
-        ├── ffProvider.java
-        ├── motorConstants.java
-        ├── motorModels.java                ← motor datasheet constants (kT, stall, free speed)
-        ├── mechanismConfig.java
-        ├── mechanismUnit.java              ← includes static nested class FF (physics FF library)
-        ├── CTREMechanismUnit.java
-        ├── REVMechanismUnit.java
-        └── NovaMechanismUnit.java
+    ├── motors/                             (mechanism motor abstraction)
+    │   ├── ffProvider.java
+    │   ├── motorConstants.java
+    │   ├── motorModels.java                ← motor datasheet constants (kT, stall, free speed)
+    │   ├── mechanismConfig.java
+    │   ├── mechanismUnit.java              ← includes static nested class FF (physics FF library)
+    │   ├── CTREMechanismUnit.java
+    │   ├── REVMechanismUnit.java
+    │   └── NovaMechanismUnit.java
+    └── mechanisms/                         (pre-packaged mechanism subsystems)
+        └── shooterMechanism.java           ← flywheel + optional turret + optional hood
 ```
 
 ---
@@ -108,6 +110,12 @@ Defined once in `RobotContainer`. Propagates through the constructor chain to `v
 All mechanism motor control routes through `mechanismUnit` in `util/motors/`. No subsystem imports `com.revrobotics`, `com.ctre`, or `com.thethriftybot` directly. Instantiate via `mechanismUnit.create(mechanismConfig)` — the factory returns the correct vendor implementation transparently.
 
 Feed-forward voltages are computed from first principles using `mechanismUnit.FF` factories and motor constants from `motorModels.java`. Do not use empirical `kG` calibration constants — use the physics-based factories which derive voltages from `stallTorqueNm` and `gearRatio`.
+
+Available factories: `springTurret` (piecewise-linear spring compensation — single calibration table, reverse rotation auto-negates torques, 0V outside calibrated range, deadbanded direction switching), `rotatingArm` (gravity with variable game-piece CG, signed cos output across 0°–180°), `gyroscopicTurret` (Tier 3, compensates flywheel angular momentum resistance to turret rotation — τ = I × ω_flywheel × ω_turret, pairs additively with springTurret), `multiStageElevator` (Tier 3, friction offset deadbanded), `pivotingElevator` (Tier 3, gravity + drivetrain inertia + centripetal, friction offset deadbanded). All unit conversions route through `units.java` — no inline constants in the FF class.
+
+`mechanismConfig` supports per-follower topology via `withFollowerConfig(modes[], inverted[], leaderIndices[])`. Each follower independently declares MECHANICAL or ENCODER_SYNC mode and which motor in `canIds[]` it tracks — enabling mixed-mode and follower-of-follower chains (e.g. a 4-motor flywheel where two independent sides each have a local mechanical follower). `withFollowMode()` remains available as a convenience for simple same-mode topologies. Nova supports MECHANICAL only.
+
+`mechanismUnit.isAtSetpoint()` compares actual position/velocity against the last commanded setpoint using `config.setpointDeadband`. Requires `withSetpointDeadband()` to be set in the config — warns to DS at construction and on first call otherwise.
 
 This makes swapping a motor controller a one-line config change. See `docs/ARCHITECTURE.md` — Mechanism Motor Abstraction for full details.
 
@@ -139,6 +147,7 @@ Architectural decisions are discussed and agreed before any code is written. Exp
 | Angle | degrees | radians | `units.deg_rad()` |
 | Robot mass | lbs | kg | `units.lbs_kg()` |
 | Moment of inertia | lb·in² | kg·m² | `units.lbIn2_kgM2()` |
+| Mechanism torque (FF calibration) | lb·in | N·m | `units.lbIn_Nm()` |
 
 ---
 
@@ -333,7 +342,9 @@ Each new season:
 | Replace `buildTagReading()` delta calc with full reprojection geometry | `visionSubsystem.java` |
 | Update PhotonVision API (deprecated `getLatestResult()`, `update()`) | `visionSubsystem.java` |
 | Update `getPositionError()` (deprecated in WPILib 2026) | `swerveDrive.java` |
-| Write first mechanism subsystem using `mechanismUnit` (validate abstraction on hardware) | new subsystem |
+| Validate `mechanismUnit` abstraction on hardware (first real mechanism deploy) | new mechanism subsystem |
+| Measure flywheel MOI for `gyroscopicTurret` FF (lb·in² from CAD or physical measurement) | `shooterMechanism` usage site |
+| Measure spring torque calibration table for `springTurret` | `shooterMechanism` usage site |
 
 ---
 

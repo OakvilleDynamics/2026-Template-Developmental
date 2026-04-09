@@ -168,16 +168,21 @@ public class CTREMechanismUnit extends mechanismUnit {
     private void configureFollowers() {
         for (int i = 0; i < followers.length; i++) {
             boolean invert = i < config.followerInverted.length && config.followerInverted[i];
+            motorConstants.FollowMode mode = i < config.followerModes.length
+                ? config.followerModes[i] : motorConstants.FollowMode.NONE;
+            // Resolve the CAN ID of this follower's designated leader
+            int leaderCanId = config.canIds[config.followerLeaderIndices[i]];
 
-            if (config.followMode == motorConstants.FollowMode.MECHANICAL) {
-                // Hardware follower — zero Rio CPU per cycle after this call
+            if (mode == motorConstants.FollowMode.MECHANICAL) {
+                // Hardware follower — zero Rio CPU per cycle after this call.
+                // Follows the designated leader CAN ID (may be another follower).
                 MotorAlignmentValue alignment = invert
                     ? MotorAlignmentValue.Opposed
                     : MotorAlignmentValue.Aligned;
-                followers[i].setControl(new Follower(config.canIds[0], alignment));
-            } else if (config.followMode == motorConstants.FollowMode.ENCODER_SYNC) {
-                // Software follower — encoder-sync loop in abstract base handles correction
-                // Configure follower independently (no Follower request)
+                followers[i].setControl(new Follower(leaderCanId, alignment));
+            } else if (mode == motorConstants.FollowMode.ENCODER_SYNC) {
+                // Software follower — encoder-sync loop in abstract base handles correction.
+                // Configure independently (no Follower request).
                 TalonFXConfiguration followerCfg = new TalonFXConfiguration();
                 followerCfg.MotorOutput.Inverted = invert
                     ? InvertedValue.Clockwise_Positive
@@ -191,7 +196,6 @@ public class CTREMechanismUnit extends mechanismUnit {
                 followerCfg.CurrentLimits.StatorCurrentLimitEnable = true;
                 followers[i].getConfigurator().apply(followerCfg);
 
-                // Register follower signals too
                 BaseStatusSignal.setUpdateFrequencyForAll(swerveConstants.SIGNAL_UPDATE_HZ,
                     followers[i].getPosition(), followers[i].getVelocity());
                 if (swerveConstants.OPTIMIZE_CAN_UTILIZATION) followers[i].optimizeBusUtilization();

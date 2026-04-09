@@ -66,12 +66,31 @@ public final class mechanismConfig {
     /** Vendor for each motor, parallel to canIds. All must be identical. */
     public final motorConstants.Vendor[] vendors;
 
-    /** Whether each follower is inverted relative to leader.
-     *  Length = canIds.length - 1. Index 0 = first follower. */
+    /** Whether each follower is inverted relative to its designated leader.
+     *  Length = canIds.length - 1. Parallel to followerModes and followerLeaderIndices. */
     public final boolean[] followerInverted;
 
-    /** Follow mode for all followers in this mechanism. */
-    public final motorConstants.FollowMode followMode;
+    /**
+     * Follow mode per follower. Length = canIds.length - 1.
+     * Index 0 = first follower (canIds[1]), etc.
+     * Use withFollowMode() to set all followers to the same mode,
+     * or withFollowerConfig() for per-follower topology.
+     */
+    public final motorConstants.FollowMode[] followerModes;
+
+    /**
+     * Leader index per follower (0-based index into canIds[]).
+     * Length = canIds.length - 1. Parallel to followerModes.
+     *
+     * 0 = follows the main leader (canIds[0]) — the default for all followers.
+     * N = follows canIds[N], enabling follower-of-follower topologies.
+     *
+     * Example 4-motor topology:
+     *   canIds = {10, 11, 12, 13}
+     *   followerLeaderIndices = {0, 0, 2}
+     *   → 11 follows 10, 12 follows 10, 13 follows canIds[2]=12
+     */
+    public final int[] followerLeaderIndices;
 
     // ── Mechanical ────────────────────────────────────────────────────────────
 
@@ -164,6 +183,16 @@ public final class mechanismConfig {
      */
     public final ffProvider tier3FF;
 
+    // ── Setpoint tracking ─────────────────────────────────────────────────────
+
+    /**
+     * Tolerance used by mechanismUnit.isAtSetpoint().
+     * For position mechanisms: degrees (mechanism shaft).
+     * For velocity mechanisms: rotations/second (mechanism shaft).
+     * Default: 0.0 (disabled — isAtSetpoint() always returns false until set).
+     */
+    public final double setpointDeadband;
+
     // ── Neutral behavior ──────────────────────────────────────────────────────
 
     /** true = brake mode (resist movement when not commanded).
@@ -206,7 +235,8 @@ public final class mechanismConfig {
         this.canIds                  = b.canIds;
         this.vendors                 = b.vendors;
         this.followerInverted        = b.followerInverted;
-        this.followMode              = b.followMode;
+        this.followerModes           = b.followerModes;
+        this.followerLeaderIndices   = b.followerLeaderIndices;
         this.gearRatio               = b.gearRatio;
         this.inverted                = b.inverted;
         this.pid                     = b.pid;
@@ -221,6 +251,7 @@ public final class mechanismConfig {
         this.motionJerkRpss3         = b.motionJerkRpss3;
         this.tier2FF                 = b.tier2FF;
         this.tier3FF                 = b.tier3FF;
+        this.setpointDeadband        = b.setpointDeadband;
         this.brakeOnNeutral          = b.brakeOnNeutral;
         this.encoderSyncDeadbandRot  = b.encoderSyncDeadbandRot;
         this.encoderSyncKp           = b.encoderSyncKp;
@@ -277,8 +308,9 @@ public final class mechanismConfig {
         private final motorConstants.Vendor[] vendors;
 
         // Optional — defaults
-        private boolean[] followerInverted        = new boolean[0];
-        private motorConstants.FollowMode followMode = motorConstants.FollowMode.NONE;
+        private boolean[] followerInverted             = new boolean[0];
+        private motorConstants.FollowMode[] followerModes        = new motorConstants.FollowMode[0];
+        private int[] followerLeaderIndices            = new int[0];
         private double gearRatio                  = 1.0;
         private boolean inverted                  = false;
         private double[] pid                      = { 0, 0, 0, 0, 0, 0 };
@@ -293,6 +325,7 @@ public final class mechanismConfig {
         private double motionJerkRpss3            = 0.0;
         private ffProvider tier2FF                = noFF();
         private ffProvider tier3FF                = noFF();
+        private double setpointDeadband           = 0.0;
         private boolean brakeOnNeutral            = true;
         private double encoderSyncDeadbandRot     = motorConstants.ENCODER_SYNC_DEADBAND_ROT;
         private double encoderSyncKp              = motorConstants.ENCODER_SYNC_KP_DEFAULT;
@@ -315,10 +348,62 @@ public final class mechanismConfig {
             this.vendors = vendors;
         }
 
-        /** Configure follower behavior. followerInverted[] is parallel to canIds[1..n]. */
+        /**
+         * Convenience method — sets all followers to the same follow mode with
+         * all following canIds[0] (the main leader). Use for simple 1-leader topologies.
+         *
+         * For mixed-mode or follower-of-follower topologies, use withFollowerConfig().
+         *
+         * @param mode             follow mode applied to every follower
+         * @param followerInverted inversion per follower, parallel to canIds[1..n]
+         */
         public Builder withFollowMode(motorConstants.FollowMode mode, boolean[] followerInverted) {
-            this.followMode        = mode;
-            this.followerInverted  = followerInverted;
+            int count = canIds.length - 1;
+            this.followerInverted       = followerInverted;
+            this.followerModes          = new motorConstants.FollowMode[count];
+            this.followerLeaderIndices  = new int[count];
+            for (int i = 0; i < count; i++) {
+                this.followerModes[i]         = mode;
+                this.followerLeaderIndices[i] = 0;  // all follow canIds[0]
+            }
+            return this;
+        }
+
+        /**
+         * Full per-follower topology configuration.
+         * Use when followers have different modes or a follower must follow another
+         * follower rather than the main leader.
+         *
+         * All three arrays must be the same length = canIds.length - 1.
+         *
+         * @param modes              follow mode per follower
+         * @param followerInverted   inversion per follower
+         * @param leaderIndices      0-based index into canIds[] that each follower tracks.
+         *                           0 = main leader. N = canIds[N] (follower-of-follower).
+         */
+        public Builder withFollowerConfig(motorConstants.FollowMode[] modes,
+                                          boolean[] followerInverted,
+                                          int[] leaderIndices) {
+            int count = canIds.length - 1;
+            if (modes.length != count || followerInverted.length != count
+                    || leaderIndices.length != count)
+                throw new IllegalArgumentException(
+                    "mechanismConfig '" + name + "': withFollowerConfig arrays must each have "
+                    + "length canIds.length - 1 (" + count + ").");
+            for (int i = 0; i < count; i++) {
+                if (leaderIndices[i] < 0 || leaderIndices[i] >= canIds.length)
+                    throw new IllegalArgumentException(
+                        "mechanismConfig '" + name + "': followerLeaderIndices[" + i + "] = "
+                        + leaderIndices[i] + " is out of range for canIds length "
+                        + canIds.length + ".");
+                if (leaderIndices[i] == i + 1)
+                    throw new IllegalArgumentException(
+                        "mechanismConfig '" + name + "': followerLeaderIndices[" + i
+                        + "] points to itself (canIds[" + (i + 1) + "]).");
+            }
+            this.followerModes         = modes;
+            this.followerInverted      = followerInverted;
+            this.followerLeaderIndices = leaderIndices;
             return this;
         }
 
@@ -409,6 +494,17 @@ public final class mechanismConfig {
          */
         public Builder withTier3FF(ffProvider provider) {
             this.tier3FF = provider;
+            return this;
+        }
+
+        /**
+         * Set the setpoint tolerance for isAtSetpoint().
+         * Position mechanisms: degrees (mechanism shaft).
+         * Velocity mechanisms: rotations/second (mechanism shaft).
+         * Default: 0.0 (isAtSetpoint() always returns false until this is set).
+         */
+        public Builder withSetpointDeadband(double deadband) {
+            this.setpointDeadband = deadband;
             return this;
         }
 

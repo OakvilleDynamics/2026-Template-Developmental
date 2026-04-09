@@ -4,6 +4,8 @@ import com.thethriftybot.devices.ThriftyNova;
 import com.thethriftybot.devices.ThriftyNova.EncoderType;
 import com.thethriftybot.devices.ThriftyNova.PIDSlot;
 
+import edu.wpi.first.wpilibj.DriverStation;
+
 /**
  * NovaMechanismUnit.java
  * PATH: src/main/java/frc/robot/util/motors/NovaMechanismUnit.java
@@ -62,12 +64,14 @@ public class NovaMechanismUnit extends mechanismUnit {
     public NovaMechanismUnit(mechanismConfig config) {
         super(config);
 
-        if (config.followMode == motorConstants.FollowMode.ENCODER_SYNC) {
-            throw new IllegalArgumentException(
-                "NovaMechanismUnit '" + config.name + "': ENCODER_SYNC follow mode is not "
-                + "supported for ThriftyBot Nova. Nova's follow() API mirrors the leader "
-                + "output over CAN; independent encoder readback on following devices is "
-                + "not reliable in this mode. Use MECHANICAL follow mode instead.");
+        for (int i = 0; i < config.followerModes.length; i++) {
+            if (config.followerModes[i] == motorConstants.FollowMode.ENCODER_SYNC) {
+                throw new IllegalArgumentException(
+                    "NovaMechanismUnit '" + config.name + "': ENCODER_SYNC follow mode is not "
+                    + "supported for ThriftyBot Nova (follower index " + i + "). Nova's follow() "
+                    + "API mirrors the leader output over CAN; independent encoder readback on "
+                    + "following devices is not reliable in this mode. Use MECHANICAL instead.");
+            }
         }
 
         this.gearRatio            = config.gearRatio;
@@ -124,18 +128,21 @@ public class NovaMechanismUnit extends mechanismUnit {
 
     private void configureFollowers() {
         for (int i = 0; i < followers.length; i++) {
-            if (config.followMode == motorConstants.FollowMode.MECHANICAL) {
+            motorConstants.FollowMode mode = i < config.followerModes.length
+                ? config.followerModes[i] : motorConstants.FollowMode.NONE;
+            if (mode == motorConstants.FollowMode.MECHANICAL) {
                 boolean invert = i < config.followerInverted.length && config.followerInverted[i];
                 if (invert) {
-                    System.out.println("[WARNING] NovaMechanismUnit '" + config.name
-                        + "': follower " + i + " requested inverted follow, but Nova's "
-                        + "follow() API does not support inversion in software. "
-                        + "Use physical motor mounting (opposite orientation) instead.");
+                    DriverStation.reportWarning(
+                        "[NovaMechanismUnit] '" + config.name + "': follower " + i
+                        + " requested inverted follow, but Nova's follow() API does not support "
+                        + "inversion in software. Use physical motor mounting instead.", false);
                 }
-                // Nova follow() mirrors the leader's output over CAN
-                followers[i].follow(config.canIds[0]);
+                // Nova follow() mirrors the designated leader's CAN ID output.
+                int leaderCanId = config.canIds[config.followerLeaderIndices[i]];
+                followers[i].follow(leaderCanId);
             }
-            // NONE: followers are unused — no configuration needed
+            // NONE: follower runs independently — no configuration needed
         }
     }
 
