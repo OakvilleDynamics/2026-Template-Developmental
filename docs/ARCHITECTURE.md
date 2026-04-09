@@ -11,17 +11,18 @@ A guide to how the robot code is organized, what each piece does, and how they c
 
 ## Big Picture
 
-The robot is a **swerve drive** controlled by two flight sticks. It tracks its position on the field using a combination of **wheel encoders** and **AprilTag cameras**, fused together by a **Kalman filter**. A driver can press a button to trigger **autonomous pathfinding** to a target location on the field — the robot navigates there on its own and hands control back when the button is released.
+The robot is a **swerve drive** controlled by two flight sticks. It tracks its position on the field using a combination of **wheel encoders** and **AprilTag cameras**, fused together by a **Kalman filter**. A driver can press a button to trigger **autonomous pathfinding** — either to a fixed scoring target or to the nearest detected game piece on the field.
 
 ```
 Driver sticks ──► driveWithJoysticks ──► driveInput ──► swerveDrive ──► 4× swerveModule
                                                               ▲
 PathPlanner ──────────────────────────────────────────────────┘
-                                                              ▲
-                                              SwerveDrivePoseEstimator
-                                               ▲                  ▲
-                                         wheel encoders      PhotonVision
-                                           + IMU              (AprilTags)
+  ▲                                                           ▲
+  │ gamePieceHuntCommand                    SwerveDrivePoseEstimator
+  │  (piece detection → auto-navigate)       ▲                  ▲
+  │                                    wheel encoders      PhotonVision
+gamePieceVisionSubsystem                  + IMU              (AprilTags)
+  (OV9782 intake camera → field position)
 ```
 
 ---
@@ -41,26 +42,29 @@ src/main/java/frc/robot/
 │   └── Autos.java          ← Autonomous routines (stub for now)
 │
 ├── constants/              ← All tunable numbers in one place
-│   ├── swerveConstants     ← CAN IDs, gear ratios, speed limits, PID defaults
-│   ├── visionConstants     ← Camera names, transforms, filter thresholds
-│   ├── pathplannerConstants ← PathPlanner config, robot mass/MOI, constraints
-│   └── AprilTagIgnore      ← Tag IDs to suppress at specific events
+│   ├── swerveConstants         ← CAN IDs, gear ratios, speed limits, PID defaults
+│   ├── visionConstants         ← AprilTag camera names, transforms, filter thresholds
+│   ├── gamePieceConstants      ← Game piece camera, clustering, hunt behavior
+│   ├── pathplannerConstants    ← PathPlanner config, robot mass/MOI, constraints
+│   └── AprilTagIgnore          ← Tag IDs to suppress at specific events
 │
 ├── pathplanning/           ← PathPlanner integration
-│   ├── FieldTargets        ← "speaker" → field coordinate lookup table
-│   └── pathfindCommand     ← Navigate to target on button press
+│   ├── FieldTargets            ← "speaker" → field coordinate lookup table
+│   ├── pathfindCommand         ← Navigate to fixed target on button press
+│   └── gamePieceHuntCommand    ← Vision-guided game piece collection (4 modes)
 │
 ├── subsystems/
 │   ├── swerveDrive/        ← Drivetrain
-│   │   ├── swerveDrive     ← Manages all 4 modules + pose estimator
-│   │   ├── swerveModule    ← One wheel/motor pair
-│   │   ├── driveInput      ← Data object: vx, vy, omega, center of rotation
-│   │   └── driveOdometryState ← Motion state snapshot (velocity, accel, etc.)
+│   │   ├── swerveDrive         ← Manages all 4 modules + pose estimator + pose history
+│   │   ├── swerveModule        ← One wheel/motor pair
+│   │   ├── driveInput          ← Data object: vx, vy, omega, center of rotation
+│   │   └── driveOdometryState  ← Motion state snapshot (velocity, accel, etc.)
 │   └── vision/             ← Vision
-│       ├── visionSubsystem ← Public interface: pose estimates, tag data
-│       ├── robotPoseEstimate ← One camera's pose estimate
-│       ├── visionHealthMonitor ← Pre-match checks, ongoing health tracking
-│       └── AprilTagFieldCalTab ← Shuffleboard calibration interface
+│       ├── visionSubsystem         ← Public interface: AprilTag pose estimates
+│       ├── gamePieceVisionSubsystem ← Game piece detection, field position tracking
+│       ├── robotPoseEstimate        ← One camera's pose estimate (AprilTag)
+│       ├── visionHealthMonitor      ← Pre-match checks, ongoing health + DataLog
+│       └── AprilTagFieldCalTab      ← Shuffleboard calibration interface
 │
 └── util/
     ├── units.java          ← All unit conversions (inches↔m, lbs↔kg, etc.)
@@ -157,6 +161,100 @@ Frames failing any check are discarded. The filter continues on odometry alone.
 ### Vision health monitoring
 
 `visionHealthMonitor` runs pre-match checks and ongoing health tracking. During disabled mode, `Robot.disabledPeriodic()` reads the health status and posts it to SmartDashboard so the drive team knows if vision is ready before auto starts.
+
+---
+
+## Camera Hardware
+
+### Camera selection
+
+| Role | Camera | Reason |
+|---|---|---|
+| AprilTag pose estimation (×2) | **OV9281** | Global shutter — zero rolling shutter distortion on a moving robot. Monochrome sensor is ideal for AprilTag detection (no color processing overhead). Runs up to 120fps for low-latency pose updates. |
+| Game piece detection | **OV9782** | Color sensor — required for detecting colored game pieces that AprilTag pipelines can't see. RGB allows ML classifiers to distinguish game pieces from field elements by color and shape. |
+
+### Coprocessor configuration
+
+The robot runs on **two dedicated OrangePi 5 coprocessors** — one per role:
+
+| Coprocessor | Static IP | Cameras | Role |
+|---|---|---|---|
+| AprilTag OP5 | `10.87.19.11` | `front_cam` (OV9281), `rear_cam` (OV9281) | Robot pose estimation |
+| Game piece OP5 | `10.87.19.12` | `intake_cam` (OV9782) | Game piece ML detection |
+
+PhotonVision UI for each: `http://<IP>:5800`
+
+**Why two coprocessors?**
+
+| Reason | Detail |
+|---|---|
+| Fault isolation | A game piece pipeline crash or frame-rate drop cannot affect AprilTag pose estimation reliability — the two subsystems are physically separate. |
+| Resource headroom | Each coprocessor has full CPU and NPU available for its role — no pipeline contention, no priority fighting between AprilTag grayscale pipelines and color ML inference. |
+| Scalability | Adding a 2nd game piece camera (e.g. 2nd intake side) stays on the game piece coprocessor; the AprilTag side is untouched. The robot code just adds a 2nd `PhotonCamera` in `gamePieceVisionSubsystem`. |
+
+**`PhotonCamera` and NT transparency:** `PhotonCamera` instances are identified by camera name, not by IP. Both coprocessors connect to the roboRIO as NetworkTables clients. `PhotonCamera("intake_cam")` resolves through NT regardless of which physical device is running it — no robot code structural change is required to split or merge coprocessors.
+
+---
+
+## Game Piece Hunt
+
+### What it does
+
+`gamePieceHuntCommand` autonomously navigates to and collects game pieces detected by the intake-side camera. Four modes are available:
+
+| Mode | `HuntMode` | Behavior |
+|---|---|---|
+| 1 | `NEAREST_PIECE` | Navigate to the nearest visible piece, trigger intake, stop. |
+| 2 | `SEQUENTIAL_PIECES` | Intake nearest piece, then find and intake the next, repeat until none. |
+| 3 | `NEAREST_CLUSTER` | Navigate to the centroid of the nearest cluster, intake, stop. |
+| 4 | `SEQUENTIAL_CLUSTERS` | Intake nearest cluster, then move to the next, repeat until none. |
+
+Clusters are groups of pieces within `gamePieceConstants.CLUSTER_RADIUS_M` of each other (default 1.5 m). The robot always arrives at a piece with its intake side facing it — PathPlanner delivers it to the computed heading automatically.
+
+### How piece positions are computed
+
+PhotonVision provides pixel-level target bearings (`getYaw()`, `getPitch()`). The code converts these to field coordinates using the camera's pose at the **exact moment the frame was captured** — retrieved via `swerveDrive.getPoseAtTime(timestampSecs)`:
+
+```
+verticalAngle = cameraMountPitch − target.getPitch()
+horizontalDist = (cameraHeight − PIECE_HEIGHT) / tan(verticalAngle)
+bearingField   = cameraYaw + target.getYaw()
+pieceX         = cameraX + horizontalDist × cos(bearingField)
+pieceY         = cameraY + horizontalDist × sin(bearingField)
+```
+
+This compensates for the ~20–60ms camera pipeline latency — the robot may have moved since the frame was captured, and using the current pose instead of the capture-time pose would misplace pieces by several centimeters.
+
+### Pose history ring buffer
+
+`swerveDrive` maintains a 4-entry ring buffer of (timestamp → Pose2d) snapshots, written every loop. At 50Hz this covers ~80ms — enough for typical PhotonVision ML pipeline latency. `getPoseAtTime(t)` linearly interpolates between the two bracketing entries.
+
+This buffer is for game piece back-projection **only** — AprilTag latency compensation is already handled internally by WPILib's `SwerveDrivePoseEstimator` and does not need this buffer.
+
+### State machine
+
+```
+FINDING ──► PATHFINDING ──► INTAKING ──► DONE
+   ▲                            │
+   └────────────────────────────┘  (SEQUENTIAL_* modes only)
+```
+
+The command is decoupled from any specific intake subsystem. It takes a `Runnable intakeTrigger` (called on arrival) and a `BooleanSupplier intakeComplete` (polls completion). Wire these in `RobotContainer` once the intake subsystem exists.
+
+### Health monitoring
+
+During disabled mode, `gamePieceVisionSubsystem.publishHealthStatus()` posts to SmartDashboard alongside the AprilTag camera health. Pre-match driver check: place a game piece ~1–2 m in front of the intake and confirm "Piece Detected = true" on the "Vision Health" Shuffleboard tab.
+
+Every loop during a match, four DataLog entries are written: `CameraConnected`, `PieceDetected`, `TrackedPieceCount`, `Debug/MissFrames` — all under `/GamePieceVision/`. These are post-match reviewable in Advantage Scope.
+
+### Extending to a second intake side
+
+A symmetric dual-intake robot (intake on front and rear) requires these changes:
+1. **`gamePieceConstants`** — add `GAME_PIECE_CAMERA_2_NAME` and `GAME_PIECE_CAMERA_2_TRANSFORM` for the rear intake camera.
+2. **`gamePieceVisionSubsystem`** — add `PhotonCamera intakeCam2`; run the same back-projection loop for both cameras, merging detections into the same `trackedPieces` list (field-relative positions, so both cameras feed the same spatial map).
+3. **`gamePieceHuntCommand`** — replace the fixed heading formula with a `findClosestIntakeHeading()` helper that compares the angular distance from the robot's current heading to both intake directions, picks the nearer one, and uses that as the arrival heading.
+
+The state machine, clustering logic, and PathPlanner wiring are all intake-agnostic and require no changes.
 
 ---
 

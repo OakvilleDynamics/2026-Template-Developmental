@@ -57,6 +57,7 @@ public class Robot extends TimedRobot {
         HealthStatus health = robotContainer.getVision().getHealthStatus();
         SmartDashboard.putString("Robot/Vision Health", health.name());
         SmartDashboard.putBoolean("Robot/Vision Ready", health == HealthStatus.GOOD);
+        robotContainer.getGamePieceVision().publishHealthStatus();
     }
 
     @Override

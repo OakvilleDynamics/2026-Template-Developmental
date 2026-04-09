@@ -10,10 +10,13 @@ import frc.robot.commands.driveWithJoysticks;
 import frc.robot.commands.xLockCommand;
 import frc.robot.constants.swerveConstants;
 import frc.robot.pathplanning.FieldTargets;
+import frc.robot.pathplanning.gamePieceHuntCommand;
+import frc.robot.pathplanning.gamePieceHuntCommand.HuntMode;
 import frc.robot.pathplanning.pathfindCommand;
 import frc.robot.subsystems.swerveDrive.swerveDrive;
 import frc.robot.subsystems.swerveDrive.swerveModule;
 import frc.robot.subsystems.vision.AprilTagFieldCalTab;
+import frc.robot.subsystems.vision.gamePieceVisionSubsystem;
 import frc.robot.subsystems.vision.robotPoseEstimate;
 import frc.robot.subsystems.vision.visionSubsystem;
 
@@ -97,20 +100,31 @@ public class RobotContainer {
     private final Joystick leftStick  = new Joystick(0);
     private final Joystick rightStick = new Joystick(1);
 
-    private final JoystickButton lockToTargetButton = new JoystickButton(rightStick, 2);
-    private final JoystickButton xLockButton        = new JoystickButton(rightStick, 3);
-    private final JoystickButton pathfindButton     = new JoystickButton(rightStick, 4);
+    private final JoystickButton lockToTargetButton  = new JoystickButton(rightStick, 2);
+    private final JoystickButton xLockButton         = new JoystickButton(rightStick, 3);
+    private final JoystickButton pathfindButton      = new JoystickButton(rightStick, 4);
+
+    // Game piece hunt — TODO: remap to final 2026 driver layout
+    private final JoystickButton huntNearestButton   = new JoystickButton(rightStick, 5);
+    private final JoystickButton huntSequentialButton = new JoystickButton(rightStick, 6);
+    private final JoystickButton huntClusterButton   = new JoystickButton(rightStick, 7);
+    private final JoystickButton huntSeqClusterButton = new JoystickButton(rightStick, 8);
 
     // ═════════════════════════════════════════════════════════════════════════
     // Subsystems, commands, calibration tab
     // ═════════════════════════════════════════════════════════════════════════
 
-    private final swerveDrive        drive;
-    private final visionSubsystem    vision;
-    private final driveWithJoysticks driveCommand;
-    private final xLockCommand       xLock;
-    private final pathfindCommand    pathfind;
-    private final AprilTagFieldCalTab calTab;
+    private final swerveDrive              drive;
+    private final visionSubsystem          vision;
+    private final gamePieceVisionSubsystem gamePieceVision;
+    private final driveWithJoysticks       driveCommand;
+    private final xLockCommand             xLock;
+    private final pathfindCommand          pathfind;
+    private final AprilTagFieldCalTab      calTab;
+    private final gamePieceHuntCommand     huntNearest;
+    private final gamePieceHuntCommand     huntSequential;
+    private final gamePieceHuntCommand     huntCluster;
+    private final gamePieceHuntCommand     huntSeqCluster;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Constructor
@@ -146,6 +160,9 @@ public class RobotContainer {
         // GAME_YEAR_FIELD propagates from here into the entire vision stack
         vision = new visionSubsystem(GAME_YEAR_FIELD);
 
+        // Game piece detection camera — must be constructed after drive (needs getPoseAtTime)
+        gamePieceVision = new gamePieceVisionSubsystem(drive);
+
         // Calibration tab receives only visionSubsystem — single interface
         calTab = new AprilTagFieldCalTab(vision);
 
@@ -160,6 +177,16 @@ public class RobotContainer {
             drive, vision,
             () -> FieldTargets.get("speaker") // TODO: wire to button/selector for target choice
         );
+
+        // TODO: replace stub lambdas with real intake subsystem calls once intake exists
+        huntNearest    = new gamePieceHuntCommand(drive, gamePieceVision, HuntMode.NEAREST_PIECE,
+                             () -> {}, () -> false);
+        huntSequential = new gamePieceHuntCommand(drive, gamePieceVision, HuntMode.SEQUENTIAL_PIECES,
+                             () -> {}, () -> false);
+        huntCluster    = new gamePieceHuntCommand(drive, gamePieceVision, HuntMode.NEAREST_CLUSTER,
+                             () -> {}, () -> false);
+        huntSeqCluster = new gamePieceHuntCommand(drive, gamePieceVision, HuntMode.SEQUENTIAL_CLUSTERS,
+                             () -> {}, () -> false);
 
         configureDefaultCommands();
         configureButtonBindings();
@@ -176,14 +203,21 @@ public class RobotContainer {
         ));
         xLockButton.whileTrue(xLock);
         pathfindButton.whileTrue(pathfind);
+
+        // Game piece hunt — TODO: remap to final 2026 driver layout
+        huntNearestButton.whileTrue(huntNearest);
+        huntSequentialButton.whileTrue(huntSequential);
+        huntClusterButton.whileTrue(huntCluster);
+        huntSeqClusterButton.whileTrue(huntSeqCluster);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Accessors
     // ─────────────────────────────────────────────────────────────────────────
 
-    public swerveDrive     getDrive()  { return drive; }
-    public visionSubsystem getVision() { return vision; }
+    public swerveDrive              getDrive()           { return drive; }
+    public visionSubsystem          getVision()          { return vision; }
+    public gamePieceVisionSubsystem getGamePieceVision() { return gamePieceVision; }
 
     /** Called from Robot.java's robotPeriodic() every loop */
     public void updateCalibrationTab() { calTab.update(); }

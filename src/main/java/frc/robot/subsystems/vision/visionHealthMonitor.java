@@ -2,6 +2,8 @@ package frc.robot.subsystems.vision;
 
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.networktables.GenericEntry;
+import edu.wpi.first.util.datalog.IntegerLogEntry;
+import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInLayouts;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
@@ -75,6 +77,13 @@ public class visionHealthMonitor {
 
     public enum HealthStatus { UNKNOWN, GOOD, WARNING, FAULT }
 
+    // ── DataLog entries (post-match analysis) ─────────────────────────────────
+    private final IntegerLogEntry logFrontMissFrames;
+    private final IntegerLogEntry logRearMissFrames;
+    private final IntegerLogEntry logFrontHighAmbFrames;
+    private final IntegerLogEntry logRearHighAmbFrames;
+    private final IntegerLogEntry logInterCameraDisagree;
+
     // ── Shuffleboard entries ──────────────────────────────────────────────────
     private GenericEntry sbFrontConnected;
     private GenericEntry sbRearConnected;
@@ -95,6 +104,12 @@ public class visionHealthMonitor {
     // ─────────────────────────────────────────────────────────────────────────
 
     public visionHealthMonitor() {
+        var log = DataLogManager.getLog();
+        logFrontMissFrames     = new IntegerLogEntry(log, "/Vision/Debug/FrontMissFrames");
+        logRearMissFrames      = new IntegerLogEntry(log, "/Vision/Debug/RearMissFrames");
+        logFrontHighAmbFrames  = new IntegerLogEntry(log, "/Vision/Debug/FrontHighAmbFrames");
+        logRearHighAmbFrames   = new IntegerLogEntry(log, "/Vision/Debug/RearHighAmbFrames");
+        logInterCameraDisagree = new IntegerLogEntry(log, "/Vision/Debug/InterCameraDisagree");
         buildShuffleboardTab();
     }
 
@@ -111,6 +126,7 @@ public class visionHealthMonitor {
         updateInterCameraAgreement(frontEstimate, rearEstimate);
         updateOverallStatus();
         publishToShuffleboard(frontEstimate, rearEstimate);
+        logDiagnosticCounters();
     }
 
     /**
@@ -210,6 +226,18 @@ public class visionHealthMonitor {
         else if (anyWarning)       overallStatus = HealthStatus.WARNING;
         else if (frontConnected && rearConnected) overallStatus = HealthStatus.GOOD;
         else                       overallStatus = HealthStatus.UNKNOWN;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // DataLog publishing
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private void logDiagnosticCounters() {
+        logFrontMissFrames    .append(frontMissFrames);
+        logRearMissFrames     .append(rearMissFrames);
+        logFrontHighAmbFrames .append(frontHighAmbFrames);
+        logRearHighAmbFrames  .append(rearHighAmbFrames);
+        logInterCameraDisagree.append(interCameraDisagree);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

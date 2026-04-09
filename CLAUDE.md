@@ -10,7 +10,7 @@ It is loaded automatically by Claude Code at the start of every session. Keep it
 From-scratch swerve drive robot codebase for **FRC Team 8719**, built using:
 - **WPILib 2026** (Java)
 - **Phoenix 6** — CTRE motor/sensor library (Kraken X60 drive, Minion steer)
-- **PhotonVision** — dual-camera AprilTag pose estimation (OrangePi 5 coprocessor)
+- **PhotonVision** — three-camera vision system (AprilTag pose estimation + game piece detection)
 - **PathPlannerLib 2026.1.2** — on-the-fly AD* pathfinding
 
 ---
@@ -25,9 +25,17 @@ From-scratch swerve drive robot codebase for **FRC Team 8719**, built using:
 - **IMU:** ADIS16470
 
 ### Vision
-- **Cameras:** Dual PhotonVision cameras (front + rear)
-- **Coprocessor:** OrangePi 5 — static IP 10.87.19.11
-- **Use:** AprilTag pose estimation, fused into Kalman filter
+Two dedicated OrangePi 5 coprocessors — isolated by role for reliability and headroom:
+
+**AprilTag coprocessor** — static IP `10.87.19.11`
+- Cameras: `front_cam` (OV9281), `rear_cam` (OV9281) — global shutter, grayscale, optimized for AprilTag
+- Use: Robot pose estimation via AprilTag, fused into Kalman filter
+
+**Game piece coprocessor** — static IP `10.87.19.12`
+- Camera: `intake_cam` (OV9782) — rolling shutter, color, optimized for ML game piece detection
+- Use: Back-project detections to field coordinates for autonomous game piece hunting
+
+`PhotonCamera` resolves by name through NetworkTables — no robot code change needed when cameras are on separate physical devices.
 
 ---
 
@@ -47,25 +55,28 @@ src/main/java/frc/robot/
 │
 ├── constants/
 │   ├── swerveConstants.java
-│   ├── visionConstants.java
-│   ├── pathplannerConstants.java           (new — PathPlanner config)
+│   ├── visionConstants.java                (AprilTag coprocessor — 10.87.19.11)
+│   ├── gamePieceConstants.java             (game piece coprocessor — 10.87.19.12)
+│   ├── pathplannerConstants.java
 │   └── AprilTagIgnore.java
 │
-├── pathplanning/                           (new package)
+├── pathplanning/
 │   ├── FieldTargets.java
-│   └── pathfindCommand.java
+│   ├── pathfindCommand.java
+│   └── gamePieceHuntCommand.java           (4-mode vision-guided collection)
 │
 ├── subsystems/
 │   ├── swerveDrive/
-│   │   ├── swerveDrive.java
+│   │   ├── swerveDrive.java                (includes 4-entry pose history ring buffer)
 │   │   ├── swerveModule.java
 │   │   ├── driveInput.java
 │   │   └── driveOdometryState.java
 │   └── vision/
 │       ├── visionSubsystem.java
 │       ├── robotPoseEstimate.java
-│       ├── visionHealthMonitor.java
-│       └── AprilTagFieldCalTab.java
+│       ├── visionHealthMonitor.java        (diagnostic counters now persisted to DataLog)
+│       ├── AprilTagFieldCalTab.java
+│       └── gamePieceVisionSubsystem.java   (intake_cam, back-projection, clustering, health)
 │
 └── util/
     ├── units.java
@@ -173,8 +184,12 @@ Owns all four modules and the IMU. The only way to move the robot.
 | `resetPose(Pose2d)` | Seed estimator with known position |
 | `getRobotRelativeSpeeds()` | Encoder-derived ChassisSpeeds — PathPlanner feedback |
 | `addVisionMeasurement(pose, timestamp, tagCount)` | Inject vision into Kalman filter, trust scaled by tag count |
+| `getPoseAtTime(timestampSecs)` | Pose closest to given FPGA timestamp from ring buffer — for game piece back-projection |
 | `getOdometryState()` | Full `driveOdometryState` snapshot |
 | `getDimension(key)` | Geometry query: "wheel-base", "frame-perimeter", "bumper-perimeter" |
+
+**Pose history ring buffer:**
+`swerveDrive` maintains a 4-entry ring buffer of `(Pose2d, timestamp)` pairs, written every loop after `poseEstimator.update()`. `getPoseAtTime()` linearly interpolates between bracketing entries; at 50Hz the buffer covers ~80ms, which encompasses typical PhotonVision ML detection latency (20–60ms). Used exclusively by `gamePieceVisionSubsystem` — AprilTag latency compensation is handled internally by WPILib's `SwerveDrivePoseEstimator.addVisionMeasurement()`.
 
 **PathPlanner integration:**
 | Method | Description |
@@ -234,9 +249,41 @@ Immutable value record per camera. Fields: `pose` (Pose3d), `timestampSecs`, `am
 
 Pre-match health validation and per-loop health tracking. Checks camera connectivity, tag visibility, and pose consistency. Exposed via `visionSubsystem.isHealthy()` and `getHealthStatus()`. Polled in `Robot.disabledPeriodic()` for pit/field readiness confirmation.
 
+Diagnostic counters (`frontMissFrames`, `rearMissFrames`, `frontHighAmbFrames`, `rearHighAmbFrames`, `interCameraDisagree`) are now persisted to DataLog at `/Vision/Debug/*` every loop — enables frame-level post-match root cause analysis in AdvantageScope.
+
 ### `AprilTagFieldCal` / `AprilTagFieldCalTab`
 
 Field calibration system. Measures per-tag position offsets vs. WPILib baseline. Outputs correction offsets three ways: Python script capture to laptop, backup to roboRIO, clipboard copy. Tab is live on Shuffleboard "Field Calibration" tab.
+
+### `gamePieceVisionSubsystem`
+
+Separate subsystem for game piece detection via `intake_cam` on the game piece coprocessor (10.87.19.12). Runs independently of `visionSubsystem`.
+
+**periodic():** Pulls latest PhotonPipeline result → retrieves `drive.getPoseAtTime(captureTimestamp)` → computes camera field pose → back-projects each detected target to field `Translation2d` using ray-casting → merges into tracked list (position averaging) → expires stale entries.
+
+**Back-projection math:**
+```
+verticalAngle = cameraMountPitch − target.getPitch()    (radians)
+horizontalDist = (cameraHeight − GAME_PIECE_HEIGHT_M) / tan(verticalAngle)
+bearing = cameraYawField + target.getYaw()
+pieceX = cameraX + horizontalDist × cos(bearing)
+pieceY = cameraY + horizontalDist × sin(bearing)
+```
+Guard: `tan(verticalAngle) ≤ 0` → skip (piece above camera horizon).
+
+**Public API:**
+| Method | Description |
+|---|---|
+| `getFieldRelativePieces()` | All freshness-filtered tracked pieces |
+| `getNearestPiece(robotPose)` | Closest single `Translation2d` to robot |
+| `getClusters(robotPose)` | Greedy distance clusters sorted by centroid proximity |
+| `isCameraConnected()` | NT connectivity check |
+| `hasPieceDetection()` | True if a piece was detected within `PIECE_STALE_SECS` |
+| `publishHealthStatus()` | Called from `Robot.disabledPeriodic()` — posts to Shuffleboard "Vision Health" |
+
+**DataLog paths:** `/GamePieceVision/CameraConnected`, `/GamePieceVision/PieceDetected`, `/GamePieceVision/TrackedPieceCount`, `/GamePieceVision/Debug/MissFrames`.
+
+**Health check:** No field calibration needed (pieces have no fixed reference positions). Pre-match check: place a game piece ~1–2m in front of intake, confirm `PieceDetected = true` on Shuffleboard.
 
 ---
 
@@ -250,9 +297,27 @@ Default drive command on `swerveDrive`. Left stick = field-relative translation 
 
 X-brace defense. Commands all four modules to 45° X pattern, zero drive speed. Held while button is pressed.
 
-### `pathfindCommand` *(new)*
+### `pathfindCommand`
 
 On-the-fly AD* pathfinding to a field target using PathPlanner. Requires `swerveDrive` — preempts `driveWithJoysticks` via scheduler, restores it on end. Vision staleness is checked at initialize and logged to Shuffleboard "Pathfinding" tab (command still runs on odometry if stale). Currently uses `pathfindToPose()`. TODO: upgrade to `pathfindThenFollowPath()` once `.path` files are authored in PathPlanner GUI.
+
+### `gamePieceHuntCommand`
+
+Vision-guided autonomous game piece collection. Four modes via `HuntMode` enum:
+| Mode | Behavior |
+|---|---|
+| `NEAREST_PIECE` | Drive to closest detected piece, intake, done |
+| `SEQUENTIAL_PIECES` | Intake nearest, then next nearest, repeat until none found |
+| `NEAREST_CLUSTER` | Drive to centroid of nearest cluster, intake all reachable, done |
+| `SEQUENTIAL_CLUSTERS` | Like above but repeats across all clusters |
+
+**State machine:** `FINDING → PATHFINDING → INTAKING → (DONE | FINDING)`
+
+- **FINDING:** Polls `gamePieceVisionSubsystem` for target. Times out after `HUNT_NO_PIECE_TIMEOUT_SECS`. Computes arrival heading: `atan2(dy, dx) + APPROACH_HEADING_OFFSET_DEG` (intake faces piece). Schedules `AutoBuilder.pathfindToPose()` as inner command.
+- **PATHFINDING:** Polls inner pathfinder via `!pathfinder.isScheduled()`. On arrival: calls `intakeTrigger.run()`, transitions to INTAKING.
+- **INTAKING:** Waits for `intakeComplete.getAsBoolean()` or `INTAKE_TIMEOUT_SECS`. Sequential modes loop back to FINDING; single-target modes transition to DONE.
+
+**Intake decoupling:** Constructor takes `Runnable intakeTrigger` and `BooleanSupplier intakeComplete` — no intake subsystem import. Wire in `RobotContainer` once intake subsystem exists. `addRequirements(drive)` preempts `driveWithJoysticks`.
 
 ### `Autos.java`
 
@@ -312,8 +377,10 @@ Each new season:
 2. `FieldTargets.java` — replace stub coordinates with real field target poses
 3. `pathplannerConstants.ALLIANCE_ZONE_EXCLUSIONS` — populate with new field zone polygons
 4. `AprilTagIgnore.java` — review which tag IDs to suppress for known problem tags
-5. `visionConstants` — re-verify camera transforms if robot geometry changed
-6. PathPlanner GUI — re-author final approach `.path` files for each target
+5. `visionConstants` — re-verify AprilTag camera transforms if robot geometry changed
+6. `gamePieceConstants.GAME_PIECE_CAMERA_TRANSFORM` — remeasure intake camera mounting if robot changed
+7. `gamePieceConstants.GAME_PIECE_HEIGHT_M` — update for new game piece height above carpet
+8. PathPlanner GUI — re-author final approach `.path` files for each target
 
 ---
 
@@ -340,8 +407,12 @@ Each new season:
 | Measure actual steer offset voltages | `swerveConstants.java` |
 | Confirm CAN IDs match physical wiring | `swerveConstants.java` |
 | Replace `buildTagReading()` delta calc with full reprojection geometry | `visionSubsystem.java` |
-| Update PhotonVision API (deprecated `getLatestResult()`, `update()`) | `visionSubsystem.java` |
+| Update PhotonVision API (deprecated `getLatestResult()`, `update()`) | `visionSubsystem.java`, `gamePieceVisionSubsystem.java` |
 | Update `getPositionError()` (deprecated in WPILib 2026) | `swerveDrive.java` |
+| Measure intake camera mounting position + angle | `gamePieceConstants.GAME_PIECE_CAMERA_TRANSFORM` |
+| Update game piece height once 2026 game piece is known | `gamePieceConstants.GAME_PIECE_HEIGHT_M` |
+| Wire `gamePieceHuntCommand` button bindings | `RobotContainer.configureButtonBindings()` |
+| Wire intake trigger + completion callbacks to hunt command | `RobotContainer` — once intake subsystem exists |
 | Validate `mechanismUnit` abstraction on hardware (first real mechanism deploy) | new mechanism subsystem |
 | Measure flywheel MOI for `gyroscopicTurret` FF (lb·in² from CAD or physical measurement) | `shooterMechanism` usage site |
 | Measure spring torque calibration table for `springTurret` | `shooterMechanism` usage site |

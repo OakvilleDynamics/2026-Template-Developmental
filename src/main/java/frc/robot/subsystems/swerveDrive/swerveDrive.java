@@ -119,6 +119,16 @@ public class swerveDrive extends SubsystemBase {
     private ChassisSpeeds lastCommandedSpeeds = new ChassisSpeeds();
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Pose history ring buffer — for game piece vision latency compensation
+    // ─────────────────────────────────────────────────────────────────────────
+    // At 50 Hz, 4 entries covers ~80 ms — enough for typical PhotonVision
+    // ML detection pipeline latency (20–60 ms).
+    private static final int POSE_HISTORY_SIZE     = 4;
+    private final Pose2d[]   poseHistory           = new Pose2d[POSE_HISTORY_SIZE];
+    private final double[]   poseHistoryTimestamps = new double[POSE_HISTORY_SIZE];
+    private int              poseHistoryHead       = 0;
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Constructor
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -191,7 +201,11 @@ public class swerveDrive extends SubsystemBase {
     public void periodic() {
         poseEstimator.update(getYaw(), getModulePositions());
 
+        // Write latest estimated pose into the ring buffer for getPoseAtTime()
         double now = Timer.getFPGATimestamp();
+        poseHistory[poseHistoryHead]           = poseEstimator.getEstimatedPosition();
+        poseHistoryTimestamps[poseHistoryHead] = now;
+        poseHistoryHead = (poseHistoryHead + 1) % POSE_HISTORY_SIZE;
         double dt  = Math.max(now - prevTimestamp, 1e-4);
         prevTimestamp = now;
 
@@ -411,6 +425,61 @@ public class swerveDrive extends SubsystemBase {
 
     public Pose2d    getPose()              { return poseEstimator.getEstimatedPosition(); }
     public Rotation2d getYaw()             { return Rotation2d.fromDegrees(-imu.getAngle(IMUAxis.kZ)); }
+
+    /**
+     * Returns the estimated robot pose at or nearest to the given FPGA timestamp.
+     *
+     * Linearly interpolates between the two ring-buffer entries that bracket the
+     * requested timestamp. Falls back to the chronologically nearest stored entry
+     * if the timestamp is outside the buffered window (~80 ms at 50 Hz).
+     *
+     * Used by gamePieceVisionSubsystem to back-project game piece detections to
+     * field coordinates at the exact moment the camera frame was captured.
+     *
+     * @param timestampSecs  FPGA timestamp of the camera frame (seconds)
+     * @return  Robot Pose2d at that time, or nearest available if out of window
+     */
+    public Pose2d getPoseAtTime(double timestampSecs) {
+        // Find how many entries are populated (null check)
+        int filled = 0;
+        for (Pose2d p : poseHistory) { if (p != null) filled++; }
+        if (filled == 0) return getPose();   // buffer not yet populated
+
+        // Collect valid entries in chronological order
+        // Ring buffer reads: start from the oldest entry = current head (next write slot)
+        Pose2d  bestPose  = null;
+        double  bestDelta = Double.MAX_VALUE;
+        Pose2d  prevPose  = null;
+        double  prevTs    = 0;
+
+        for (int i = 0; i < POSE_HISTORY_SIZE; i++) {
+            int idx = (poseHistoryHead + i) % POSE_HISTORY_SIZE;
+            Pose2d p = poseHistory[idx];
+            double t = poseHistoryTimestamps[idx];
+            if (p == null) { prevPose = null; continue; }
+
+            // Check if this entry and the previous bracket the requested timestamp
+            if (prevPose != null && prevTs <= timestampSecs && t >= timestampSecs) {
+                double span = t - prevTs;
+                double frac = (span > 1e-6) ? (timestampSecs - prevTs) / span : 0.0;
+                double x = prevPose.getX()                 + frac * (p.getX()                 - prevPose.getX());
+                double y = prevPose.getY()                 + frac * (p.getY()                 - prevPose.getY());
+                double h = prevPose.getRotation().getRadians()
+                           + frac * (p.getRotation().getRadians() - prevPose.getRotation().getRadians());
+                return new Pose2d(x, y, new Rotation2d(h));
+            }
+
+            // Track nearest entry in case we need to fall back
+            double delta = Math.abs(t - timestampSecs);
+            if (delta < bestDelta) { bestDelta = delta; bestPose = p; }
+
+            prevPose = p;
+            prevTs   = t;
+        }
+
+        // Timestamp outside window — return nearest stored entry
+        return bestPose != null ? bestPose : getPose();
+    }
     public boolean   isPointedAtTarget()   { return headingPID.atSetpoint(); }
     public boolean   isHeadingLockActive() { return headingLockActive; }
 

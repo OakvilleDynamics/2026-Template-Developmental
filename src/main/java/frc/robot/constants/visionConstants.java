@@ -35,11 +35,30 @@ import frc.robot.util.units;
  * Yaw of 180° = camera faces rearward
  *
  * ─── COPROCESSOR NETWORK ─────────────────────────────────────────────────────
- * OrangePi 5 static IP: 10.87.19.11
- * Replace 87.19 with your team number digits (team 8719 → 87.19)
- * PhotonVision UI: http://10.87.19.11:5800
- * Stream ports assigned sequentially by PhotonVision: 1182, 1184, etc.
- * Verify exact ports in the PhotonVision UI under camera settings.
+ * This file covers the AprilTag pose estimation coprocessor only.
+ * Game piece detection runs on a separate coprocessor — see gamePieceConstants.
+ *
+ * AprilTag OrangePi 5 static IP: 10.87.19.11
+ *   Cameras: front_cam (OV9281), rear_cam (OV9281)
+ *   PhotonVision UI: http://10.87.19.11:5800
+ *   Stream ports assigned by PhotonVision: 1182, 1184, etc.
+ *   Verify exact ports in the PhotonVision UI under camera settings.
+ *
+ * Replace 87.19 with your team number digits (team 8719 → 87.19).
+ *
+ * ─── WHY TWO COPROCESSORS ────────────────────────────────────────────────────
+ * AprilTag detection (OV9281, global shutter, grayscale) and game piece ML
+ * detection (OV9782, color) are on separate OrangePi 5 units for:
+ *   1. Isolation — a game piece pipeline crash or overload cannot affect pose
+ *      estimation reliability.
+ *   2. Headroom — leaves full NPU/CPU available per role; no pipeline contention.
+ *   3. Scalability — adding a 2nd game piece camera (2nd intake side) stays on
+ *      the game piece coprocessor; AprilTag side is untouched.
+ *
+ * Both coprocessors connect to the roboRIO's NetworkTables server as NT clients.
+ * PhotonCamera() constructor uses camera name only — it resolves through NT
+ * transparently regardless of which physical device the camera is on.
+ * No robot code structural change is required to split coprocessors.
  */
 public final class visionConstants {
 
@@ -70,10 +89,13 @@ public final class visionConstants {
     // Verify port numbers in PhotonVision UI → camera settings
     // ═════════════════════════════════════════════════════════════════════════
 
+    /** Static IP of the AprilTag pose estimation OrangePi 5. */
+    public static final String APRILTAG_COPROCESSOR_IP = "10.87.19.11";
+
     public static final String FRONT_CAMERA_STREAM_URL = "http://10.87.19.11:1182/stream.mjpg";
     public static final String REAR_CAMERA_STREAM_URL  = "http://10.87.19.11:1184/stream.mjpg";
 
-    /** PhotonVision web UI — useful reference for pit display and diagnostics */
+    /** PhotonVision web UI for the AprilTag coprocessor — for pit diagnostics */
     public static final String PHOTONVISION_UI_URL = "http://10.87.19.11:5800";
 
     // ═════════════════════════════════════════════════════════════════════════
