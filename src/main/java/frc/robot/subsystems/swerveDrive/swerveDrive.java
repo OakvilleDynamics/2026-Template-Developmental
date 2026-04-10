@@ -298,6 +298,65 @@ public class swerveDrive extends SubsystemBase {
     }
 
     /**
+     * Heading-bounded drive.
+     *
+     * Driver retains full translation and rotation control while the robot heading
+     * stays within [minAbsHeadingDeg, maxAbsHeadingDeg] (field frame, degrees).
+     *
+     * Behavior:
+     *   Heading within bounds  → passes driver omega through unchanged (full control)
+     *   Heading below minDeg   → PID-holds to minAbsHeadingDeg (overrides driver omega)
+     *   Heading above maxDeg   → PID-holds to maxAbsHeadingDeg (overrides driver omega)
+     *
+     * Reuses the same headingPID and HEADING_PID_MAX_OMEGA as drivePointAt().
+     * Bounds come from ShooterOutput.headingBoundsDeg — the range of robot headings
+     * within which the turret can reach the target without exceeding its soft stops.
+     *
+     * @param input              Driver translation + omega + CoR.
+     * @param minAbsHeadingDeg   Lower heading bound (degrees, field frame).
+     * @param maxAbsHeadingDeg   Upper heading bound (degrees, field frame).
+     */
+    public void driveWithHeadingBound(
+            driveInput input,
+            double minAbsHeadingDeg,
+            double maxAbsHeadingDeg) {
+
+        double currentHeadingDeg = units.rad_deg(getYaw().getRadians());
+
+        if (currentHeadingDeg < minAbsHeadingDeg || currentHeadingDeg > maxAbsHeadingDeg) {
+            // Outside bounds — PID-hold to the nearer bound
+            headingLockActive = true;
+            commandedCoR = input.getCenterOfRotation();
+
+            double clampedDeg = currentHeadingDeg < minAbsHeadingDeg
+                    ? minAbsHeadingDeg
+                    : maxAbsHeadingDeg;
+            double desiredRad = units.deg_rad(clampedDeg);
+
+            double omegaCorrection = headingPID.calculate(getYaw().getRadians(), desiredRad);
+            omegaCorrection = MathUtil.clamp(omegaCorrection,
+                    -swerveConstants.HEADING_PID_MAX_OMEGA,
+                     swerveConstants.HEADING_PID_MAX_OMEGA);
+
+            ChassisSpeeds fieldRelative = ChassisSpeeds.fromFieldRelativeSpeeds(
+                    input.getVxMps(), input.getVyMps(), omegaCorrection, getYaw());
+            commandModules(fieldRelative, input.getCenterOfRotation());
+
+            SmartDashboard.putBoolean("Drive/HeadingBound/InBounds", false);
+        } else {
+            // Within bounds — pass driver omega through unchanged
+            headingLockActive = false;
+            drive(input);
+
+            SmartDashboard.putBoolean("Drive/HeadingBound/InBounds", true);
+        }
+
+        SmartDashboard.putNumber("Drive/HeadingBound/Min (deg)", minAbsHeadingDeg);
+        SmartDashboard.putNumber("Drive/HeadingBound/Max (deg)", maxAbsHeadingDeg);
+        SmartDashboard.putNumber("Drive/HeadingBound/Current (deg)", currentHeadingDeg);
+    }
+
+    /**
      * X-lock defense — sets all four modules to 45° X brace pattern.
      * No drive speed. Robot resists being pushed from any direction.
      * Called by xLockCommand every loop while defense button is held.

@@ -33,12 +33,16 @@ import frc.robot.util.units;
  * Stick within deadband = CoR at robot center (0,0) = pivot in place.
  * CoR is always robot-relative — independent of field heading.
  *
- * ─── POINT-AT-TARGET ─────────────────────────────────────────────────────────
- * When enablePointAt() is called (by RobotContainer button binding):
- *   - Twist axis is ignored
- *   - Heading PID in swerveDrive takes over omega to face the target
- *   - Left stick translation still works normally
- * disablePointAt() restores normal twist-to-rotate behavior.
+ * ─── DRIVE MODES ─────────────────────────────────────────────────────────────
+ * NORMAL           — full driver control (default)
+ * POINT_AT         — heading PID locks to a field target; translation free
+ * HEADING_BOUND    — driver controls heading freely within [min, max] window;
+ *                    PID-holds to nearest bound if heading exits the window
+ * STATIC_SHOT_LOCK — wheels X-braced, no translation; for stationary shooting
+ *
+ * The shooterAimController sets the active mode each loop via the enable/clear
+ * methods. This is the external driver-input pipeline — joystick values are read
+ * every execute() but the output path is governed by the externally-set mode.
  *
  * ─── INPUT SHAPING ───────────────────────────────────────────────────────────
  * squareInput() squares magnitude while preserving sign.
@@ -60,11 +64,32 @@ public class driveWithJoysticks extends Command {
     private final double corMaxX;
     private final double corMaxY;
 
-    // ── Point-at-target state ─────────────────────────────────────────────────
-    private boolean pointAtActive  = false;
-    private double  targetFeetX    = 0.0;
-    private double  targetFeetY    = 0.0;
-    private double  targetOffsetDeg = 0.0;
+    // ── Drive mode ────────────────────────────────────────────────────────────
+
+    private enum DriveMode {
+        /** Full driver control — no heading override. */
+        NORMAL,
+        /** Heading PID holds robot facing a field target; translation free. */
+        POINT_AT,
+        /**
+         * Driver controls heading freely within [headingBoundMinDeg, headingBoundMaxDeg].
+         * PID-holds to the nearest bound when heading exits the window.
+         */
+        HEADING_BOUND,
+        /** Wheels X-braced, no translation. Used for stationary shooting. */
+        STATIC_SHOT_LOCK
+    }
+
+    private DriveMode driveMode = DriveMode.NORMAL;
+
+    // ── POINT_AT state ────────────────────────────────────────────────────────
+    private double targetFeetX    = 0.0;
+    private double targetFeetY    = 0.0;
+    private double targetOffsetDeg = 0.0;
+
+    // ── HEADING_BOUND state ───────────────────────────────────────────────────
+    private double headingBoundMinDeg = 0.0;
+    private double headingBoundMaxDeg = 0.0;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Constructor
@@ -94,18 +119,63 @@ public class driveWithJoysticks extends Command {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Point-at-target control (called by RobotContainer button binding)
+    // Drive mode control — called by shooterAimController each loop
     // ─────────────────────────────────────────────────────────────────────────
 
+    /**
+     * Activate POINT_AT mode: heading PID locks robot facing (targetFeetX, targetFeetY).
+     * Translation remains under driver control.
+     *
+     * @param targetFeetX  Field X of target (feet).
+     * @param targetFeetY  Field Y of target (feet).
+     * @param offsetDeg    Heading offset in degrees (0 = robot front faces target).
+     */
     public void enablePointAt(double targetFeetX, double targetFeetY, double offsetDeg) {
-        this.pointAtActive   = true;
-        this.targetFeetX     = targetFeetX;
-        this.targetFeetY     = targetFeetY;
+        this.driveMode      = DriveMode.POINT_AT;
+        this.targetFeetX    = targetFeetX;
+        this.targetFeetY    = targetFeetY;
         this.targetOffsetDeg = offsetDeg;
     }
 
+    /**
+     * Activate HEADING_BOUND mode: driver controls heading freely within the
+     * provided window. PID-holds to the nearest bound if heading exits the window.
+     * Translation remains under full driver control.
+     *
+     * Bounds come from ShooterOutput.headingBoundsDeg — the range of robot headings
+     * within which the turret can reach the target without exceeding its soft stops.
+     *
+     * @param minAbsHeadingDeg  Minimum allowed absolute robot heading (degrees, field frame).
+     * @param maxAbsHeadingDeg  Maximum allowed absolute robot heading (degrees, field frame).
+     */
+    public void enableHeadingBound(double minAbsHeadingDeg, double maxAbsHeadingDeg) {
+        this.driveMode         = DriveMode.HEADING_BOUND;
+        this.headingBoundMinDeg = minAbsHeadingDeg;
+        this.headingBoundMaxDeg = maxAbsHeadingDeg;
+    }
+
+    /**
+     * Activate STATIC_SHOT_LOCK mode: wheels X-braced, no translation.
+     * The shooter fires while the robot is stationary.
+     */
+    public void enableStaticShotLock() {
+        this.driveMode = DriveMode.STATIC_SHOT_LOCK;
+    }
+
+    /**
+     * Restore NORMAL mode — full driver control, all heading overrides released.
+     * Called by shooterAimController.clearAimMode() on button release.
+     */
+    public void clearAimMode() {
+        this.driveMode = DriveMode.NORMAL;
+    }
+
+    /**
+     * Legacy: disable point-at and restore NORMAL mode.
+     * Kept for backward compatibility with existing button bindings.
+     */
     public void disablePointAt() {
-        this.pointAtActive = false;
+        clearAimMode();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -139,14 +209,27 @@ public class driveWithJoysticks extends Command {
 
         Translation2d centerOfRotation = new Translation2d(corXm, corYm);
 
-        // ── Build input and command the subsystem ─────────────────────────────
+        // ── Build input and dispatch by drive mode ────────────────────────────
         driveInput input = new driveInput(vxFtps, vyFtps, omega, centerOfRotation);
 
-        if (pointAtActive) {
-            // Heading PID takes over omega; translation passes through normally
-            drive.drivePointAt(input, targetFeetX, targetFeetY, targetOffsetDeg);
-        } else {
-            drive.drive(input);
+        switch (driveMode) {
+            case POINT_AT:
+                drive.drivePointAt(input, targetFeetX, targetFeetY, targetOffsetDeg);
+                break;
+
+            case HEADING_BOUND:
+                drive.driveWithHeadingBound(input, headingBoundMinDeg, headingBoundMaxDeg);
+                break;
+
+            case STATIC_SHOT_LOCK:
+                // X-brace: ignore all driver input while locked for shot
+                drive.lockWheelsX();
+                break;
+
+            case NORMAL:
+            default:
+                drive.drive(input);
+                break;
         }
     }
 
@@ -168,7 +251,7 @@ public class driveWithJoysticks extends Command {
         return MathUtil.applyDeadband(value, swerveConstants.INPUT_DEADBAND);
     }
 
-    /** Squares magnitude while preserving sign for improved low-speed feel */
+    /** Squares magnitude while preserving sign for improved low-speed feel. */
     private double squareInput(double value) {
         return Math.copySign(value * value, value);
     }

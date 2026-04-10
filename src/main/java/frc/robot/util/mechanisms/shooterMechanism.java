@@ -1,5 +1,7 @@
 package frc.robot.util.mechanisms;
 
+import java.util.function.BooleanSupplier;
+
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
@@ -69,6 +71,13 @@ public class shooterMechanism extends SubsystemBase {
     // ── Hold threshold ────────────────────────────────────────────────────────
     private final double holdThresholdRps;
 
+    // ── Ready gate ────────────────────────────────────────────────────────────
+    // Optional external condition that must be true before isReady() can return true.
+    // Use case: gate on robot heading being within headingBoundsDeg so the shooter
+    // never reports READY while the turret would have to fire past a soft stop.
+    //   .withReadyGate(() -> aimController.getLastResult().isHeadingInBounds())
+    private final BooleanSupplier readyGate;
+
     // ── Ready state ───────────────────────────────────────────────────────────
     private enum ReadyState { SEEKING, READY }
     private ReadyState state = ReadyState.SEEKING;
@@ -86,6 +95,7 @@ public class shooterMechanism extends SubsystemBase {
         defaultTurretDeg   = b.defaultTurretDeg;
         defaultHoodDeg     = b.defaultHoodDeg;
         holdThresholdRps   = b.holdThresholdRpm / 60.0;
+        readyGate          = b.readyGate;
 
         flywheelSetpointRps = defaultFlywheelRps;
         turretSetpointDeg   = defaultTurretDeg;
@@ -223,11 +233,15 @@ public class shooterMechanism extends SubsystemBase {
         }
     }
 
-    /** True when every configured sub-mechanism is within its setpoint deadband. */
+    /**
+     * True when every configured sub-mechanism is within its setpoint deadband
+     * AND the optional ready gate (if set) returns true.
+     */
     private boolean allAtSetpoint() {
         if (!flywheel.isAtSetpoint()) return false;
         if (turret != null && !turret.isAtSetpoint()) return false;
         if (hood   != null && !hood.isAtSetpoint())   return false;
+        if (readyGate != null && !readyGate.getAsBoolean()) return false;
         return true;
     }
 
@@ -321,6 +335,9 @@ public class shooterMechanism extends SubsystemBase {
         private double holdThresholdRpm        = 0.0;
         private boolean holdThresholdSet       = false;
 
+        // Ready gate — optional external condition
+        private BooleanSupplier readyGate      = null;
+
         public Builder(String name) {
             this.name = name;
         }
@@ -361,6 +378,26 @@ public class shooterMechanism extends SubsystemBase {
         public Builder withHood(mechanismConfig config, double defaultDeg) {
             this.hoodConfig    = config;
             this.defaultHoodDeg = defaultDeg;
+            return this;
+        }
+
+        /**
+         * Set an optional external condition that must be true before isReady()
+         * can return true. All configured sub-mechanisms must still be at their
+         * setpoints — this gate is an additional AND condition on top of that.
+         *
+         * Typical use: prevent firing when robot heading is outside the turret's
+         * allowed window.
+         *
+         * <pre>{@code
+         * .withReadyGate(() -> aimController.getLastResult().isHeadingInBounds())
+         * }</pre>
+         *
+         * @param gate  Returns true when the external condition is satisfied.
+         *              Pass null to disable (equivalent to not calling this method).
+         */
+        public Builder withReadyGate(BooleanSupplier gate) {
+            this.readyGate = gate;
             return this;
         }
 
