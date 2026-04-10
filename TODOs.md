@@ -2,6 +2,8 @@ Generate the full-code Unit Test procedure
 
 Develop schema for autos and a test auto (for the unit test)
 
+Work through managing what gets passed to smartdashboard when (dev, pid tuning, vision calibration, prematch, auto, during match, etc.) concerns that the current body fo "stuff' being sent to dashboard will cause bandwidth crashing when connected to competition fields.
+
 test EVERY piece of this codebase (all written by Claude, none of it has had any testing or validation)
 
 Develop and impliment an auto PID tuner (will need future-state PID tuning SOP complete to derive this from, currently PID tuning SOP is a 70% draft that needs peer-review)
