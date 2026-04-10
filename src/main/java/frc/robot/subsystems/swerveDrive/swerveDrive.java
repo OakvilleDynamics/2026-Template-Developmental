@@ -16,8 +16,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.*;
 import edu.wpi.first.math.system.plant.DCMotor;
-import edu.wpi.first.wpilibj.ADIS16470_IMU;
-import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis;
+import com.ctre.phoenix6.hardware.Pigeon2;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -85,7 +84,7 @@ public class swerveDrive extends SubsystemBase {
     // Hardware
     // ─────────────────────────────────────────────────────────────────────────
     private final swerveModule[] modules;
-    private final ADIS16470_IMU  imu = new ADIS16470_IMU();
+    private final Pigeon2 imu = new Pigeon2(swerveConstants.PIGEON2_CAN_ID);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Kinematics and pose estimation
@@ -189,7 +188,8 @@ public class swerveDrive extends SubsystemBase {
         SmartDashboard.putNumber("Drive/HeadingPID/kI", headingPID[1]);
         SmartDashboard.putNumber("Drive/HeadingPID/kD", headingPID[2]);
 
-        imu.calibrate();
+        // Pigeon 2 self-calibrates on power-up. Temperature calibration is performed
+        // once in Phoenix Tuner X — no runtime calibrate() call needed.
         publishGeometry();
     }
 
@@ -483,7 +483,11 @@ public class swerveDrive extends SubsystemBase {
     public driveOdometryState getOdometryState() { return currentState; }
 
     public Pose2d    getPose()              { return poseEstimator.getEstimatedPosition(); }
-    public Rotation2d getYaw()             { return Rotation2d.fromDegrees(-imu.getAngle(IMUAxis.kZ)); }
+    public Rotation2d getYaw() {
+        // Pigeon 2 reports yaw in degrees, CCW positive (NWU).
+        // Negated to match WPILib field convention — verify sign against physical mounting.
+        return Rotation2d.fromDegrees(-imu.getYaw().getValueAsDouble());
+    }
 
     /**
      * Returns the estimated robot pose at or nearest to the given FPGA timestamp.
@@ -568,7 +572,7 @@ public class swerveDrive extends SubsystemBase {
         );
     }
 
-    public void zeroYaw() { imu.reset(); }
+    public void zeroYaw() { imu.setYaw(0.0); }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Internal helpers
@@ -626,10 +630,11 @@ public class swerveDrive extends SubsystemBase {
             new double[]{corX, corY}, new double[]{corVx, corVy}, new double[]{corAx, corAy}
         );
 
-        double imuAngVelRad   = Math.toRadians(imu.getRate(IMUAxis.kZ));
+        // Pigeon 2: getAngularVelocityZDevice() → deg/s, getAcceleration*() → g's
+        double imuAngVelRad   = Math.toRadians(imu.getAngularVelocityZDevice().getValueAsDouble());
         double imuAngAccel    = (imuAngVelRad - prevImuAngVel) / dt;
-        double imuAxMs2       = imu.getAccelX() * 9.81;
-        double imuAyMs2       = imu.getAccelY() * 9.81;
+        double imuAxMs2       = imu.getAccelerationX().getValueAsDouble() * 9.81;
+        double imuAyMs2       = imu.getAccelerationY().getValueAsDouble() * 9.81;
         double imuLinAccelMag = Math.hypot(imuAxMs2, imuAyMs2);
         double imuLinAccelHdg = Math.atan2(imuAyMs2, imuAxMs2);
         double imuLinVelX     = prevLinVelX + imuAxMs2 * dt;

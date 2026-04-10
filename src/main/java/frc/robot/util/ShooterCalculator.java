@@ -233,10 +233,30 @@ public class ShooterCalculator {
             return !warnings.isEmpty();
         }
 
-        /** True when the robot heading is within headingBoundsDeg. */
+        /**
+         * True when the robot heading is within headingBoundsDeg.
+         *
+         * Uses a wrap-aware arc check so results are correct when the valid window
+         * crosses the ±180° boundary (e.g., bounds = [150°, -160°]).
+         *
+         * Arc convention: the valid window is the CW arc from bounds[0] to bounds[1].
+         * If bounds[0] ≤ bounds[1] the arc does not wrap; otherwise it crosses ±180°.
+         */
         public boolean isHeadingInBounds(double robotHeadingDeg) {
-            return robotHeadingDeg >= headingBoundsDeg[0]
-                && robotHeadingDeg <= headingBoundsDeg[1];
+            return isInArc(robotHeadingDeg, headingBoundsDeg[0], headingBoundsDeg[1]);
+        }
+
+        /**
+         * Static helper — wrap-aware arc membership test.
+         * Returns true when {@code angle} lies in the CW arc from {@code arcMin} to {@code arcMax}.
+         */
+        public static boolean isInArc(double angle, double arcMin, double arcMax) {
+            if (arcMin <= arcMax) {
+                return angle >= arcMin && angle <= arcMax;
+            } else {
+                // Arc wraps through ±180°
+                return angle >= arcMin || angle <= arcMax;
+            }
         }
 
         @Override
@@ -254,6 +274,18 @@ public class ShooterCalculator {
                 warnings.isEmpty() ? "none" : warnings.toString());
         }
     }
+
+    // =========================================================================
+    // Soft limit accessors
+    // Used by shooterAimController to command the turret to its wait positions
+    // when the target heading falls outside the reachable window.
+    // =========================================================================
+
+    /** Turret soft limit minimum (robot-relative degrees, most-negative allowed angle). */
+    public double getTurretSoftLimitMinDeg() { return turretSoftLimitMinDeg; }
+
+    /** Turret soft limit maximum (robot-relative degrees, most-positive allowed angle). */
+    public double getTurretSoftLimitMaxDeg() { return turretSoftLimitMaxDeg; }
 
     // =========================================================================
     // Primary entry point — StaticShot
