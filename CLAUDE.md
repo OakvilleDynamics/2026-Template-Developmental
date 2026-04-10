@@ -22,7 +22,7 @@ From-scratch swerve drive robot codebase for **FRC Team 8719**, built using:
 - **Drive motors:** Kraken X60 (TalonFX, Phoenix 6)
 - **Steer motors:** Minion (TalonFX, Phoenix 6)
 - **Steer encoders:** Thrifty absolute analog encoders (0–3.3V, roboRIO analog ports)
-- **IMU:** ADIS16470
+- **IMU:** CTRE Pigeon 2.0 (CAN ID: `swerveConstants.PIGEON2_CAN_ID`; Phoenix 6 API — `getYaw().getValueAsDouble()`, `getAngularVelocityZDevice()`, `getAccelerationX/Y()`; calibration done via Phoenix Tuner X, not in code)
 
 ### Vision
 Two dedicated OrangePi 5 coprocessors — isolated by role for reliability and headroom:
@@ -58,6 +58,7 @@ src/main/java/frc/robot/
 │   ├── visionConstants.java                (AprilTag coprocessor — 10.87.19.11)
 │   ├── gamePieceConstants.java             (game piece coprocessor — 10.87.19.12)
 │   ├── pathplannerConstants.java
+│   ├── shooterConstants.java               ← shooter lookup table, pivot geometry, speed warning threshold
 │   └── AprilTagIgnore.java
 │
 ├── pathplanning/
@@ -81,6 +82,8 @@ src/main/java/frc/robot/
 └── util/
     ├── units.java
     ├── AprilTagFieldCal.java
+    ├── ShooterCalculator.java              ← pure-math ballistics; StaticShot + OnTheMove; outputs headingBoundsDeg
+    ├── shooterAimController.java           ← orchestration middleware; drivetrain state → calculator → mechanism setpoints + drive mode
     ├── motors/                             (mechanism motor abstraction)
     │   ├── ffProvider.java
     │   ├── motorConstants.java
@@ -91,7 +94,7 @@ src/main/java/frc/robot/
     │   ├── REVMechanismUnit.java
     │   └── NovaMechanismUnit.java
     └── mechanisms/                         (pre-packaged mechanism subsystems)
-        └── shooterMechanism.java           ← flywheel + optional turret + optional hood
+        └── shooterMechanism.java           ← flywheel + optional turret + optional hood; supports withReadyGate()
 ```
 
 ---
@@ -128,6 +131,11 @@ Available factories: `springTurret` (piecewise-linear spring compensation — si
 
 `mechanismUnit.isAtSetpoint()` compares actual position/velocity against the last commanded setpoint using `config.setpointDeadband`. Requires `withSetpointDeadband()` to be set in the config — warns to DS at construction and on first call otherwise.
 
+`shooterMechanism` supports an optional `withReadyGate(BooleanSupplier gate)` builder method. When set, `isReady()` (i.e. `allAtSetpoint()`) additionally requires `gate.getAsBoolean()` to be true — use this to AND an external condition (e.g. robot heading within turret window) onto the READY state. Usage:
+```java
+.withReadyGate(() -> aimController.getLastResult().isHeadingInBounds())
+```
+
 This makes swapping a motor controller a one-line config change. See `docs/ARCHITECTURE.md` — Mechanism Motor Abstraction for full details.
 
 ### 6. Two-phase design before implementation
@@ -152,13 +160,14 @@ Architectural decisions are discussed and agreed before any code is written. Exp
 
 | Value type | Interface unit | Internal unit | Conversion |
 |---|---|---|---|
-| Linear velocity | ft/s | m/s | `units.ftps_mps()` |
+| Linear velocity | ft/s | m/s | `units.ftps_mps()` / `units.mps_ftps()` |
 | Distance / geometry | inches | meters | `units.inches_m()` |
 | Field coordinates | feet | meters | `units.fieldFeet_m()` |
 | Angle | degrees | radians | `units.deg_rad()` |
 | Robot mass | lbs | kg | `units.lbs_kg()` |
 | Moment of inertia | lb·in² | kg·m² | `units.lbIn2_kgM2()` |
 | Mechanism torque (FF calibration) | lb·in | N·m | `units.lbIn_Nm()` |
+| Heading normalization | degrees (any range) | degrees (−180°, 180°] | `units.normalizeAngleDeg()` |
 
 ---
 
@@ -173,6 +182,7 @@ Owns all four modules and the IMU. The only way to move the robot.
 |---|---|
 | `drive(driveInput)` | Normal field-relative driver control |
 | `drivePointAt(input, x, y, offset)` | Translation from driver, heading PID locks to target |
+| `driveWithHeadingBound(input, minDeg, maxDeg)` | Translation from driver; heading PID holds to nearest bound when outside `[minDeg, maxDeg]`; passes through driver omega when inside bounds. Publishes `Drive/HeadingBound/*` telemetry. |
 | `lockWheelsX()` | X-brace defense pattern |
 | `stop()` | Zero drive speed, hold steer angles |
 | `driveRobotRelative(ChassisSpeeds)` | PathPlanner-only — robot-relative, bypasses field-relative conversion |
@@ -211,7 +221,7 @@ Immutable value object. The sole public command interface into `swerveDrive`. Ac
 
 Full motion state snapshot updated every 20ms. Three buckets:
 - `encoderState` — from wheel encoders + kinematics (reliable linear velocity)
-- `imuState` — from ADIS16470 (reliable angular velocity)
+- `imuState` — from Pigeon 2.0 (reliable angular velocity)
 - `blendedState` — complementary filter blend (alpha tunable live from SmartDashboard)
 
 All values SI internally. CoR tracked with velocity and acceleration.
@@ -291,7 +301,22 @@ Guard: `tan(verticalAngle) ≤ 0` → skip (piece above camera horizon).
 
 ### `driveWithJoysticks`
 
-Default drive command on `swerveDrive`. Left stick = field-relative translation (ft/s). Right stick twist = rotation (rad/s). Right stick X/Y = dynamic center of rotation (bounded to bumper corners). `enablePointAt()` / `disablePointAt()` toggled by button binding — heading PID takes over omega.
+Default drive command on `swerveDrive`. Left stick = field-relative translation (ft/s). Right stick twist = rotation (rad/s). Right stick X/Y = dynamic center of rotation (bounded to bumper corners).
+
+**Drive mode enum** (`DriveMode`):
+| Mode | Trigger | Behavior |
+|---|---|---|
+| `NORMAL` | Default | Full driver control |
+| `POINT_AT` | `enablePointAt(x, y, offsetDeg)` | Driver translates; heading PID locks to field point |
+| `HEADING_BOUND` | `enableHeadingBound(minDeg, maxDeg)` | Driver translates; heading PID clamps to window when outside; driver omega passes through when inside |
+| `STATIC_SHOT_LOCK` | `enableStaticShotLock()` | X-brace, no translation — robot stops in place |
+
+**Mode control methods:**
+- `enablePointAt(x, y, offsetDeg)` — set `POINT_AT` mode (backward compat)
+- `disablePointAt()` — alias for `clearAimMode()` (backward compat)
+- `enableHeadingBound(minAbsDeg, maxAbsDeg)` — set `HEADING_BOUND` mode
+- `enableStaticShotLock()` — set `STATIC_SHOT_LOCK` mode
+- `clearAimMode()` — restore `NORMAL`; unified teardown for all aim modes
 
 ### `xLockCommand`
 
@@ -355,6 +380,73 @@ Every 20ms, in `Robot.robotPeriodic()`:
 1. `CommandScheduler.getInstance().run()` — runs subsystem `periodic()` + all active commands
 2. `robotContainer.updatePoseEstimator()` — fuses latest valid vision pose into Kalman filter
 3. `robotContainer.updateCalibrationTab()` — updates field calibration Shuffleboard tab
+
+---
+
+## Shooter Aim System
+
+Three-layer architecture separating math, hardware, and orchestration:
+
+| Layer | File | Role |
+|---|---|---|
+| Math | `util/ShooterCalculator.java` | Pure-math ballistics. No hardware refs. StaticShot + OnTheMove modes with iterative ToF refinement. Outputs `ShooterOutput` including `headingBoundsDeg[2]`. |
+| Hardware | `util/mechanisms/shooterMechanism.java` | Flywheel + optional turret + optional hood. Manages motor setpoints, PID, feed-forward. Exposes `isReady()` (optionally gated by `readyGate`). |
+| Orchestration | `util/shooterAimController.java` | SubsystemBase. Reads drivetrain state, calls `ShooterCalculator`, pushes setpoints to `shooterMechanism`, sets drive mode on `driveWithJoysticks`. |
+| Constants | `constants/shooterConstants.java` | Lookup table (`LookupEntry[]`), pivot geometry, speed warning threshold. Turret soft/hard limits live in `mechanismConfig` to avoid duplication. |
+
+### `ShooterCalculator`
+
+Two constructors:
+- **Convenience** `(hz, iterations, mechanismConfig turretConfig)` — reads `softLimitReverseDeg`/`softLimitForwardDeg` directly from the config. Single source of truth.
+- **Full** `(hz, iterations, softMin, softMax, hardMin, hardMax)` — for use without a `mechanismConfig` (e.g. standalone testing).
+
+**`ShooterOutput`** includes:
+- `double[] headingBoundsDeg` — `[normalize(aimFieldDeg − softMax), normalize(aimFieldDeg − softMin)]`. The range of robot headings within which the turret stays inside its soft limits.
+- `boolean isHeadingInBounds(double robotHdgDeg)` — wrap-aware check using `isInArc()`.
+- `static boolean isInArc(double angle, double arcMin, double arcMax)` — handles window crossing ±180°: uses `arcMin <= arcMax` branch for normal case vs. `angle >= arcMin || angle <= arcMax` for wrapping case.
+
+### `shooterAimController`
+
+**Enums:** `TurretMode { PHYSICAL_TURRET, SWERVE_AS_TURRET }`, `AimMode { STATIC_SHOT, ON_THE_MOVE, IDLE }`
+
+**Key methods:** `setTarget(type, x, y)`, `setAimMode(mode)`, `clearAimMode()`, `getLastResult()` → `ShooterAimOutput`
+
+**`ShooterAimOutput`** nested class: `shooterResult`, `headingChangeRequired`, `shooterReady`, `activeMode`, `isHeadingInBounds()`
+
+**Static shot** drive mode (two-phase):
+- `PHYSICAL_TURRET`: Phase 1 → `enableHeadingBound()` until in bounds; Phase 2 → `enableStaticShotLock()` (X-brace).
+- `SWERVE_AS_TURRET`: Phase 1 → `enablePointAt(target)` until pointed; Phase 2 → `enableStaticShotLock()`.
+
+**On the Move** drive mode: `enableHeadingBound(result.headingBoundsDeg[0], result.headingBoundsDeg[1])` each loop.
+
+**Turret OTM — `TurretBoundState` machine** (physical turret only):
+
+| State | Turret command | Transition |
+|---|---|---|
+| `IN_BOUNDS` | Normal aim from `ShooterCalculator` | → `WAITING_AT_FORWARD_LIMIT` when heading goes CCW past `boundsMin`; → `WAITING_AT_REVERSE_LIMIT` when CW past `boundsMax` |
+| `WAITING_AT_FORWARD_LIMIT` | Park at `softMax` | → `IN_BOUNDS` if heading returns inside bounds; → `WAITING_AT_REVERSE_LIMIT` when overshoot exceeds `deadZone × flipThresholdPct` |
+| `WAITING_AT_REVERSE_LIMIT` | Park at `softMin` | → `IN_BOUNDS` if heading returns inside bounds; → `WAITING_AT_FORWARD_LIMIT` when overshoot exceeds `deadZone × flipThresholdPct` |
+
+Dead zone width = `360° − (softMax − softMin)`. `flipThresholdPct` defaults to 0.5 (midpoint). Overshoot is computed wrap-correctly via `units.normalizeAngleDeg(boundEdge − robotHdgDeg)`.
+
+### RobotContainer wiring
+
+```java
+ShooterCalculator calc = new ShooterCalculator(50, 5, turretMotor.getConfig());
+shooterAimController aimCtrl = new shooterAimController(calc, drive, shooter, driveCmd,
+    shooterAimController.TurretMode.PHYSICAL_TURRET);
+
+// Gate isReady() on heading-in-bounds
+shooter = new shooterMechanism.Builder(...)
+    .withReadyGate(() -> aimCtrl.getLastResult().isHeadingInBounds())
+    .build();
+
+// Button bindings
+new JoystickButton(stick, 5).whileHeld(() -> {
+    aimCtrl.setTarget("Hub", TARGET_X_FT, TARGET_Y_FT);
+    aimCtrl.setAimMode(shooterAimController.AimMode.ON_THE_MOVE);
+}).whenReleased(aimCtrl::clearAimMode);
+```
 
 ---
 
