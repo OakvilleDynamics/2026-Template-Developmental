@@ -148,6 +148,49 @@ public class shooterAimController extends SubsystemBase {
      */
     private boolean    staticShotLocked = false;
 
+    // ── Turret bound state (ON_THE_MOVE + PHYSICAL_TURRET only) ──────────────
+
+    /**
+     * Tracks where the turret is parked when robot heading has drifted outside
+     * the valid window and the target is temporarily unreachable.
+     *
+     * IN_BOUNDS
+     *   Heading within headingBoundsDeg. Turret aims normally. isReady() can fire.
+     *
+     * WAITING_AT_FORWARD_LIMIT
+     *   Heading went CCW past headingBoundsDeg[0] — target would require the turret
+     *   to exceed softMax. Turret parks at softMax and waits.
+     *   → Back to IN_BOUNDS if heading returns inside the valid window.
+     *   → Flips to WAITING_AT_REVERSE_LIMIT if heading drifts CCW past the flip
+     *     threshold (X% of the dead zone from softMax toward softMin side).
+     *     Turret traverses to softMin; once heading enters the valid window from
+     *     that side the turret backs off softMin and aims normally.
+     *
+     * WAITING_AT_REVERSE_LIMIT
+     *   Symmetric: heading went CW past headingBoundsDeg[1]. Turret parks at softMin.
+     *   → Back to IN_BOUNDS if heading returns inside the valid window.
+     *   → Flips to WAITING_AT_FORWARD_LIMIT if heading drifts CW past the flip threshold.
+     */
+    private enum TurretBoundState {
+        IN_BOUNDS,
+        WAITING_AT_FORWARD_LIMIT,
+        WAITING_AT_REVERSE_LIMIT
+    }
+
+    private TurretBoundState turretBoundState = TurretBoundState.IN_BOUNDS;
+
+    /**
+     * Fraction of the dead zone width at which the turret flips from one parked
+     * limit to the other. Measured from the soft limit the turret is currently
+     * parked at, toward the opposite limit.
+     *
+     * 0.5 = flip at the midpoint of the dead zone (break-even point — neither
+     *   rotation direction is shorter). Good default for symmetric turrets.
+     * < 0.5 = flip sooner; > 0.5 = wait longer before committing.
+     * Range: (0.0, 1.0).
+     */
+    private final double flipThresholdPct;
+
     private ShooterAimOutput lastResult = ShooterAimOutput.idle();
 
     // =========================================================================
@@ -155,13 +198,33 @@ public class shooterAimController extends SubsystemBase {
     // =========================================================================
 
     /**
-     * @param calc       ShooterCalculator instance (construct from RobotContainer
-     *                   passing shooterConstants limits).
-     * @param drive      swerveDrive subsystem.
-     * @param shooter    shooterMechanism subsystem.
-     * @param driveCmd   driveWithJoysticks default drive command — the aim
-     *                   controller sets its drive mode each loop.
-     * @param turretMode Whether a physical turret motor exists.
+     * @param calc              ShooterCalculator instance.
+     * @param drive             swerveDrive subsystem.
+     * @param shooter           shooterMechanism subsystem.
+     * @param driveCmd          driveWithJoysticks default drive command.
+     * @param turretMode        Whether a physical turret motor exists.
+     * @param flipThresholdPct  Fraction of dead-zone width at which the turret
+     *                          flips from one parked limit to the other during
+     *                          ON_THE_MOVE. 0.5 = midpoint (recommended default).
+     */
+    public shooterAimController(
+            ShooterCalculator  calc,
+            swerveDrive        drive,
+            shooterMechanism   shooter,
+            driveWithJoysticks driveCmd,
+            TurretMode         turretMode,
+            double             flipThresholdPct) {
+
+        this.calc              = calc;
+        this.drive             = drive;
+        this.shooter           = shooter;
+        this.driveCmd          = driveCmd;
+        this.turretMode        = turretMode;
+        this.flipThresholdPct  = flipThresholdPct;
+    }
+
+    /**
+     * Convenience constructor using the recommended 50% flip threshold.
      */
     public shooterAimController(
             ShooterCalculator  calc,
@@ -169,12 +232,7 @@ public class shooterAimController extends SubsystemBase {
             shooterMechanism   shooter,
             driveWithJoysticks driveCmd,
             TurretMode         turretMode) {
-
-        this.calc       = calc;
-        this.drive      = drive;
-        this.shooter    = shooter;
-        this.driveCmd   = driveCmd;
-        this.turretMode = turretMode;
+        this(calc, drive, shooter, driveCmd, turretMode, 0.5);
     }
 
     // =========================================================================
@@ -204,7 +262,8 @@ public class shooterAimController extends SubsystemBase {
      */
     public void setAimMode(AimMode mode) {
         if (mode != activeMode) {
-            staticShotLocked = false;  // reset two-phase state on any mode change
+            staticShotLocked  = false;
+            turretBoundState  = TurretBoundState.IN_BOUNDS;
         }
         this.activeMode = mode;
     }
@@ -216,6 +275,7 @@ public class shooterAimController extends SubsystemBase {
     public void clearAimMode() {
         activeMode       = AimMode.IDLE;
         staticShotLocked = false;
+        turretBoundState = TurretBoundState.IN_BOUNDS;
         driveCmd.clearAimMode();
         lastResult = ShooterAimOutput.idle();
     }
@@ -311,7 +371,14 @@ public class shooterAimController extends SubsystemBase {
         shooter.setFlywheelRpm(result.rpm);
         shooter.setHoodDeg(result.hoodAngle);
         if (turretMode == TurretMode.PHYSICAL_TURRET) {
-            shooter.setTurretDeg(result.turretAngleRobotDeg);
+            // For ON_THE_MOVE, route through the bound state machine so the turret
+            // parks at a soft limit and waits (or flips) when heading is out of range.
+            // For STATIC_SHOT, the heading correction phase ensures we're in bounds
+            // before X-locking, so the raw aim angle is always reachable.
+            double turretCmd = (activeMode == AimMode.ON_THE_MOVE)
+                    ? computeTurretCommandOTM(result, robotHdgDeg)
+                    : result.turretAngleRobotDeg;
+            shooter.setTurretDeg(turretCmd);
         }
 
         // --- 6. Determine whether heading change is needed ---
@@ -398,6 +465,96 @@ public class shooterAimController extends SubsystemBase {
         } else {
             // Phase 2: locked on target — X-brace
             driveCmd.enableStaticShotLock();
+        }
+    }
+
+    // =========================================================================
+    // Turret bound state machine — ON_THE_MOVE + PHYSICAL_TURRET only
+    // =========================================================================
+
+    /**
+     * Determines the actual turret position command to send to shooterMechanism
+     * during ON_THE_MOVE mode when the robot heading may drift outside the valid
+     * aiming window.
+     *
+     * When in bounds: returns result.turretAngleRobotDeg (normal aim).
+     *
+     * When out of bounds: parks the turret at the soft limit corresponding to
+     * which side the heading exited from, and waits. isReady() stays false since
+     * the turret is not at its aim setpoint. Three possible transitions:
+     *   - Heading returns inside bounds → turretBoundState = IN_BOUNDS, aim resumes.
+     *   - Heading drifts further past the flip threshold → turret traverses to the
+     *     opposite soft limit (turretBoundState flips). Once heading returns inside
+     *     bounds from that side, aim resumes from the new approach angle.
+     *   - Heading reverses from the new waiting position → same logic in reverse.
+     *
+     * Threshold math:
+     *   deadZoneDeg     = 360° − (boundsMax − boundsMin)  [valid window complement]
+     *   flipThresholdDeg = deadZoneDeg × flipThresholdPct
+     *   overshoot       = angular distance heading has traveled past the bound edge,
+     *                     computed with normalizeAngleDeg() for wrap-correctness.
+     */
+    private double computeTurretCommandOTM(ShooterOutput result, double robotHdgDeg) {
+        double boundsMin = result.headingBoundsDeg[0];
+        double boundsMax = result.headingBoundsDeg[1];
+
+        // Valid window width — wrap-aware
+        double validWindowDeg = boundsMax - boundsMin;
+        if (validWindowDeg < 0) validWindowDeg += 360.0;
+        double deadZoneDeg       = 360.0 - validWindowDeg;
+        double flipThresholdDeg  = deadZoneDeg * flipThresholdPct;
+
+        boolean inBounds = ShooterOutput.isInArc(robotHdgDeg, boundsMin, boundsMax);
+
+        switch (turretBoundState) {
+
+            case IN_BOUNDS:
+                if (!inBounds) {
+                    // Determine which soft limit was crossed from the required turret angle.
+                    // If the angle exceeds softMax the heading went CCW past boundsMin.
+                    // If it is below softMin the heading went CW past boundsMax.
+                    if (result.turretAngleRobotDeg > calc.getTurretSoftLimitMaxDeg()) {
+                        turretBoundState = TurretBoundState.WAITING_AT_FORWARD_LIMIT;
+                        return calc.getTurretSoftLimitMaxDeg();
+                    } else {
+                        turretBoundState = TurretBoundState.WAITING_AT_REVERSE_LIMIT;
+                        return calc.getTurretSoftLimitMinDeg();
+                    }
+                }
+                return result.turretAngleRobotDeg;
+
+            case WAITING_AT_FORWARD_LIMIT:
+                if (inBounds) {
+                    // Heading returned inside the valid window — resume normal aim
+                    turretBoundState = TurretBoundState.IN_BOUNDS;
+                    return result.turretAngleRobotDeg;
+                }
+                // How far CCW past boundsMin has the heading traveled?
+                // normalizeAngleDeg(boundsMin - robotHdgDeg) is positive when heading
+                // is CCW of boundsMin, handles ±180° wrap correctly.
+                double forwardOvershoot = units.normalizeAngleDeg(boundsMin - robotHdgDeg);
+                if (forwardOvershoot > flipThresholdDeg) {
+                    // Heading has crossed the midpoint of the dead zone — flip
+                    turretBoundState = TurretBoundState.WAITING_AT_REVERSE_LIMIT;
+                    return calc.getTurretSoftLimitMinDeg();
+                }
+                return calc.getTurretSoftLimitMaxDeg();
+
+            case WAITING_AT_REVERSE_LIMIT:
+                if (inBounds) {
+                    turretBoundState = TurretBoundState.IN_BOUNDS;
+                    return result.turretAngleRobotDeg;
+                }
+                // How far CW past boundsMax has the heading traveled?
+                double reverseOvershoot = units.normalizeAngleDeg(robotHdgDeg - boundsMax);
+                if (reverseOvershoot > flipThresholdDeg) {
+                    turretBoundState = TurretBoundState.WAITING_AT_FORWARD_LIMIT;
+                    return calc.getTurretSoftLimitMaxDeg();
+                }
+                return calc.getTurretSoftLimitMinDeg();
+
+            default:
+                return result.turretAngleRobotDeg;
         }
     }
 }

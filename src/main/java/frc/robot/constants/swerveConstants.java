@@ -61,6 +61,13 @@ public final class swerveConstants {
     public static final int BR_DRIVE_CAN_ID = 7;
     public static final int BR_STEER_CAN_ID = 8;
 
+    // ── IMU ───────────────────────────────────────────────────────────────────
+    /**
+     * CAN ID of the CTRE Pigeon 2.0 IMU.
+     * TODO: confirm this matches the physical CAN bus wiring.
+     */
+    public static final int PIGEON2_CAN_ID  = 9;
+
     // ── Analog encoder ports (roboRIO) ────────────────────────────────────────
     // Thrifty absolute encoders → roboRIO analog ports 0–3
     // TODO: confirm your physical wiring

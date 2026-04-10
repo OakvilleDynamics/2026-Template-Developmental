@@ -64,6 +64,17 @@ public final class units {
     public static double deg_rad(double degrees)   { return Math.toRadians(degrees); }
     public static double rad_deg(double radians)   { return Math.toDegrees(radians); }
 
+    /**
+     * Normalizes an angle in degrees to the range (-180°, 180°].
+     * Used for wrap-aware angular arithmetic throughout the shooter aim system.
+     */
+    public static double normalizeAngleDeg(double angleDeg) {
+        angleDeg = angleDeg % 360.0;
+        if (angleDeg >  180.0) angleDeg -= 360.0;
+        if (angleDeg <= -180.0) angleDeg += 360.0;
+        return angleDeg;
+    }
+
     // ── Mass ──────────────────────────────────────────────────────────────────
 
     public static double lbs_kg(double lbs)        { return lbs * 0.453592; }
