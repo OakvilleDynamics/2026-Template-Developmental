@@ -1,6 +1,6 @@
 Generate the full-code Unit Test procedure
 
-Develop schema for autos
+Develop schema for autos and a test auto (for the unit test)
 
 test EVERY piece of this codebase (all written by Claude, none of it has had any testing or validation)
 
