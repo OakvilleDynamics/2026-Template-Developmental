@@ -34,9 +34,10 @@ import frc.robot.subsystems.vision.visionSubsystem;
  */
 public class RobotContainer {
 
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
     // SEASON CONFIGURATION — update this one line each year
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
+
 
     /**
      * AprilTag field layout for the current game year.
@@ -48,9 +49,10 @@ public class RobotContainer {
      */
     private static final AprilTagFields GAME_YEAR_FIELD = AprilTagFields.kDefaultField;
 
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
     // Robot geometry — all in INCHES
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
+
 
     private static final double[] WHEEL_BASE_IN = { 22.0, 22.0 };
     private static final double[] FRAME_IN      = { 26.0, 26.0 };
@@ -60,17 +62,18 @@ public class RobotContainer {
     private static final double COR_MAX_X_IN = BUMPER_IN[0] / 2.0;
     private static final double COR_MAX_Y_IN = BUMPER_IN[1] / 2.0;
 
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
     // Lock-to-target coordinates (field, in FEET)
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
+
 
     private static final double TARGET_FEET_X     = 13.5;
     private static final double TARGET_FEET_Y     = 27.0;
     private static final double TARGET_OFFSET_DEG = 0.0;
 
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
     // Heading PID
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
 
     private static final double[] HEADING_PID = {
         swerveConstants.HEADING_PID_kP,
@@ -78,11 +81,11 @@ public class RobotContainer {
         swerveConstants.HEADING_PID_kD
     };
 
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
     // Per-module PID defaults
     // drivePID: { kP, kI, kD, kS, kV, kA }
     // steerPID: { kP, kI, kD, kS, kV }
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
 
     private static final double[] FL_DRIVE_PID = { 0.1, 0.0, 0.0, 0.15, 0.12, 0.01 };
     private static final double[] FL_STEER_PID = { 60.0, 0.0, 2.0, 0.25, 0.12 };
@@ -93,9 +96,9 @@ public class RobotContainer {
     private static final double[] BR_DRIVE_PID = { 0.1, 0.0, 0.0, 0.15, 0.12, 0.01 };
     private static final double[] BR_STEER_PID = { 60.0, 0.0, 2.0, 0.25, 0.12 };
 
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
     // Controllers
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
 
     private final Joystick leftStick  = new Joystick(0);
     private final Joystick rightStick = new Joystick(1);
@@ -110,9 +113,9 @@ public class RobotContainer {
     private final JoystickButton huntClusterButton   = new JoystickButton(rightStick, 7);
     private final JoystickButton huntSeqClusterButton = new JoystickButton(rightStick, 8);
 
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
     // Subsystems, commands, calibration tab
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
 
     private final swerveDrive              drive;
     private final visionSubsystem          vision;

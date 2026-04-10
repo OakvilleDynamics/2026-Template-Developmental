@@ -62,7 +62,7 @@ import frc.robot.util.units;
  */
 public final class visionConstants {
 
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
     // GAME YEAR — reference value
     // The authoritative value lives in RobotContainer as GAME_YEAR_FIELD.
     // This constant is kept here for reference and as a fallback default.
@@ -70,24 +70,24 @@ public final class visionConstants {
     // 2026 REBUILT:   AprilTagFields.kDefaultField (update when published)
     // 2025 Reefscape: AprilTagFields.k2025Reefscape
     // 2024 Crescendo: AprilTagFields.k2024Crescendo
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
 
     public static final AprilTagFields GAME_YEAR_FIELD = AprilTagFields.kDefaultField;
 
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
     // Camera names
     // Must match the camera name set in PhotonVision UI exactly (case-sensitive)
     // Set in PhotonVision UI first, then update these to match
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================    
 
     public static final String FRONT_CAMERA_NAME = "front_cam";
     public static final String REAR_CAMERA_NAME  = "rear_cam";
 
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
     // Camera MJPEG stream URLs for Shuffleboard display
     // Displayed on the "Field Calibration" tab via AprilTagFieldCalTab
     // Verify port numbers in PhotonVision UI → camera settings
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
 
     /** Static IP of the AprilTag pose estimation OrangePi 5. */
     public static final String APRILTAG_COPROCESSOR_IP = "10.87.19.11";
@@ -98,13 +98,13 @@ public final class visionConstants {
     /** PhotonVision web UI for the AprilTag coprocessor — for pit diagnostics */
     public static final String PHOTONVISION_UI_URL = "http://10.87.19.11:5800";
 
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
     // Camera transforms — robot-relative mounting positions
     //
     // TODO: Measure on your actual robot and update before first use.
     // These placeholder values assume cameras mounted on centerline,
     // 12" forward/rear of robot center, 18" above floor, 15° down tilt.
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
 
     /** Front camera — faces forward, mounted toward robot front */
     public static final Transform3d FRONT_CAMERA_TRANSFORM = new Transform3d(
@@ -134,9 +134,9 @@ public final class visionConstants {
         )
     );
 
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
     // Pose estimation filtering
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
 
     /**
      * Maximum pose ambiguity accepted from PhotonVision (0.0–1.0).
@@ -161,11 +161,11 @@ public final class visionConstants {
      */
     public static final int MIN_TAGS_FOR_ESTIMATE = 1;
 
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
     // Field calibration thresholds
     // These are DEFAULT values. All are overridable live from the
     // "Field Calibration" Shuffleboard tab without redeploying.
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
 
     /**
      * Threshold (inches) below which a tag delta is considered within tolerance.
@@ -180,10 +180,10 @@ public final class visionConstants {
      */
     public static final double CALIBRATION_TOLERANCE_INCHES = 1.0;
 
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
     // NetworkTables keys for offset file generation
     // Must match the keys watched by aprilTagFieldCalWatch.py
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
 
     /**
      * Key where generated Java snippet is published.
@@ -203,9 +203,9 @@ public final class visionConstants {
      */
     public static final String OFFSETS_ROBORIO_PATH = "/home/lvuser/field_offsets_latest.java";
 
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
     // Pose estimator — vision measurement trust
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
 
     /**
      * Base standard deviations for vision measurements [x (m), y (m), theta (rad)].
@@ -224,9 +224,9 @@ public final class visionConstants {
      */
     public static final double[] VISION_STD_DEV_TAG_SCALE = { 2.0, 1.0, 0.5 };
 
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
     // Complementary filter blend weight
-    // ═════════════════════════════════════════════════════════════════════════
+    //==========================================================================
 
     /**
      * Alpha weight for blended pose in driveOdometryState.
