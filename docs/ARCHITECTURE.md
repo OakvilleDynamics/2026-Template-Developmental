@@ -46,6 +46,7 @@ src/main/java/frc/robot/
 │   ├── visionConstants         ← AprilTag camera names, transforms, filter thresholds
 │   ├── gamePieceConstants      ← Game piece camera, clustering, hunt behavior
 │   ├── pathplannerConstants    ← PathPlanner config, robot mass/MOI, constraints
+│   ├── shooterConstants        ← Shooter lookup table, pivot geometry, speed warning threshold
 │   └── AprilTagIgnore          ← Tag IDs to suppress at specific events
 │
 ├── pathplanning/           ← PathPlanner integration
@@ -67,8 +68,10 @@ src/main/java/frc/robot/
 │       └── AprilTagFieldCalTab      ← Shuffleboard calibration interface
 │
 └── util/
-    ├── units.java          ← All unit conversions (inches↔m, lbs↔kg, etc.)
+    ├── units.java          ← All unit conversions (inches↔m, lbs↔kg, etc.) + normalizeAngleDeg()
     ├── AprilTagFieldCal    ← Field layout, per-tag offsets, geometry
+    ├── ShooterCalculator   ← Pure-math ballistics (StaticShot + OnTheMove), outputs headingBoundsDeg
+    ├── shooterAimController ← Orchestration: drivetrain state → calculator → mechanism + drive mode
     └── motors/             ← Vendor-agnostic mechanism motor abstraction
         ├── ffProvider          ← @FunctionalInterface: (pos, vel, accel) → volts
         ├── motorConstants      ← Vendor/FollowMode enums + package constants
@@ -92,6 +95,8 @@ The driver moves the left stick to translate (move forward/back/strafe) and twis
 
 **Dynamic center of rotation** — the right stick X/Y axis shifts the pivot point of rotation anywhere within the robot's bumper footprint. Centered stick = pivot in place. Full deflection = pivot at a bumper corner. This lets the driver swing around a game piece or defense target.
 
+**Drive modes** (`driveWithJoysticks.DriveMode`): `NORMAL` (default), `POINT_AT` (heading PID locks to field point), `HEADING_BOUND` (heading PID clamps to window when outside, driver omega passes through when inside), `STATIC_SHOT_LOCK` (X-brace, no translation). `shooterAimController` drives these transitions — see Shooter Aim System section.
+
 ### `driveInput` — the one interface rule
 
 **The only way to command the drivetrain is through `driveInput`.** No command or subsystem directly tells the motors what to do — they all build a `driveInput` and pass it to `swerveDrive`. This keeps input handling cleanly separated from drive execution.
@@ -111,7 +116,7 @@ Every 20ms, `swerveDrive` computes a `driveOdometryState` — a rich snapshot of
 | Bucket | Source | Best for |
 |---|---|---|
 | `encoderState` | Wheel encoders + kinematics | Linear velocity, distance |
-| `imuState` | ADIS16470 IMU | Angular velocity, heading rate |
+| `imuState` | CTRE Pigeon 2.0 IMU | Angular velocity, heading rate |
 | `blendedState` | Complementary filter of both | General-purpose motion monitoring |
 
 The blend weight (how much encoder vs. IMU) is tunable live from SmartDashboard.
@@ -420,7 +425,6 @@ Motor constants live in `motorModels.java` (sourced from vendor datasheets). Pas
     new double[]{ 1.5 }, new Supplier[]{ indexer::getPieceCount },
     () -> 90.0)) // fixed vertical elevator
 ```
-```
 
 ### What each vendor supports
 
@@ -555,6 +559,71 @@ When adding future mechanisms (intake, shooter, climber), add matching constants
 
 ---
 
+## Shooter Aim System
+
+Three-layer architecture — math, hardware, orchestration — keeps each concern isolated and independently testable.
+
+```
+ShooterCalculator  (pure math — no hardware refs)
+      │
+      │  ShooterOutput: rpm, hood°, turret°, headingBoundsDeg[2]
+      ▼
+shooterAimController  (SubsystemBase — orchestration)
+      │
+      ├──► shooterMechanism.setFlywheelRpm() / setHoodDeg() / setTurretDeg()
+      └──► driveWithJoysticks.enableHeadingBound() / enableStaticShotLock() / clearAimMode()
+```
+
+### `ShooterCalculator`
+
+Pure-math ballistics calculator. No subsystem imports, no hardware access.
+
+**Shot modes:**
+- `calculateStaticShot(targetType, tx, ty, rx, ry, headingDeg)` — assumes robot is stopped; iterates for time-of-flight.
+- `calculateOnTheMove(targetType, tx, ty, robotState...)` — adds robot velocity vector to ball velocity for moving shots.
+
+**`ShooterOutput` fields of note:**
+- `double[] headingBoundsDeg` — `[normalize(aimFieldDeg − softMax), normalize(aimFieldDeg − softMin)]`. The window of robot headings where the turret can reach the aim direction without leaving its soft limits.
+- `isHeadingInBounds(double robotHdgDeg)` — wrap-aware check using `isInArc()`, correctly handles windows that cross ±180° (e.g., bounds = [150°, −160°]).
+
+**Heading bounds derivation:** turretAngle = aimFieldDeg − robotHeadingDeg. Rearranging: robotHeadingDeg ∈ [aimFieldDeg − softMax, aimFieldDeg − softMin]. For swerve-as-turret pass softMin = softMax = 0 → bounds collapse to [aimFieldDeg, aimFieldDeg] (tight lock).
+
+### `shooterAimController`
+
+Reads drivetrain state → calls `ShooterCalculator` → pushes setpoints to `shooterMechanism` → sets drive mode on `driveWithJoysticks`. Runs in `periodic()`.
+
+**Aim modes (set by button bindings):**
+- `STATIC_SHOT` — two-phase: Phase 1 rotates robot into heading window (`enableHeadingBound`), Phase 2 X-locks once in bounds (`enableStaticShotLock`). Swerve-as-turret variant uses `enablePointAt` for Phase 1.
+- `ON_THE_MOVE` — calls `enableHeadingBound(min, max)` each loop; driver retains full translation.
+- `IDLE` — `clearAimMode()`, no setpoints sent.
+
+**`TurretBoundState` machine (OTM + physical turret):**
+
+When the robot drifts outside the heading window during on-the-move shooting, the turret can't reach the target — it must wait at its soft limit or commit to the other side.
+
+| State | Turret parks at | Flip to opposite limit when |
+|---|---|---|
+| `IN_BOUNDS` | Normal aim | Heading crosses soft limit boundary |
+| `WAITING_AT_FORWARD_LIMIT` | `softMax` | Overshoot > `deadZone × flipThresholdPct` from forward limit |
+| `WAITING_AT_REVERSE_LIMIT` | `softMin` | Overshoot > `deadZone × flipThresholdPct` from reverse limit |
+
+Dead zone = `360° − (softMax − softMin)`. Default `flipThresholdPct` = 0.5 (break-even midpoint — equally fast to rotate back or forward to re-enter the window). Overshoot is computed wrap-correctly via `units.normalizeAngleDeg(boundEdge − robotHdgDeg)`.
+
+### `shooterMechanism` — `readyGate`
+
+The optional `withReadyGate(BooleanSupplier gate)` builder method ANDs an external condition onto `isReady()`. Wire it to `aimCtrl.getLastResult().isHeadingInBounds()` so the robot won't attempt to fire when the heading is outside the turret window — even if flywheel and hood are at setpoint.
+
+### `shooterConstants`
+
+Keeps the lookup table and geometry in a single visible place for in-season tuning:
+- `LookupEntry[]` LOOKUP_TABLE — all shot profiles (distance → RPM, hood angle, etc.)
+- `PIVOT_OFFSET_X/Y_IN` — shooter pivot position in robot frame (inches)
+- `ROBOT_SPEED_WARNING_THRESHOLD_FT_S` — OTM speed-too-high warning threshold
+
+Turret soft/hard limits are **not** in `shooterConstants` — they live in `mechanismConfig` (passed to `shooterMechanism`) to avoid duplication. `ShooterCalculator` reads them from `mechanismConfig` via the convenience constructor.
+
+---
+
 ## What's Still TODO
 
 These are known gaps — in priority order for competition readiness:
@@ -572,4 +641,4 @@ These are known gaps — in priority order for competition readiness:
 
 ---
 
-*Last updated: 2026 preseason — Ryan + Claude (Code) | mechanismUnit: per-follower mixed topology (withFollowerConfig), follower-of-follower leader indices; FF library: gyroscopicTurret, springTurret direction-aware, friction deadbanding, signed gravity output; shooterMechanism pre-packaged subsystem; setpointDeadband + isAtSetpoint on mechanismUnit*
+*Last updated: 2026 preseason — Ryan + Claude (Code) | mechanismUnit: per-follower mixed topology (withFollowerConfig), follower-of-follower leader indices; FF library: gyroscopicTurret, springTurret direction-aware, friction deadbanding, signed gravity output; shooterMechanism pre-packaged subsystem; setpointDeadband + isAtSetpoint on mechanismUnit; shooter aim system: ShooterCalculator + shooterAimController + shooterConstants, headingBoundsDeg, TurretBoundState OTM machine, readyGate; IMU changed to Pigeon 2.0; driveWithJoysticks DriveMode enum + HEADING_BOUND + STATIC_SHOT_LOCK modes; driveWithHeadingBound() on swerveDrive; units.normalizeAngleDeg()*
