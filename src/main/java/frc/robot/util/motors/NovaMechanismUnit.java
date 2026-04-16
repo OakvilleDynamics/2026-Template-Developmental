@@ -228,7 +228,6 @@ public class NovaMechanismUnit extends mechanismUnit {
 
     @Override
     protected double getFollowerPositionImpl(int followerIndex) {
-        // ENCODER_SYNC is rejected at construction — this should never be called
         throw new UnsupportedOperationException(
             "NovaMechanismUnit: ENCODER_SYNC follow mode is not supported. "
             + "getFollowerPositionImpl() should never be called on a Nova mechanism.");
@@ -236,10 +235,43 @@ public class NovaMechanismUnit extends mechanismUnit {
 
     @Override
     protected void applyFollowerCorrectionImpl(int followerIndex, double duty) {
-        // ENCODER_SYNC is rejected at construction — this should never be called
         throw new UnsupportedOperationException(
             "NovaMechanismUnit: ENCODER_SYNC follow mode is not supported. "
             + "applyFollowerCorrectionImpl() should never be called on a Nova mechanism.");
+    }
+
+    @Override
+    protected double getDetectionCurrentImpl() {
+        // ThriftyNova exposes stator current natively
+        return leader.getStatorCurrent();
+    }
+
+    @Override
+    protected double getFollowerDetectionCurrentImpl(int followerIndex) {
+        // ENCODER_SYNC is rejected at construction for Nova — guard remains for safety
+        throw new UnsupportedOperationException(
+            "NovaMechanismUnit: ENCODER_SYNC follow mode is not supported. "
+            + "getFollowerDetectionCurrentImpl() should never be called on a Nova mechanism.");
+    }
+
+    @Override
+    protected double getFollowerVelocityImpl(int followerIndex) {
+        throw new UnsupportedOperationException(
+            "NovaMechanismUnit: ENCODER_SYNC follow mode is not supported. "
+            + "getFollowerVelocityImpl() should never be called on a Nova mechanism.");
+    }
+
+    @Override
+    protected void resetLeadEncoderImpl(double positionRot) {
+        // Scale to motor-native rotations (gearRatio is cached in this class)
+        leader.setEncoderPosition(positionRot * gearRatio);
+    }
+
+    @Override
+    protected void resetFollowerEncoderImpl(int followerIndex, double positionRot) {
+        throw new UnsupportedOperationException(
+            "NovaMechanismUnit: ENCODER_SYNC follow mode is not supported. "
+            + "resetFollowerEncoderImpl() should never be called on a Nova mechanism.");
     }
 
     @Override

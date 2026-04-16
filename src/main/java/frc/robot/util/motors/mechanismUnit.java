@@ -43,6 +43,19 @@ import frc.robot.util.units;
  */
 public abstract class mechanismUnit {
 
+    // ── Homing direction (public — used in startHoming() calls) ───────────────
+
+    /**
+     * Direction to drive during a homing operation.
+     * POSITIVE = positive duty cycle (increasing position reading).
+     * NEGATIVE = negative duty cycle (decreasing position reading).
+     * Physical direction depends on the leader motor's inversion config.
+     */
+    public enum HomingDirection { POSITIVE, NEGATIVE }
+
+    /** Homing state machine states (private — implementation detail). */
+    private enum HomingState { IDLE, IN_PROGRESS, COMPLETE }
+
     // ── Config ────────────────────────────────────────────────────────────────
     protected final mechanismConfig config;
 
@@ -66,6 +79,37 @@ public abstract class mechanismUnit {
     private double rampedPositionSetpoint  = 0.0;
     private boolean positionInitialized    = false;
 
+    // ── Cached ENCODER_SYNC follower index ────────────────────────────────────
+    // 1-based index into config.canIds[]. -1 when no ENCODER_SYNC follower exists.
+    // Computed once at construction; avoids scanning followerModes[] every cycle.
+    private final int encoderSyncFollowerIndex;
+
+    // ── Travel limit latch state ──────────────────────────────────────────────
+    // Each stall counter tracks consecutive loops where both current and speed
+    // thresholds are met. When counter >= stallDetectionCycles, the latch sets.
+    private int     leadLowerStallCount      = 0;
+    private int     leadUpperStallCount      = 0;
+    private int     followerLowerStallCount  = 0;
+    private int     followerUpperStallCount  = 0;
+
+    private boolean leadLowerLimitLatched      = false;
+    private boolean leadUpperLimitLatched      = false;
+    private boolean followerLowerLimitLatched  = false;
+    private boolean followerUpperLimitLatched  = false;
+
+    // ── Homing state machine ──────────────────────────────────────────────────
+    private HomingState     homingState               = HomingState.IDLE;
+    private HomingDirection homingDirection           = HomingDirection.NEGATIVE;
+    private double          homingDutyCycle           = 0.0;
+    private double          homingLeadCurrentAmps     = 0.0;
+    private double          homingLeadSpeedRps        = 0.0;
+    private double          homingFollowerCurrentAmps = 0.0;
+    private double          homingFollowerSpeedRps    = 0.0;
+    private int             homingLeadStallCount      = 0;
+    private int             homingFollowerStallCount  = 0;
+    private boolean         leadHomed                 = false;
+    private boolean         followerHomed             = false;
+
     // ── SmartDashboard key prefixes ───────────────────────────────────────────
     protected final String dashPrefix;   // "[Name]/"
     private   final String pidPrefix;    // "[Name]/PID/"
@@ -86,6 +130,13 @@ public abstract class mechanismUnit {
     // ENCODER_SYNC only (null otherwise):
     private DoubleLogEntry  logSyncErrorRot;
     private DoubleLogEntry  logSyncOutput;
+    // Travel limits (null when limits not configured):
+    private BooleanLogEntry logLeadLowerLimit;
+    private BooleanLogEntry logLeadUpperLimit;
+    private BooleanLogEntry logFollowerLowerLimit;
+    private BooleanLogEntry logFollowerUpperLimit;
+    // Homing (always allocated):
+    private BooleanLogEntry logIsHoming;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Static factory
@@ -136,6 +187,17 @@ public abstract class mechanismUnit {
         kV = config.pid[4];
         kA = config.pid[5];
 
+        // Cache the ENCODER_SYNC follower index once — avoids a per-cycle array scan.
+        // Must be set before initLogEntries(), which uses it to allocate log entries.
+        int syncIdx = -1;
+        for (int i = 0; i < config.followerModes.length; i++) {
+            if (config.followerModes[i] == motorConstants.FollowMode.ENCODER_SYNC) {
+                syncIdx = i + 1;  // 1-based to match getFollowerPositionImpl convention
+                break;
+            }
+        }
+        this.encoderSyncFollowerIndex = syncIdx;
+
         initLogEntries();
         publishPIDToDashboard();
 
@@ -159,12 +221,20 @@ public abstract class mechanismUnit {
      * @param duty -1.0 to 1.0
      */
     public final void setDutyCycle(double duty) {
+        if (isHoming()) {
+            DriverStation.reportWarning("[mechanismUnit] '" + config.name
+                + "': setDutyCycle() called while homing — command ignored.", false);
+            return;
+        }
         runEncoderSync();
+        checkTravelLimits();
+        duty = applyTravelLimitBlock(duty, Math.signum(duty));
         applyDashboardPIDUpdates();
         double ramped = usesHardwareDutyCycleRamp() ? duty : applyDutyCycleRamp(duty);
         applyDutyCycleImpl(ramped);
         logDutyCycle.append(ramped);
         logTelemetry();
+        logTravelLimitState();
     }
 
     /**
@@ -176,7 +246,14 @@ public abstract class mechanismUnit {
      * @param velocityRps target velocity (rotations/second, mechanism shaft)
      */
     public final void setVelocity(double velocityRps) {
+        if (isHoming()) {
+            DriverStation.reportWarning("[mechanismUnit] '" + config.name
+                + "': setVelocity() called while homing — command ignored.", false);
+            return;
+        }
         runEncoderSync();
+        checkTravelLimits();
+        velocityRps = applyTravelLimitBlock(velocityRps, Math.signum(velocityRps));
         applyDashboardPIDUpdates();
         updateAcceleration();
         double ffVolts = computeTotalFF();
@@ -186,6 +263,7 @@ public abstract class mechanismUnit {
         logCommandedVelocityRps.append(velocityRps);
         logAppliedFFVolts.append(ffVolts);
         logTelemetry();
+        logTravelLimitState();
     }
 
     /**
@@ -197,7 +275,26 @@ public abstract class mechanismUnit {
      * @param positionDeg target position (degrees, mechanism shaft)
      */
     public final void setPosition(double positionDeg) {
+        if (isHoming()) {
+            DriverStation.reportWarning("[mechanismUnit] '" + config.name
+                + "': setPosition() called while homing — command ignored.", false);
+            return;
+        }
         runEncoderSync();
+        checkTravelLimits();
+        // Position blocking: substitute current position to hold in place when
+        // commanded into a latched limit. Clear the opposite latch when moving away.
+        double currentDeg = getPositionImpl() * 360.0;
+        double direction  = Math.signum(positionDeg - currentDeg);
+        if (direction > 0 && isUpperLimitReached()) {
+            positionDeg = currentDeg;
+        } else if (direction < 0 && isLowerLimitReached()) {
+            positionDeg = currentDeg;
+        } else if (direction > 0) {
+            clearLowerLatches();
+        } else if (direction < 0) {
+            clearUpperLatches();
+        }
         applyDashboardPIDUpdates();
         updateAcceleration();
         double ffVolts      = computeTotalFF();
@@ -208,6 +305,7 @@ public abstract class mechanismUnit {
         logCommandedPositionDeg.append(positionDeg);
         logAppliedFFVolts.append(ffVolts);
         logTelemetry();
+        logTravelLimitState();
     }
 
     /**
@@ -465,6 +563,322 @@ public abstract class mechanismUnit {
             logSyncErrorRot = new DoubleLogEntry(log, p + "EncoderSync/Error_rot");
             logSyncOutput   = new DoubleLogEntry(log, p + "EncoderSync/Output");
         }
+        // Travel limit log entries — allocated only when limits are configured
+        boolean hasTravelLimits = !Double.isNaN(config.leadLowerCurrentAmps)
+                               || !Double.isNaN(config.leadUpperCurrentAmps);
+        if (hasTravelLimits) {
+            logLeadLowerLimit = new BooleanLogEntry(log, p + "TravelLimits/LeadLower");
+            logLeadUpperLimit = new BooleanLogEntry(log, p + "TravelLimits/LeadUpper");
+            if (encoderSyncFollowerIndex > 0) {
+                logFollowerLowerLimit = new BooleanLogEntry(log, p + "TravelLimits/FollowerLower");
+                logFollowerUpperLimit = new BooleanLogEntry(log, p + "TravelLimits/FollowerUpper");
+            }
+        }
+        // Homing log entry — always allocated (homing is always available)
+        logIsHoming = new BooleanLogEntry(log, p + "Homing/IsHoming");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Travel limit detection — private helpers
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Update stall counters for lead and (if present) ENCODER_SYNC follower.
+     * A limit latches when both detection current >= threshold AND
+     * |velocity| <= threshold hold for stallDetectionCycles consecutive loops.
+     * No-op when no travel limits are configured (early return).
+     * Called at the start of every set*() invocation.
+     */
+    private void checkTravelLimits() {
+        if (Double.isNaN(config.leadLowerCurrentAmps) && Double.isNaN(config.leadUpperCurrentAmps))
+            return;
+
+        double leadCurrent = getDetectionCurrentImpl();
+        double leadAbsVel  = Math.abs(getVelocityImpl());
+
+        if (!Double.isNaN(config.leadLowerCurrentAmps) && !leadLowerLimitLatched) {
+            if (leadCurrent >= config.leadLowerCurrentAmps && leadAbsVel <= config.leadLowerMaxSpeedRps) {
+                if (++leadLowerStallCount >= config.stallDetectionCycles) leadLowerLimitLatched = true;
+            } else {
+                leadLowerStallCount = 0;
+            }
+        }
+        if (!Double.isNaN(config.leadUpperCurrentAmps) && !leadUpperLimitLatched) {
+            if (leadCurrent >= config.leadUpperCurrentAmps && leadAbsVel <= config.leadUpperMaxSpeedRps) {
+                if (++leadUpperStallCount >= config.stallDetectionCycles) leadUpperLimitLatched = true;
+            } else {
+                leadUpperStallCount = 0;
+            }
+        }
+
+        if (encoderSyncFollowerIndex < 0) return;
+
+        // Resolve effective follower thresholds — NaN inherits the lead value
+        double effLowerCurrent = Double.isNaN(config.followerLowerCurrentAmps) ? config.leadLowerCurrentAmps : config.followerLowerCurrentAmps;
+        double effLowerSpeed   = Double.isNaN(config.followerLowerMaxSpeedRps)  ? config.leadLowerMaxSpeedRps  : config.followerLowerMaxSpeedRps;
+        double effUpperCurrent = Double.isNaN(config.followerUpperCurrentAmps) ? config.leadUpperCurrentAmps : config.followerUpperCurrentAmps;
+        double effUpperSpeed   = Double.isNaN(config.followerUpperMaxSpeedRps)  ? config.leadUpperMaxSpeedRps  : config.followerUpperMaxSpeedRps;
+
+        double followerCurrent = getFollowerDetectionCurrentImpl(encoderSyncFollowerIndex);
+        double followerAbsVel  = Math.abs(getFollowerVelocityImpl(encoderSyncFollowerIndex));
+
+        if (!Double.isNaN(effLowerCurrent) && !followerLowerLimitLatched) {
+            if (followerCurrent >= effLowerCurrent && followerAbsVel <= effLowerSpeed) {
+                if (++followerLowerStallCount >= config.stallDetectionCycles) followerLowerLimitLatched = true;
+            } else {
+                followerLowerStallCount = 0;
+            }
+        }
+        if (!Double.isNaN(effUpperCurrent) && !followerUpperLimitLatched) {
+            if (followerCurrent >= effUpperCurrent && followerAbsVel <= effUpperSpeed) {
+                if (++followerUpperStallCount >= config.stallDetectionCycles) followerUpperLimitLatched = true;
+            } else {
+                followerUpperStallCount = 0;
+            }
+        }
+    }
+
+    /** Clear lower-limit latches and reset their stall counters. */
+    private void clearLowerLatches() {
+        leadLowerLimitLatched     = false;
+        leadLowerStallCount       = 0;
+        followerLowerLimitLatched = false;
+        followerLowerStallCount   = 0;
+    }
+
+    /** Clear upper-limit latches and reset their stall counters. */
+    private void clearUpperLatches() {
+        leadUpperLimitLatched     = false;
+        leadUpperStallCount       = 0;
+        followerUpperLimitLatched = false;
+        followerUpperStallCount   = 0;
+    }
+
+    /**
+     * Block a duty-cycle or velocity command in a latched direction.
+     * Returns 0.0 when {@code direction} points into a latched limit.
+     * Auto-clears the opposite latch when the command moves away from it.
+     *
+     * @param value     raw command value (duty cycle or velocity)
+     * @param direction Math.signum of value (+1, -1, or 0)
+     * @return the original value, or 0.0 if blocked
+     */
+    private double applyTravelLimitBlock(double value, double direction) {
+        if (direction > 0 && isUpperLimitReached()) return 0.0;
+        if (direction < 0 && isLowerLimitReached()) return 0.0;
+        // Moving away from a limit: auto-clear the opposite latch
+        if (direction > 0) clearLowerLatches();
+        if (direction < 0) clearUpperLatches();
+        return value;
+    }
+
+    /** Append travel limit latch state to DataLog and SmartDashboard. */
+    private void logTravelLimitState() {
+        if (logLeadLowerLimit != null) {
+            logLeadLowerLimit.append(leadLowerLimitLatched);
+            logLeadUpperLimit.append(leadUpperLimitLatched);
+            SmartDashboard.putBoolean(dashPrefix + "TravelLimits/LeadLower", leadLowerLimitLatched);
+            SmartDashboard.putBoolean(dashPrefix + "TravelLimits/LeadUpper", leadUpperLimitLatched);
+            if (logFollowerLowerLimit != null) {
+                logFollowerLowerLimit.append(followerLowerLimitLatched);
+                logFollowerUpperLimit.append(followerUpperLimitLatched);
+                SmartDashboard.putBoolean(dashPrefix + "TravelLimits/FollowerLower", followerLowerLimitLatched);
+                SmartDashboard.putBoolean(dashPrefix + "TravelLimits/FollowerUpper", followerUpperLimitLatched);
+            }
+        }
+        logIsHoming.append(isHoming());
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Travel limit state reporting — public API
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * True if the lower (reverse) travel limit is latched on either the lead or
+     * the ENCODER_SYNC follower. Cleared automatically when a positive-direction
+     * command is issued after the limit was reached.
+     */
+    public final boolean isLowerLimitReached() {
+        return leadLowerLimitLatched || followerLowerLimitLatched;
+    }
+
+    /**
+     * True if the upper (forward) travel limit is latched on either the lead or
+     * the ENCODER_SYNC follower.
+     */
+    public final boolean isUpperLimitReached() {
+        return leadUpperLimitLatched || followerUpperLimitLatched;
+    }
+
+    /** True if the lead motor's lower travel limit is currently latched. */
+    public final boolean isLeadLowerLimitReached()     { return leadLowerLimitLatched; }
+
+    /** True if the lead motor's upper travel limit is currently latched. */
+    public final boolean isLeadUpperLimitReached()     { return leadUpperLimitLatched; }
+
+    /**
+     * True if the ENCODER_SYNC follower's lower travel limit is latched.
+     * Always false on mechanisms without an ENCODER_SYNC follower.
+     */
+    public final boolean isFollowerLowerLimitReached() { return followerLowerLimitLatched; }
+
+    /**
+     * True if the ENCODER_SYNC follower's upper travel limit is latched.
+     * Always false on mechanisms without an ENCODER_SYNC follower.
+     */
+    public final boolean isFollowerUpperLimitReached() { return followerUpperLimitLatched; }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Homing — public API
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Begin homing with the same current/speed thresholds for both lead and follower.
+     * Drives the mechanism in {@code dir} at {@code dutyCycle} magnitude until
+     * stall is detected on each side independently.
+     *
+     * <p>Call {@link #updateHoming()} from the subsystem periodic every loop
+     * while {@link #isHoming()} returns true. Do NOT call set*() while homing.</p>
+     *
+     * @param dir          direction to drive during homing
+     * @param dutyCycle    magnitude of duty cycle to apply (will be sign-adjusted by dir)
+     * @param minCurrentAmps minimum detection current (amps) for stall on both sides
+     * @param maxSpeedRps  maximum |velocity| (RPS) for stall on both sides
+     */
+    public final void startHoming(HomingDirection dir, double dutyCycle,
+                                  double minCurrentAmps, double maxSpeedRps) {
+        startHoming(dir, dutyCycle, minCurrentAmps, maxSpeedRps, minCurrentAmps, maxSpeedRps);
+    }
+
+    /**
+     * Begin homing with separate current/speed thresholds for lead and follower.
+     * Useful when the two sides have different mechanical loads.
+     *
+     * @param dir                  direction to drive during homing
+     * @param dutyCycle            magnitude of duty cycle (will be sign-adjusted by dir)
+     * @param leadCurrentAmps      minimum detection current (amps) for lead-side stall
+     * @param leadSpeedRps         maximum |velocity| (RPS) for lead-side stall
+     * @param followerCurrentAmps  minimum detection current (amps) for follower-side stall
+     * @param followerSpeedRps     maximum |velocity| (RPS) for follower-side stall
+     */
+    public final void startHoming(HomingDirection dir, double dutyCycle,
+                                  double leadCurrentAmps, double leadSpeedRps,
+                                  double followerCurrentAmps, double followerSpeedRps) {
+        homingDirection           = dir;
+        homingDutyCycle           = Math.abs(dutyCycle);
+        homingLeadCurrentAmps     = leadCurrentAmps;
+        homingLeadSpeedRps        = leadSpeedRps;
+        homingFollowerCurrentAmps = followerCurrentAmps;
+        homingFollowerSpeedRps    = followerSpeedRps;
+        homingLeadStallCount      = 0;
+        homingFollowerStallCount  = 0;
+        leadHomed                 = false;
+        // For mechanisms with no ENCODER_SYNC follower, consider follower vacuously homed
+        followerHomed             = (encoderSyncFollowerIndex < 0);
+        homingState               = HomingState.IN_PROGRESS;
+    }
+
+    /**
+     * Advance the homing state machine. Must be called from the subsystem's
+     * {@code periodic()} every loop while {@link #isHoming()} returns true.
+     *
+     * <p>Drives each side toward its hard stop, stops it when stall is confirmed,
+     * and resets encoders once both sides complete. ENCODER_SYNC correction is
+     * naturally suppressed (this method drives the follower directly and does
+     * not call {@code runEncoderSync()}).</p>
+     *
+     * <p>Do NOT call setDutyCycle(), setVelocity(), or setPosition() while homing.</p>
+     */
+    public final void updateHoming() {
+        if (homingState != HomingState.IN_PROGRESS) return;
+
+        double leadDuty = (homingDirection == HomingDirection.POSITIVE)
+            ? +homingDutyCycle : -homingDutyCycle;
+
+        // ── Lead side ────────────────────────────────────────────────────────
+        if (!leadHomed) {
+            double leadCurrent = getDetectionCurrentImpl();
+            double leadAbsVel  = Math.abs(getVelocityImpl());
+            boolean leadStalled = leadCurrent >= homingLeadCurrentAmps
+                               && leadAbsVel  <= homingLeadSpeedRps;
+            if (leadStalled) {
+                if (++homingLeadStallCount >= config.stallDetectionCycles) {
+                    applyDutyCycleImpl(0.0);
+                    leadHomed = true;
+                }
+            } else {
+                homingLeadStallCount = 0;
+                applyDutyCycleImpl(leadDuty);
+            }
+        }
+
+        // ── Follower side (ENCODER_SYNC only) ─────────────────────────────────
+        if (encoderSyncFollowerIndex > 0 && !followerHomed) {
+            double followerCurrent = getFollowerDetectionCurrentImpl(encoderSyncFollowerIndex);
+            double followerAbsVel  = Math.abs(getFollowerVelocityImpl(encoderSyncFollowerIndex));
+            boolean followerStalled = followerCurrent >= homingFollowerCurrentAmps
+                                   && followerAbsVel  <= homingFollowerSpeedRps;
+            if (followerStalled) {
+                if (++homingFollowerStallCount >= config.stallDetectionCycles) {
+                    applyFollowerCorrectionImpl(encoderSyncFollowerIndex, 0.0);
+                    followerHomed = true;
+                }
+            } else {
+                homingFollowerStallCount = 0;
+                // Drive follower in same mechanism direction.
+                // The follower's own hardware inversion config handles physical direction;
+                // no extra sign flip is needed here.
+                applyFollowerCorrectionImpl(encoderSyncFollowerIndex, leadDuty);
+            }
+        }
+
+        // ── Completion check ──────────────────────────────────────────────────
+        if (leadHomed && followerHomed) {
+            double zeroRot = Double.isNaN(config.homingZeroOffsetDeg)
+                ? 0.0 : config.homingZeroOffsetDeg / 360.0;
+            resetLeadEncoderImpl(zeroRot);
+            if (encoderSyncFollowerIndex > 0) resetFollowerEncoderImpl(encoderSyncFollowerIndex, zeroRot);
+            homingState = HomingState.COMPLETE;
+        }
+
+        // ── Telemetry ─────────────────────────────────────────────────────────
+        SmartDashboard.putBoolean(dashPrefix + "Homing/IsHoming",      isHoming());
+        SmartDashboard.putBoolean(dashPrefix + "Homing/LeadHomed",     leadHomed);
+        if (encoderSyncFollowerIndex > 0)
+            SmartDashboard.putBoolean(dashPrefix + "Homing/FollowerHomed", followerHomed);
+        logIsHoming.append(isHoming());
+    }
+
+    /**
+     * Abort an in-progress homing operation. Both motors are stopped immediately.
+     * Encoders are NOT reset. {@link #isHoming()} returns false after this call.
+     */
+    public final void cancelHoming() {
+        if (homingState != HomingState.IN_PROGRESS) return;
+        applyDutyCycleImpl(0.0);
+        if (encoderSyncFollowerIndex > 0)
+            applyFollowerCorrectionImpl(encoderSyncFollowerIndex, 0.0);
+        homingState   = HomingState.IDLE;
+        leadHomed     = false;
+        followerHomed = false;
+    }
+
+    /** True while a homing operation is in progress (started but not complete or cancelled). */
+    public final boolean isHoming() { return homingState == HomingState.IN_PROGRESS; }
+
+    /** True once homing has successfully completed and encoders have been reset. */
+    public final boolean isHomingComplete() { return homingState == HomingState.COMPLETE; }
+
+    /** True if the lead motor's side has finished homing. */
+    public final boolean isLeadHomed() { return leadHomed; }
+
+    /**
+     * True if the ENCODER_SYNC follower's side has finished homing.
+     * Always returns false when no ENCODER_SYNC follower is present
+     * (use {@link #isHomingComplete()} as the canonical completion check).
+     */
+    public final boolean isFollowerHomed() {
+        return encoderSyncFollowerIndex > 0 && followerHomed;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -534,6 +948,54 @@ public abstract class mechanismUnit {
      * @param duty          correction duty cycle [-1.0, 1.0]
      */
     protected abstract void applyFollowerCorrectionImpl(int followerIndex, double duty);
+
+    /**
+     * Return the current reading best suited for stall detection on the lead motor.
+     * Vendor contracts:
+     *   CTRE  — stator current (directly proportional to torque, ideal for stall)
+     *   REV   — output current (best approximation available on SparkMax/Flex)
+     *   Nova  — stator current (ThriftyNova exposes stator current natively)
+     *
+     * @return detection current in amps
+     */
+    protected abstract double getDetectionCurrentImpl();
+
+    /**
+     * Return the stall-detection current for an ENCODER_SYNC follower motor.
+     * Same vendor-selection logic as {@link #getDetectionCurrentImpl()}.
+     * Only called when encoderSyncFollowerIndex > 0.
+     *
+     * @param followerIndex 1-based index into config.canIds[]
+     * @return detection current in amps
+     */
+    protected abstract double getFollowerDetectionCurrentImpl(int followerIndex);
+
+    /**
+     * Return the velocity of an ENCODER_SYNC follower motor (mechanism shaft RPS).
+     * Only called when encoderSyncFollowerIndex > 0.
+     *
+     * @param followerIndex 1-based index into config.canIds[]
+     * @return follower velocity in rotations/second (signed)
+     */
+    protected abstract double getFollowerVelocityImpl(int followerIndex);
+
+    /**
+     * Write a new encoder position to the lead motor.
+     * Called once by the homing system after both sides have confirmed contact.
+     *
+     * @param positionRot mechanism shaft rotations to set as the current position
+     */
+    protected abstract void resetLeadEncoderImpl(double positionRot);
+
+    /**
+     * Write a new encoder position to an ENCODER_SYNC follower motor.
+     * Called in the same homing completion sequence as {@link #resetLeadEncoderImpl}.
+     * Only called when encoderSyncFollowerIndex > 0.
+     *
+     * @param followerIndex 1-based index into config.canIds[]
+     * @param positionRot   mechanism shaft rotations to set as the current position
+     */
+    protected abstract void resetFollowerEncoderImpl(int followerIndex, double positionRot);
 
     /**
      * Returns true when the vendor implementation has configured a hardware duty

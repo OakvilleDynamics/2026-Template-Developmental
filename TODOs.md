@@ -15,4 +15,4 @@ Create an intake template mechanism (call it intakeMechanism to be consistent wi
 
     Also need ability to have a 'stop intake' external command passed in with a property to just stop the roller or stop the roller and retract the intake (or or or... 3rd option to retract the intake but keep the roller running)
 
-    May also need to think through how it would handle a multi-game piece type game like 2025 or 2017 ?? 
+    May also need to think through how it would handle a multi-game piece type game like 2025, 2023, 2021, 2019 or 2017 ?? 
