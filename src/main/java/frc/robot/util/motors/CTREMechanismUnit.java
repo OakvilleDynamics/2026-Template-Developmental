@@ -197,7 +197,8 @@ public class CTREMechanismUnit extends mechanismUnit {
                 followers[i].getConfigurator().apply(followerCfg);
 
                 BaseStatusSignal.setUpdateFrequencyForAll(swerveConstants.SIGNAL_UPDATE_HZ,
-                    followers[i].getPosition(), followers[i].getVelocity());
+                    followers[i].getPosition(), followers[i].getVelocity(),
+                    followers[i].getStatorCurrent());
                 if (swerveConstants.OPTIMIZE_CAN_UTILIZATION) followers[i].optimizeBusUtilization();
             }
         }
@@ -288,6 +289,32 @@ public class CTREMechanismUnit extends mechanismUnit {
     @Override
     protected void applyFollowerCorrectionImpl(int followerIndex, double duty) {
         followers[followerIndex - 1].setControl(new DutyCycleOut(duty).withEnableFOC(true));
+    }
+
+    @Override
+    protected double getDetectionCurrentImpl() {
+        // Stator current is directly proportional to motor torque — ideal for stall detection
+        return leader.getStatorCurrent().getValueAsDouble();
+    }
+
+    @Override
+    protected double getFollowerDetectionCurrentImpl(int followerIndex) {
+        return followers[followerIndex - 1].getStatorCurrent().getValueAsDouble();
+    }
+
+    @Override
+    protected double getFollowerVelocityImpl(int followerIndex) {
+        return followers[followerIndex - 1].getVelocity().getValueAsDouble();
+    }
+
+    @Override
+    protected void resetLeadEncoderImpl(double positionRot) {
+        leader.setPosition(positionRot);
+    }
+
+    @Override
+    protected void resetFollowerEncoderImpl(int followerIndex, double positionRot) {
+        followers[followerIndex - 1].setPosition(positionRot);
     }
 
     @Override

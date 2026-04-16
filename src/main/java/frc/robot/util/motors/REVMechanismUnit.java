@@ -286,6 +286,35 @@ public class REVMechanismUnit extends mechanismUnit {
     }
 
     @Override
+    protected double getDetectionCurrentImpl() {
+        // REV does not expose a separate stator current; output current is the
+        // closest approximation and works well for stall detection in practice
+        return leader.getOutputCurrent();
+    }
+
+    @Override
+    protected double getFollowerDetectionCurrentImpl(int followerIndex) {
+        return followers[followerIndex - 1].getOutputCurrent();
+    }
+
+    @Override
+    protected double getFollowerVelocityImpl(int followerIndex) {
+        // Encoder conversion factor already converts to mechanism-shaft RPS
+        return followers[followerIndex - 1].getEncoder().getVelocity();
+    }
+
+    @Override
+    protected void resetLeadEncoderImpl(double positionRot) {
+        // Motor must be stopped before this is called (homing stops it first)
+        leader.getEncoder().setPosition(positionRot);
+    }
+
+    @Override
+    protected void resetFollowerEncoderImpl(int followerIndex, double positionRot) {
+        followers[followerIndex - 1].getEncoder().setPosition(positionRot);
+    }
+
+    @Override
     protected boolean usesHardwareDutyCycleRamp() {
         return hardwareRampConfigured;
     }

@@ -209,6 +209,47 @@ public final class mechanismConfig {
      *  Output clamped to [-1.0, 1.0]. Default: motorConstants.ENCODER_SYNC_KP_DEFAULT */
     public final double encoderSyncKp;
 
+    // ── End-of-travel stall detection thresholds ──────────────────────────────
+    //
+    // A travel limit latches when BOTH conditions hold simultaneously for
+    // stallDetectionCycles consecutive loops:
+    //   detectionCurrent >= threshold  AND  |velocity| <= threshold
+    //
+    // Double.NaN = disabled for any individual threshold field.
+    // Follower threshold fields fall back to their corresponding lead values
+    // when left at NaN — call withFollowerTravelLimits() only when the two
+    // sides need different sensitivity (e.g. different mechanical loads).
+
+    /** Minimum detection current (amps) to register a lower-limit stall on the lead motor. */
+    public final double leadLowerCurrentAmps;
+    /** Maximum |velocity| (RPS) to register a lower-limit stall on the lead motor. */
+    public final double leadLowerMaxSpeedRps;
+    /** Minimum detection current (amps) to register an upper-limit stall on the lead motor. */
+    public final double leadUpperCurrentAmps;
+    /** Maximum |velocity| (RPS) to register an upper-limit stall on the lead motor. */
+    public final double leadUpperMaxSpeedRps;
+
+    /** Lower-limit current threshold for the ENCODER_SYNC follower.
+     *  Double.NaN = inherit leadLowerCurrentAmps. */
+    public final double followerLowerCurrentAmps;
+    /** Lower-limit speed threshold for the ENCODER_SYNC follower.
+     *  Double.NaN = inherit leadLowerMaxSpeedRps. */
+    public final double followerLowerMaxSpeedRps;
+    /** Upper-limit current threshold for the ENCODER_SYNC follower.
+     *  Double.NaN = inherit leadUpperCurrentAmps. */
+    public final double followerUpperCurrentAmps;
+    /** Upper-limit speed threshold for the ENCODER_SYNC follower.
+     *  Double.NaN = inherit leadUpperMaxSpeedRps. */
+    public final double followerUpperMaxSpeedRps;
+
+    /** Number of consecutive loops both stall conditions must hold before a limit latches.
+     *  Default: 3 (~60ms at 50Hz). Increase to reduce false positives. */
+    public final int stallDetectionCycles;
+
+    /** Encoder value (degrees, mechanism shaft) written to both sides after homing completes.
+     *  Double.NaN = 0 degrees. */
+    public final double homingZeroOffsetDeg;
+
     // ─────────────────────────────────────────────────────────────────────────
     // Convenience FF factory
     // ─────────────────────────────────────────────────────────────────────────
@@ -255,6 +296,16 @@ public final class mechanismConfig {
         this.brakeOnNeutral          = b.brakeOnNeutral;
         this.encoderSyncDeadbandRot  = b.encoderSyncDeadbandRot;
         this.encoderSyncKp           = b.encoderSyncKp;
+        this.leadLowerCurrentAmps    = b.leadLowerCurrentAmps;
+        this.leadLowerMaxSpeedRps    = b.leadLowerMaxSpeedRps;
+        this.leadUpperCurrentAmps    = b.leadUpperCurrentAmps;
+        this.leadUpperMaxSpeedRps    = b.leadUpperMaxSpeedRps;
+        this.followerLowerCurrentAmps = b.followerLowerCurrentAmps;
+        this.followerLowerMaxSpeedRps = b.followerLowerMaxSpeedRps;
+        this.followerUpperCurrentAmps = b.followerUpperCurrentAmps;
+        this.followerUpperMaxSpeedRps = b.followerUpperMaxSpeedRps;
+        this.stallDetectionCycles    = b.stallDetectionCycles;
+        this.homingZeroOffsetDeg     = b.homingZeroOffsetDeg;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -329,6 +380,16 @@ public final class mechanismConfig {
         private boolean brakeOnNeutral            = true;
         private double encoderSyncDeadbandRot     = motorConstants.ENCODER_SYNC_DEADBAND_ROT;
         private double encoderSyncKp              = motorConstants.ENCODER_SYNC_KP_DEFAULT;
+        private double leadLowerCurrentAmps       = Double.NaN;
+        private double leadLowerMaxSpeedRps       = Double.NaN;
+        private double leadUpperCurrentAmps       = Double.NaN;
+        private double leadUpperMaxSpeedRps       = Double.NaN;
+        private double followerLowerCurrentAmps   = Double.NaN;
+        private double followerLowerMaxSpeedRps   = Double.NaN;
+        private double followerUpperCurrentAmps   = Double.NaN;
+        private double followerUpperMaxSpeedRps   = Double.NaN;
+        private int    stallDetectionCycles       = 3;
+        private double homingZeroOffsetDeg        = Double.NaN;
 
         /**
          * @param name    mechanism name — used for logging and dashboard
@@ -522,6 +583,67 @@ public final class mechanismConfig {
         public Builder withEncoderSync(double deadbandRot, double kp) {
             this.encoderSyncDeadbandRot = deadbandRot;
             this.encoderSyncKp          = kp;
+            return this;
+        }
+
+        /**
+         * Configure end-of-travel stall detection thresholds for the lead motor.
+         * A limit latches when detectionCurrent >= minCurrentAmps AND
+         * |velocity| <= maxSpeedRps simultaneously for stallDetectionCycles loops.
+         * Pass Double.NaN for any value to leave that limit disabled.
+         *
+         * @param lowerCurrentAmps minimum detection current (amps) for lower-limit stall
+         * @param lowerMaxSpeedRps maximum |velocity| (RPS) for lower-limit stall
+         * @param upperCurrentAmps minimum detection current (amps) for upper-limit stall
+         * @param upperMaxSpeedRps maximum |velocity| (RPS) for upper-limit stall
+         */
+        public Builder withLeadTravelLimits(double lowerCurrentAmps, double lowerMaxSpeedRps,
+                                            double upperCurrentAmps, double upperMaxSpeedRps) {
+            this.leadLowerCurrentAmps = lowerCurrentAmps;
+            this.leadLowerMaxSpeedRps = lowerMaxSpeedRps;
+            this.leadUpperCurrentAmps = upperCurrentAmps;
+            this.leadUpperMaxSpeedRps = upperMaxSpeedRps;
+            return this;
+        }
+
+        /**
+         * Configure separate end-of-travel stall detection thresholds for the
+         * ENCODER_SYNC follower motor. When not called, the follower inherits the
+         * lead thresholds. Only meaningful on mechanisms with an ENCODER_SYNC follower.
+         *
+         * @param lowerCurrentAmps minimum detection current (amps) for lower-limit stall
+         * @param lowerMaxSpeedRps maximum |velocity| (RPS) for lower-limit stall
+         * @param upperCurrentAmps minimum detection current (amps) for upper-limit stall
+         * @param upperMaxSpeedRps maximum |velocity| (RPS) for upper-limit stall
+         */
+        public Builder withFollowerTravelLimits(double lowerCurrentAmps, double lowerMaxSpeedRps,
+                                                double upperCurrentAmps, double upperMaxSpeedRps) {
+            this.followerLowerCurrentAmps = lowerCurrentAmps;
+            this.followerLowerMaxSpeedRps = lowerMaxSpeedRps;
+            this.followerUpperCurrentAmps = upperCurrentAmps;
+            this.followerUpperMaxSpeedRps = upperMaxSpeedRps;
+            return this;
+        }
+
+        /**
+         * Set how many consecutive loops the stall condition must hold before a
+         * travel limit latches. Default: 3 (~60ms at 50Hz).
+         * Increase to reduce false positives from current transients.
+         */
+        public Builder withStallDetectionCycles(int cycles) {
+            if (cycles < 1)
+                throw new IllegalArgumentException(
+                    "mechanismConfig '" + name + "': stallDetectionCycles must be >= 1");
+            this.stallDetectionCycles = cycles;
+            return this;
+        }
+
+        /**
+         * Set the encoder value (degrees, mechanism shaft) written to both lead and
+         * follower after homing completes. Default: Double.NaN, which writes 0 degrees.
+         */
+        public Builder withHomingZeroOffset(double offsetDeg) {
+            this.homingZeroOffsetDeg = offsetDeg;
             return this;
         }
 
