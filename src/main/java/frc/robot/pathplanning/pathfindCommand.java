@@ -9,7 +9,6 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
 import frc.robot.constants.pathplannerConstants;
 import frc.robot.subsystems.swerveDrive.swerveDrive;
-import frc.robot.util.RobotLogger;
 
 import java.util.function.Supplier;
 
@@ -63,13 +62,7 @@ public class pathfindCommand extends Command {
 
     @Override
     public void initialize() {
-        RobotLogger.pathfindActive.append(true);
-
         Pose2d target = targetSupplier.get();
-        RobotLogger.pathfindTargetX.append(target.getX());
-        RobotLogger.pathfindTargetY.append(target.getY());
-        RobotLogger.pathfindTargetHeadingDeg.append(target.getRotation().getDegrees());
-
         // TODO: replace pathfindToPose with pathfindThenFollowPath once
         // final-approach .path files are authored in PathPlanner GUI.
         pathfinder = AutoBuilder.pathfindToPose(target, constraints);
@@ -77,17 +70,10 @@ public class pathfindCommand extends Command {
     }
 
     @Override
-    public void execute() {
-        Pose2d current = drive.getPose();
-        Pose2d target  = targetSupplier.get();
-        RobotLogger.pathfindPoseErrorM.append(
-            current.getTranslation().getDistance(target.getTranslation()));
-    }
+    public void execute() {}
 
     @Override
     public void end(boolean interrupted) {
-        RobotLogger.pathfindActive.append(false);
-        RobotLogger.pathfindPoseErrorM.append(0.0);
         if (pathfinder != null) {
             pathfinder.cancel();
             pathfinder = null;
