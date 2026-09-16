@@ -4,14 +4,14 @@ package frc.robot.constants;
  * canIDs.java
  * PATH: src/main/java/frc/robot/constants/canIDs.java
  *
- * Single source of truth for ALL CAN bus IDs and roboRIO port assignments.
+ * Single source of truth for ALL CAN bus IDs.
  * Update this file when rewiring the robot — no other files need to change.
+ * roboRIO analog/digital/PWM port assignments live in portIDs.java.
  *
  * ─── VERIFICATION PROCEDURE ──────────────────────────────────────────────────
  * Before first deploy, verify each ID against the physical device:
  *   CTRE devices (Kraken, Pigeon 2): use Phoenix Tuner X (Self-Test Snapshot)
  *   Thrifty Nova: use ThriftyBot app or Nova's built-in LED blink pattern
- *   roboRIO analog ports: trace wire from encoder to RIO port number
  *
  * TODO: confirm all IDs match physical wiring before first deploy.
  */
@@ -33,14 +33,6 @@ public final class canIDs {
 
     // ── IMU — CTRE Pigeon 2.0 ────────────────────────────────────────────────
     public static final int PIGEON2 = 0;
-
-    // ── Absolute encoder analog ports — Thrifty analog encoders ──────────────
-    // roboRIO analog inputs 0–3. Assigned FL=0, FR=1, BL=2, BR=3.
-    // TODO: confirm ports match physical wiring
-    public static final int FL_ANALOG_PORT = 0;
-    public static final int FR_ANALOG_PORT = 1;
-    public static final int BL_ANALOG_PORT = 2;
-    public static final int BR_ANALOG_PORT = 3;
 
     // ── CANcoder CAN IDs — unused (ABS_ENCODER_TYPE = THRIFTY_ANALOG) ────────
     // Populated here for reference if encoder type is ever changed.
