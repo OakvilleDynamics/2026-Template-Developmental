@@ -250,6 +250,14 @@ public final class mechanismConfig {
      *  Double.NaN = 0 degrees. */
     public final double homingZeroOffsetDeg;
 
+    /**
+     * Expected ThriftyNova motor type (NEO, MINION, or BRUSHED).
+     * null = skip motor-type check during ConfigVerifier readback.
+     * Set this whenever using a ThriftyBot Nova so a wrong-motor-type
+     * mismatch (a known silent-failure mode) is caught at startup.
+     */
+    public final com.thethriftybot.devices.ThriftyNova.MotorType novaMotorType;
+
     // ─────────────────────────────────────────────────────────────────────────
     // Convenience FF factory
     // ─────────────────────────────────────────────────────────────────────────
@@ -306,6 +314,7 @@ public final class mechanismConfig {
         this.followerUpperMaxSpeedRps = b.followerUpperMaxSpeedRps;
         this.stallDetectionCycles    = b.stallDetectionCycles;
         this.homingZeroOffsetDeg     = b.homingZeroOffsetDeg;
+        this.novaMotorType           = b.novaMotorType;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -390,6 +399,7 @@ public final class mechanismConfig {
         private double followerUpperMaxSpeedRps   = Double.NaN;
         private int    stallDetectionCycles       = 3;
         private double homingZeroOffsetDeg        = Double.NaN;
+        private com.thethriftybot.devices.ThriftyNova.MotorType novaMotorType = null;
 
         /**
          * @param name    mechanism name — used for logging and dashboard
@@ -644,6 +654,19 @@ public final class mechanismConfig {
          */
         public Builder withHomingZeroOffset(double offsetDeg) {
             this.homingZeroOffsetDeg = offsetDeg;
+            return this;
+        }
+
+        /**
+         * Declare the expected ThriftyNova motor type for startup config verification.
+         * ConfigVerifier reads back the device's stored motor type and flags a mismatch
+         * as a fault. A wrong motor type (NEO vs Minion) is a known silent-failure mode.
+         * Only needed on THRIFTYBOT_NOVA mechanisms. Defaults to null (no check).
+         *
+         * @param type ThriftyNova.MotorType.NEO, MINION, or BRUSHED
+         */
+        public Builder withNovaMotorType(com.thethriftybot.devices.ThriftyNova.MotorType type) {
+            this.novaMotorType = type;
             return this;
         }
 

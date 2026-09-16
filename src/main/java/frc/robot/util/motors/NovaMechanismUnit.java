@@ -2,9 +2,13 @@ package frc.robot.util.motors;
 
 import com.thethriftybot.devices.ThriftyNova;
 import com.thethriftybot.devices.ThriftyNova.EncoderType;
+import com.thethriftybot.devices.ThriftyNova.MotorType;
 import com.thethriftybot.devices.ThriftyNova.PIDSlot;
 
 import edu.wpi.first.wpilibj.DriverStation;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * NovaMechanismUnit.java
@@ -317,5 +321,70 @@ public class NovaMechanismUnit extends mechanismUnit {
      */
     public ThriftyNova getLeaderMotor() {
         return leader;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ConfigVerifiable implementation
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static final int    VERIFY_RETRIES  = 5;
+    private static final int    VERIFY_DELAY_MS = 50;
+
+    @Override
+    public List<ConfigVerifyResult> verifyConfig() {
+        List<ConfigVerifyResult> results = new ArrayList<>();
+        results.add(verifyLeader());
+        // Nova followers use hardware follow() and do not have independent configs
+        // to diff — no follower results added.
+        return results;
+    }
+
+    private ConfigVerifyResult verifyLeader() {
+        String label  = config.name + " Leader";
+        int    canId  = config.canIds[0];
+        String vendor = "ThriftyBot Nova";
+
+        // ── Retry apply ───────────────────────────────────────────────────────
+        // Nova has no single apply() call; we set each param and check getErrors().
+        boolean applyOk = false;
+        for (int attempt = 0; attempt < VERIFY_RETRIES; attempt++) {
+            leader.clearErrors();
+            leader.setInverted(config.inverted);
+            leader.setBrakeMode(config.brakeOnNeutral);
+            leader.setMaxCurrent(ThriftyNova.CurrentType.SUPPLY, config.supplyCurrentLimitAmps);
+            if (config.novaMotorType != null) {
+                leader.setMotorType(config.novaMotorType);
+            }
+            try { Thread.sleep(VERIFY_DELAY_MS); } catch (InterruptedException ignored) {}
+            if (leader.getErrors().isEmpty()) { applyOk = true; break; }
+        }
+
+        if (!applyOk) {
+            return new ConfigVerifyResult(label, canId, vendor, false, List.of());
+        }
+
+        // ── Read back and diff ────────────────────────────────────────────────
+        List<String> mismatches = new ArrayList<>();
+
+        boolean readInverted = leader.getInverted();
+        if (readInverted != config.inverted) {
+            mismatches.add("inversion: expected " + config.inverted + " got " + readInverted);
+        }
+
+        boolean readBrake = leader.getBrakeMode();
+        if (readBrake != config.brakeOnNeutral) {
+            mismatches.add("brakeMode: expected " + config.brakeOnNeutral + " got " + readBrake);
+        }
+
+        // Motor type — only checked when caller declared an expected type in mechanismConfig
+        if (config.novaMotorType != null) {
+            MotorType readType = leader.getMotorType();
+            if (readType != config.novaMotorType) {
+                mismatches.add("motorType: expected " + config.novaMotorType + " got " + readType
+                               + " — wrong motor type is a known silent-failure mode");
+            }
+        }
+
+        return new ConfigVerifyResult(label, canId, vendor, true, mismatches);
     }
 }

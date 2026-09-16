@@ -15,6 +15,7 @@ import frc.robot.pathplanning.gamePieceHuntCommand.HuntMode;
 import frc.robot.pathplanning.pathfindCommand;
 import frc.robot.subsystems.swerveDrive.swerveDrive;
 import frc.robot.subsystems.swerveDrive.swerveModule;
+import frc.robot.util.ConfigVerifier;
 import frc.robot.subsystems.vision.AprilTagFieldCalTab;
 import frc.robot.subsystems.vision.gamePieceVisionSubsystem;
 import frc.robot.subsystems.vision.robotPoseEstimate;
@@ -160,6 +161,13 @@ public class RobotContainer {
             WHEEL_BASE_IN, FRAME_IN, BUMPER_IN, WHEEL_DIAM_IN, HEADING_PID
         );
 
+        // ── Config verification — runs before CommandScheduler first executes ──
+        // Add mechanisms here once they exist: ConfigVerifier.register(myShooter);
+        ConfigVerifier.register(flModule);
+        ConfigVerifier.register(frModule);
+        ConfigVerifier.register(blModule);
+        ConfigVerifier.register(brModule);
+
         // GAME_YEAR_FIELD propagates from here into the entire vision stack
         vision = new visionSubsystem(GAME_YEAR_FIELD);
 
@@ -190,6 +198,8 @@ public class RobotContainer {
                              () -> {}, () -> false);
         huntSeqCluster = new gamePieceHuntCommand(drive, gamePieceVision, HuntMode.SEQUENTIAL_CLUSTERS,
                              () -> {}, () -> false);
+
+        ConfigVerifier.runAll();
 
         configureDefaultCommands();
         configureButtonBindings();

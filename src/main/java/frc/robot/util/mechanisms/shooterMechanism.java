@@ -5,6 +5,8 @@ import java.util.function.BooleanSupplier;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
+import frc.robot.util.motors.ConfigVerifiable;
+import frc.robot.util.motors.ConfigVerifyResult;
 import frc.robot.util.motors.mechanismConfig;
 import frc.robot.util.motors.mechanismUnit;
 import frc.robot.util.motors.motorConstants;
@@ -51,7 +53,7 @@ import frc.robot.util.motors.motorConstants;
  * RobotContainer before passing the config to the Builder, since RobotContainer
  * is where both flywheel and turret references co-exist.
  */
-public class shooterMechanism extends SubsystemBase {
+public class shooterMechanism extends SubsystemBase implements ConfigVerifiable {
 
     // ── Sub-mechanisms ────────────────────────────────────────────────────────
     private final mechanismUnit flywheel;
@@ -212,6 +214,22 @@ public class shooterMechanism extends SubsystemBase {
 
     /** Hood shaft velocity (RPS). Returns 0 if hood not configured. */
     public double getHoodVelocityRps()         { return hood != null ? hood.getVelocityRps()  : 0.0; }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ConfigVerifiable implementation
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Delegates to each configured sub-mechanism's verifyConfig().
+     * Returns results for flywheel, turret (if present), and hood (if present).
+     */
+    @Override
+    public java.util.List<ConfigVerifyResult> verifyConfig() {
+        java.util.List<ConfigVerifyResult> results = new java.util.ArrayList<>(flywheel.verifyConfig());
+        if (turret != null) results.addAll(turret.verifyConfig());
+        if (hood   != null) results.addAll(hood.verifyConfig());
+        return results;
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Internal — ready state machine

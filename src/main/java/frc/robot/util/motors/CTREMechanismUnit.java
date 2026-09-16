@@ -1,6 +1,7 @@
 package frc.robot.util.motors;
 
 import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.configs.*;
 import com.ctre.phoenix6.controls.*;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -9,6 +10,9 @@ import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import frc.robot.constants.swerveConstants;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * CTREMechanismUnit.java
@@ -383,5 +387,122 @@ public class CTREMechanismUnit extends mechanismUnit {
      */
     public TalonFX getLeaderMotor() {
         return leader;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ConfigVerifiable implementation
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static final int    VERIFY_RETRIES   = 5;
+    private static final int    VERIFY_DELAY_MS  = 50;
+
+    @Override
+    public List<ConfigVerifyResult> verifyConfig() {
+        List<ConfigVerifyResult> results = new ArrayList<>();
+        results.add(verifyDevice("Leader", leader, config.inverted, config.brakeOnNeutral,
+                                 config.supplyCurrentLimitAmps, config.statorCurrentLimitAmps));
+
+        // ENCODER_SYNC followers have their own independent config — verify them too.
+        // MECHANICAL followers mirror the leader over CAN; their config is set by the
+        // Follower request, not a TalonFXConfiguration, so there is nothing to diff.
+        for (int i = 0; i < followers.length; i++) {
+            if (i < config.followerModes.length
+                    && config.followerModes[i] == motorConstants.FollowMode.ENCODER_SYNC) {
+                boolean followerInverted = i < config.followerInverted.length
+                                          && config.followerInverted[i];
+                results.add(verifyDevice(
+                    "Follower[" + (i + 1) + "]",
+                    followers[i],
+                    followerInverted,
+                    config.brakeOnNeutral,
+                    config.supplyCurrentLimitAmps,
+                    config.statorCurrentLimitAmps));
+            }
+        }
+        return results;
+    }
+
+    /**
+     * Retry-apply, then read back and diff key fields for one TalonFX.
+     * Device label is prefixed with the mechanism name for unambiguous DS output.
+     */
+    private ConfigVerifyResult verifyDevice(
+            String role, TalonFX motor,
+            boolean expectedInverted, boolean expectedBrake,
+            double expectedSupplyAmps, double expectedStatorAmps) {
+
+        String label  = config.name + " " + role;
+        int    canId  = motor.getDeviceID();
+        String vendor = "CTRE TalonFX";
+
+        // Rebuild the exact configuration that configureLeader / configureFollowers applied
+        TalonFXConfiguration cfg = buildVerifyConfig(expectedInverted, expectedBrake,
+                                                     expectedSupplyAmps, expectedStatorAmps);
+
+        // ── Retry apply ───────────────────────────────────────────────────────
+        boolean applyOk = false;
+        for (int attempt = 0; attempt < VERIFY_RETRIES; attempt++) {
+            StatusCode sc = motor.getConfigurator().apply(cfg);
+            if (sc.isOK()) { applyOk = true; break; }
+            try { Thread.sleep(VERIFY_DELAY_MS); } catch (InterruptedException ignored) {}
+        }
+
+        if (!applyOk) {
+            return new ConfigVerifyResult(label, canId, vendor, false, List.of());
+        }
+
+        // ── Read back and diff ────────────────────────────────────────────────
+        TalonFXConfiguration readback = new TalonFXConfiguration();
+        motor.getConfigurator().refresh(readback);
+
+        List<String> mismatches = new ArrayList<>();
+
+        InvertedValue wantInv = expectedInverted
+            ? InvertedValue.Clockwise_Positive
+            : InvertedValue.CounterClockwise_Positive;
+        if (readback.MotorOutput.Inverted != wantInv) {
+            mismatches.add("inversion: expected " + wantInv
+                           + " got " + readback.MotorOutput.Inverted);
+        }
+
+        NeutralModeValue wantNeutral = expectedBrake
+            ? NeutralModeValue.Brake
+            : NeutralModeValue.Coast;
+        if (readback.MotorOutput.NeutralMode != wantNeutral) {
+            mismatches.add("neutralMode: expected " + wantNeutral
+                           + " got " + readback.MotorOutput.NeutralMode);
+        }
+
+        double readSupply = readback.CurrentLimits.SupplyCurrentLimit;
+        if (Math.abs(readSupply - expectedSupplyAmps) > 0.5) {
+            mismatches.add("supplyCurrentLimit: expected " + expectedSupplyAmps
+                           + "A got " + readSupply + "A");
+        }
+
+        double readStator = readback.CurrentLimits.StatorCurrentLimit;
+        if (Math.abs(readStator - expectedStatorAmps) > 0.5) {
+            mismatches.add("statorCurrentLimit: expected " + expectedStatorAmps
+                           + "A got " + readStator + "A");
+        }
+
+        return new ConfigVerifyResult(label, canId, vendor, true, mismatches);
+    }
+
+    /** Builds a minimal TalonFXConfiguration containing only the fields we verify. */
+    private static TalonFXConfiguration buildVerifyConfig(
+            boolean inverted, boolean brake,
+            double supplyAmps, double statorAmps) {
+        TalonFXConfiguration cfg = new TalonFXConfiguration();
+        cfg.MotorOutput.Inverted = inverted
+            ? InvertedValue.Clockwise_Positive
+            : InvertedValue.CounterClockwise_Positive;
+        cfg.MotorOutput.NeutralMode = brake
+            ? NeutralModeValue.Brake
+            : NeutralModeValue.Coast;
+        cfg.CurrentLimits.SupplyCurrentLimit       = supplyAmps;
+        cfg.CurrentLimits.SupplyCurrentLimitEnable = true;
+        cfg.CurrentLimits.StatorCurrentLimit       = statorAmps;
+        cfg.CurrentLimits.StatorCurrentLimitEnable = true;
+        return cfg;
     }
 }

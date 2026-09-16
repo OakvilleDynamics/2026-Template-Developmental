@@ -1,12 +1,16 @@
 package frc.robot.subsystems.swerveDrive;
 
 import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
@@ -16,6 +20,8 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 import frc.robot.constants.swerveConstants;
 import frc.robot.util.RobotLogger;
+import frc.robot.util.motors.ConfigVerifiable;
+import frc.robot.util.motors.ConfigVerifyResult;
 
 /**
  * swerveModule.java
@@ -39,7 +45,7 @@ import frc.robot.util.RobotLogger;
  * Native unit: rotations (position) and rotations/second (velocity).
  * Conversion to meters happens in getPosition() and getState().
  */
-public class swerveModule {
+public class swerveModule implements ConfigVerifiable {
 
     // ── Hardware ──────────────────────────────────────────────────────────────
     private final TalonFX    driveMotor;
@@ -113,20 +119,7 @@ public class swerveModule {
     // ─────────────────────────────────────────────────────────────────────────
 
     private void configureDriveMotor() {
-        TalonFXConfiguration config = new TalonFXConfiguration();
-        config.MotorOutput.Inverted    = driveInverted
-            ? InvertedValue.Clockwise_Positive
-            : InvertedValue.CounterClockwise_Positive;
-        config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
-        config.Slot0.kP = drive_kP; config.Slot0.kI = drive_kI; config.Slot0.kD = drive_kD;
-        config.Slot0.kS = drive_kS; config.Slot0.kV = drive_kV; config.Slot0.kA = drive_kA;
-        config.CurrentLimits.SupplyCurrentLimit       = 60;
-        config.CurrentLimits.SupplyCurrentLimitEnable = true;
-        config.CurrentLimits.StatorCurrentLimit       = 80;
-        config.CurrentLimits.StatorCurrentLimitEnable = true;
-        config.OpenLoopRamps.VoltageOpenLoopRampPeriod     = 0.1;
-        config.ClosedLoopRamps.VoltageClosedLoopRampPeriod = 0.02;
-        driveMotor.getConfigurator().apply(config);
+        driveMotor.getConfigurator().apply(buildDriveConfig());
         driveMotor.setPosition(0);
 
         // Set signal update rates for logging — high rate for transient capture
@@ -146,17 +139,7 @@ public class swerveModule {
     }
 
     private void configureSteerMotor() {
-        TalonFXConfiguration config = new TalonFXConfiguration();
-        config.MotorOutput.Inverted    = InvertedValue.Clockwise_Positive;
-        config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
-        config.Slot0.kP = steer_kP; config.Slot0.kI = steer_kI; config.Slot0.kD = steer_kD;
-        config.Slot0.kS = steer_kS; config.Slot0.kV = steer_kV;
-        config.CurrentLimits.SupplyCurrentLimit       = 30;
-        config.CurrentLimits.SupplyCurrentLimitEnable = true;
-        config.CurrentLimits.StatorCurrentLimit       = 40;
-        config.CurrentLimits.StatorCurrentLimitEnable = true;
-        config.ClosedLoopGeneral.ContinuousWrap = true;
-        steerMotor.getConfigurator().apply(config);
+        steerMotor.getConfigurator().apply(buildSteerConfig());
 
         BaseStatusSignal.setUpdateFrequencyForAll(swerveConstants.SIGNAL_UPDATE_HZ,
             steerMotor.getVelocity(),
@@ -271,6 +254,104 @@ public class swerveModule {
             steer_kS=nskS; steer_kV=nskV;
             configureSteerMotor();
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Config builders — shared by configure*() and verifyConfig()
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private TalonFXConfiguration buildDriveConfig() {
+        TalonFXConfiguration cfg = new TalonFXConfiguration();
+        cfg.MotorOutput.Inverted    = driveInverted
+            ? InvertedValue.Clockwise_Positive
+            : InvertedValue.CounterClockwise_Positive;
+        cfg.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+        cfg.Slot0.kP = drive_kP; cfg.Slot0.kI = drive_kI; cfg.Slot0.kD = drive_kD;
+        cfg.Slot0.kS = drive_kS; cfg.Slot0.kV = drive_kV; cfg.Slot0.kA = drive_kA;
+        cfg.CurrentLimits.SupplyCurrentLimit       = 60;
+        cfg.CurrentLimits.SupplyCurrentLimitEnable = true;
+        cfg.CurrentLimits.StatorCurrentLimit       = 80;
+        cfg.CurrentLimits.StatorCurrentLimitEnable = true;
+        cfg.OpenLoopRamps.VoltageOpenLoopRampPeriod     = 0.1;
+        cfg.ClosedLoopRamps.VoltageClosedLoopRampPeriod = 0.02;
+        return cfg;
+    }
+
+    private TalonFXConfiguration buildSteerConfig() {
+        TalonFXConfiguration cfg = new TalonFXConfiguration();
+        cfg.MotorOutput.Inverted    = InvertedValue.Clockwise_Positive;
+        cfg.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+        cfg.Slot0.kP = steer_kP; cfg.Slot0.kI = steer_kI; cfg.Slot0.kD = steer_kD;
+        cfg.Slot0.kS = steer_kS; cfg.Slot0.kV = steer_kV;
+        cfg.CurrentLimits.SupplyCurrentLimit       = 30;
+        cfg.CurrentLimits.SupplyCurrentLimitEnable = true;
+        cfg.CurrentLimits.StatorCurrentLimit       = 40;
+        cfg.CurrentLimits.StatorCurrentLimitEnable = true;
+        cfg.ClosedLoopGeneral.ContinuousWrap = true;
+        return cfg;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ConfigVerifiable implementation
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static final int VERIFY_RETRIES  = 5;
+    private static final int VERIFY_DELAY_MS = 50;
+
+    @Override
+    public List<ConfigVerifyResult> verifyConfig() {
+        List<ConfigVerifyResult> results = new ArrayList<>();
+        results.add(verifyMotor(name + " Drive", driveMotor, buildDriveConfig(),
+            driveInverted ? InvertedValue.Clockwise_Positive : InvertedValue.CounterClockwise_Positive,
+            NeutralModeValue.Brake, 60.0, 80.0));
+        results.add(verifyMotor(name + " Steer", steerMotor, buildSteerConfig(),
+            InvertedValue.Clockwise_Positive,
+            NeutralModeValue.Brake, 30.0, 40.0));
+        return results;
+    }
+
+    private static ConfigVerifyResult verifyMotor(
+            String label, TalonFX motor, TalonFXConfiguration cfg,
+            InvertedValue expectedInv, NeutralModeValue expectedNeutral,
+            double expectedSupplyAmps, double expectedStatorAmps) {
+
+        int    canId  = motor.getDeviceID();
+        String vendor = "CTRE TalonFX";
+
+        boolean applyOk = false;
+        for (int attempt = 0; attempt < VERIFY_RETRIES; attempt++) {
+            StatusCode sc = motor.getConfigurator().apply(cfg);
+            if (sc.isOK()) { applyOk = true; break; }
+            try { Thread.sleep(VERIFY_DELAY_MS); } catch (InterruptedException ignored) {}
+        }
+
+        if (!applyOk) {
+            return new ConfigVerifyResult(label, canId, vendor, false, List.of());
+        }
+
+        TalonFXConfiguration readback = new TalonFXConfiguration();
+        motor.getConfigurator().refresh(readback);
+
+        List<String> mismatches = new ArrayList<>();
+
+        if (readback.MotorOutput.Inverted != expectedInv) {
+            mismatches.add("inversion: expected " + expectedInv
+                           + " got " + readback.MotorOutput.Inverted);
+        }
+        if (readback.MotorOutput.NeutralMode != expectedNeutral) {
+            mismatches.add("neutralMode: expected " + expectedNeutral
+                           + " got " + readback.MotorOutput.NeutralMode);
+        }
+        if (Math.abs(readback.CurrentLimits.SupplyCurrentLimit - expectedSupplyAmps) > 0.5) {
+            mismatches.add("supplyCurrentLimit: expected " + expectedSupplyAmps
+                           + "A got " + readback.CurrentLimits.SupplyCurrentLimit + "A");
+        }
+        if (Math.abs(readback.CurrentLimits.StatorCurrentLimit - expectedStatorAmps) > 0.5) {
+            mismatches.add("statorCurrentLimit: expected " + expectedStatorAmps
+                           + "A got " + readback.CurrentLimits.StatorCurrentLimit + "A");
+        }
+
+        return new ConfigVerifyResult(label, canId, vendor, true, mismatches);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

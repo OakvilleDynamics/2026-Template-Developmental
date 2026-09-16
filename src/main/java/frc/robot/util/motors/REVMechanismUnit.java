@@ -1,7 +1,12 @@
 package frc.robot.util.motors;
 
+import com.revrobotics.REVLibError;
 import com.revrobotics.PersistMode;
 import com.revrobotics.ResetMode;
+import com.revrobotics.spark.config.SparkBaseConfigAccessor;
+
+import java.util.ArrayList;
+import java.util.List;
 import com.revrobotics.spark.ClosedLoopSlot;
 import com.revrobotics.spark.SparkBase;
 import com.revrobotics.spark.SparkBase.ControlType;
@@ -329,5 +334,101 @@ public class REVMechanismUnit extends mechanismUnit {
      */
     public SparkBase getLeaderMotor() {
         return leader;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ConfigVerifiable implementation
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static final int VERIFY_RETRIES  = 5;
+    private static final int VERIFY_DELAY_MS = 50;
+
+    @Override
+    public List<ConfigVerifyResult> verifyConfig() {
+        List<ConfigVerifyResult> results = new ArrayList<>();
+        results.add(verifyDevice("Leader", leader, config.inverted, config.brakeOnNeutral,
+                                 config.supplyCurrentLimitAmps));
+
+        for (int i = 0; i < followers.length; i++) {
+            if (i < config.followerModes.length
+                    && config.followerModes[i] == motorConstants.FollowMode.ENCODER_SYNC) {
+                boolean followerInverted = i < config.followerInverted.length
+                                          && config.followerInverted[i];
+                results.add(verifyDevice(
+                    "Follower[" + (i + 1) + "]",
+                    followers[i],
+                    followerInverted,
+                    config.brakeOnNeutral,
+                    config.supplyCurrentLimitAmps));
+            }
+        }
+        return results;
+    }
+
+    private ConfigVerifyResult verifyDevice(
+            String role, SparkBase motor,
+            boolean expectedInverted, boolean expectedBrake,
+            double expectedSupplyAmps) {
+
+        String label  = config.name + " " + role;
+        int    canId  = motor.getDeviceId();
+        String vendor = isFlex ? "REV SparkFlex" : "REV SparkMax";
+
+        SparkBaseConfig cfg = buildVerifyConfig(expectedInverted, expectedBrake, expectedSupplyAmps);
+
+        // ── Retry apply ───────────────────────────────────────────────────────
+        boolean applyOk = false;
+        for (int attempt = 0; attempt < VERIFY_RETRIES; attempt++) {
+            REVLibError err = motor.configure(cfg,
+                ResetMode.kResetSafeParameters,
+                PersistMode.kPersistParameters);
+            if (err == REVLibError.kOk) { applyOk = true; break; }
+            try { Thread.sleep(VERIFY_DELAY_MS); } catch (InterruptedException ignored) {}
+        }
+
+        if (!applyOk) {
+            return new ConfigVerifyResult(label, canId, vendor, false, List.of());
+        }
+
+        // ── Read back and diff via configAccessor ─────────────────────────────
+        // configAccessor lives on SparkMax/SparkFlex, not SparkBase — cast to reach it.
+        List<String> mismatches = new ArrayList<>();
+        SparkBaseConfigAccessor accessor = getAccessor(motor);
+
+        if (accessor != null) {
+            boolean readInverted = accessor.getInverted();
+            if (readInverted != expectedInverted) {
+                mismatches.add("inversion: expected " + expectedInverted + " got " + readInverted);
+            }
+
+            IdleMode wantIdle = expectedBrake ? IdleMode.kBrake : IdleMode.kCoast;
+            IdleMode readIdle = accessor.getIdleMode();
+            if (readIdle != wantIdle) {
+                mismatches.add("idleMode: expected " + wantIdle + " got " + readIdle);
+            }
+
+            int readLimit = accessor.getSmartCurrentLimit();
+            int wantLimit = (int) expectedSupplyAmps;
+            if (Math.abs(readLimit - wantLimit) > 1) {
+                mismatches.add("smartCurrentLimit: expected " + wantLimit + "A got " + readLimit + "A");
+            }
+        }
+
+        return new ConfigVerifyResult(label, canId, vendor, true, mismatches);
+    }
+
+    /** Returns the SparkBaseConfigAccessor for readback — field lives on SparkMax/SparkFlex, not SparkBase. */
+    private static SparkBaseConfigAccessor getAccessor(SparkBase motor) {
+        if (motor instanceof SparkMax)  return ((SparkMax)  motor).configAccessor;
+        if (motor instanceof SparkFlex) return ((SparkFlex) motor).configAccessor;
+        return null;
+    }
+
+    private SparkBaseConfig buildVerifyConfig(boolean inverted, boolean brake, double supplyAmps) {
+        SparkBaseConfig cfg = isFlex ? new SparkFlexConfig() : new SparkMaxConfig();
+        cfg.inverted(inverted);
+        cfg.idleMode(brake ? IdleMode.kBrake : IdleMode.kCoast);
+        cfg.smartCurrentLimit((int) supplyAmps);
+        return cfg;
     }
 }

@@ -6,6 +6,8 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import frc.robot.subsystems.swerveDrive.driveOdometryState;
+import frc.robot.util.motors.ConfigVerifiable;
+import frc.robot.util.motors.ConfigVerifyResult;
 import frc.robot.util.motors.ffProvider;
 import frc.robot.util.motors.mechanismConfig;
 import frc.robot.util.motors.mechanismUnit;
@@ -77,7 +79,7 @@ import frc.robot.util.units;
  * automatically by CommandScheduler each loop. No additional per-loop calls needed;
  * encoder sync, FF, PID tuning, and telemetry are all automatic inside set*().
  */
-public class elevatorMechanism extends SubsystemBase {
+public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable {
 
     // ── Sub-mechanisms ────────────────────────────────────────────────────────
     private final mechanismUnit elevator;
@@ -237,6 +239,21 @@ public class elevatorMechanism extends SubsystemBase {
     /** Actual pivot velocity (RPS). Returns 0 if pivot not configured. */
     public double getPivotVelocityRps() {
         return pivot != null ? pivot.getVelocityRps() : 0.0;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ConfigVerifiable implementation
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Delegates to each configured sub-mechanism's verifyConfig().
+     * Returns results for elevator motor(s) and pivot motor(s) if present.
+     */
+    @Override
+    public java.util.List<ConfigVerifyResult> verifyConfig() {
+        java.util.List<ConfigVerifyResult> results = new java.util.ArrayList<>(elevator.verifyConfig());
+        if (pivot != null) results.addAll(pivot.verifyConfig());
+        return results;
     }
 
     // ─────────────────────────────────────────────────────────────────────────

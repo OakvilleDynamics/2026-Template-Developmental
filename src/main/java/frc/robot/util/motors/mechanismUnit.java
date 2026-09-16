@@ -10,6 +10,8 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.subsystems.swerveDrive.driveOdometryState;
 import frc.robot.util.units;
 
+import java.util.List;
+
 /**
  * mechanismUnit.java
  * PATH: src/main/java/frc/robot/util/motors/mechanismUnit.java
@@ -41,7 +43,7 @@ import frc.robot.util.units;
  *   (CommandScheduler.run() context). No synchronization is performed.
  *   The tier-2/3 FF lambdas and all state fields assume single-threaded access.
  */
-public abstract class mechanismUnit {
+public abstract class mechanismUnit implements ConfigVerifiable {
 
     // ── Homing direction (public — used in startHoming() calls) ───────────────
 
@@ -1005,6 +1007,18 @@ public abstract class mechanismUnit {
      * fallback is preferred.
      */
     protected boolean usesHardwareDutyCycleRamp() { return false; }
+
+    /**
+     * Verify this mechanism's motor controller configuration(s).
+     * Called once by ConfigVerifier.runAll() in robotInit(), before any
+     * motor is commanded. Retries apply up to 5×, then reads back and
+     * diffs key fields (inversion, brake mode, current limits, etc.).
+     *
+     * @return one ConfigVerifyResult per physical motor controller verified
+     *         (leader + any ENCODER_SYNC followers)
+     */
+    @Override
+    public abstract List<ConfigVerifyResult> verifyConfig();
 
     // =========================================================================
     // FF — Static factory library for physics-based feed-forward providers
