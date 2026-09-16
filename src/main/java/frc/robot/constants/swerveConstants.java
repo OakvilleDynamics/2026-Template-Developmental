@@ -18,6 +18,23 @@ import frc.robot.util.units;
  */
 public final class swerveConstants {
 
+    // ── Motor / encoder type selection ────────────────────────────────────────
+    /**
+     * Select the drive and steer motor types and absolute encoder type for this
+     * robot build. All four modules always use the same hardware. Change these
+     * three constants when swapping hardware — no other code changes required.
+     */
+    public enum DriveMotorType  { KRAKEN_X60, KRAKEN_X44, NEO_VORTEX, NEO, NOVA_PULSAR }
+    public enum SteerMotorType  { KRAKEN_X60, KRAKEN_X44, MINION, NOVA, NEO_VORTEX, NEO, NEO_550 }
+    public enum AbsoluteEncoderType { THRIFTY_ANALOG, CTRE_CANCODER, REV_THROUGH_BORE }
+
+    public static final DriveMotorType      DRIVE_MOTOR_TYPE  = DriveMotorType.KRAKEN_X60;
+    // NOVA = Thrifty Nova controller (driving a Minion motor in this build)
+    public static final SteerMotorType      STEER_MOTOR_TYPE  = SteerMotorType.NOVA;
+    public static final AbsoluteEncoderType ABS_ENCODER_TYPE  = AbsoluteEncoderType.THRIFTY_ANALOG;
+
+
+
     // ── Wheel ─────────────────────────────────────────────────────────────────
     /**
      * Drive wheel diameter in INCHES.
@@ -50,38 +67,17 @@ public final class swerveConstants {
     /** Maximum angular speed (rad/s). ~1 full rotation per second. */
     public static final double MAX_ANGULAR_SPEED_RPS = 2.0 * Math.PI;
 
-    // ── CAN IDs ───────────────────────────────────────────────────────────────
-    // TODO: update to match your robot's actual wiring
-    public static final int FL_DRIVE_CAN_ID = 1;
-    public static final int FL_STEER_CAN_ID = 2;
-    public static final int FR_DRIVE_CAN_ID = 3;
-    public static final int FR_STEER_CAN_ID = 4;
-    public static final int BL_DRIVE_CAN_ID = 5;
-    public static final int BL_STEER_CAN_ID = 6;
-    public static final int BR_DRIVE_CAN_ID = 7;
-    public static final int BR_STEER_CAN_ID = 8;
-
-    // ── IMU ───────────────────────────────────────────────────────────────────
-    /**
-     * CAN ID of the CTRE Pigeon 2.0 IMU.
-     * TODO: confirm this matches the physical CAN bus wiring.
-     */
-    public static final int PIGEON2_CAN_ID  = 9;
-
-    // ── Analog encoder ports (roboRIO) ────────────────────────────────────────
-    // Thrifty absolute encoders → roboRIO analog ports 0–3
-    // TODO: confirm your physical wiring
-    public static final int FL_ANALOG_PORT = 0;
-    public static final int FR_ANALOG_PORT = 1;
-    public static final int BL_ANALOG_PORT = 2;
-    public static final int BR_ANALOG_PORT = 3;
+    // ── CAN IDs and port assignments ─────────────────────────────────────────
+    // All CAN IDs and roboRIO port assignments are in canIDs.java.
 
     /** Thrifty encoder full-scale output voltage */
     public static final double ANALOG_FULL_SCALE_VOLTS = 3.3;
 
     // ── Steering zero offsets ─────────────────────────────────────────────────
+
     /**
      * Analog voltage read when each module wheel points straight forward.
+     * Used when ABS_ENCODER_TYPE = THRIFTY_ANALOG.
      *
      * HOW TO MEASURE:
      *   1. Deploy with all offsets = 0.0
@@ -95,6 +91,24 @@ public final class swerveConstants {
     public static final double FR_STEER_OFFSET_VOLTS = 0.0;
     public static final double BL_STEER_OFFSET_VOLTS = 0.0;
     public static final double BR_STEER_OFFSET_VOLTS = 0.0;
+
+    /**
+     * Absolute encoder offset in rotations when wheel points straight forward.
+     * Used when ABS_ENCODER_TYPE = CTRE_CANCODER or REV_THROUGH_BORE.
+     * Range: [-0.5, 0.5]. Subtract from raw encoder reading; result is normalized.
+     *
+     * HOW TO MEASURE:
+     *   1. Deploy with all offsets = 0.0
+     *   2. Rotate each wheel by hand to face straight forward
+     *   3. Read "Swerve/FL/Abs Enc Rot" from SmartDashboard
+     *   4. Paste those values here and redeploy
+     *
+     * TODO: measure on your physical robot
+     */
+    public static final double FL_STEER_OFFSET_ROT = 0.0;
+    public static final double FR_STEER_OFFSET_ROT = 0.0;
+    public static final double BL_STEER_OFFSET_ROT = 0.0;
+    public static final double BR_STEER_OFFSET_ROT = 0.0;
 
     // ── Input deadband ────────────────────────────────────────────────────────
     /** Applied to all joystick axes before scaling. Eliminates stick drift. */
