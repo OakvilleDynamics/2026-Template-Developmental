@@ -22,6 +22,7 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.pathplannerConstants;
+import frc.robot.constants.canIDs;
 import frc.robot.constants.swerveConstants;
 import frc.robot.constants.visionConstants;
 import frc.robot.util.RobotLogger;
@@ -84,7 +85,7 @@ public class swerveDrive extends SubsystemBase {
     // Hardware
     // ─────────────────────────────────────────────────────────────────────────
     private final swerveModule[] modules;
-    private final Pigeon2 imu = new Pigeon2(swerveConstants.PIGEON2_CAN_ID);
+    private final Pigeon2 imu = new Pigeon2(canIDs.PIGEON2);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Kinematics and pose estimation
@@ -293,7 +294,7 @@ public class swerveDrive extends SubsystemBase {
         SmartDashboard.putNumber("Drive/PointAt/Target X (ft)",     targetFeetX);
         SmartDashboard.putNumber("Drive/PointAt/Target Y (ft)",     targetFeetY);
         SmartDashboard.putNumber("Drive/PointAt/Desired Hdg (deg)", units.rad_deg(desiredHeadingRad));
-        SmartDashboard.putNumber("Drive/PointAt/Hdg Error (deg)",   units.rad_deg(headingPID.getPositionError()));
+        SmartDashboard.putNumber("Drive/PointAt/Hdg Error (deg)",   units.rad_deg(headingPID.getError()));
         SmartDashboard.putBoolean("Drive/PointAt/At Heading",       headingPID.atSetpoint());
     }
 

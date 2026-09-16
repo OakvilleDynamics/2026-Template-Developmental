@@ -6,6 +6,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 
+import frc.robot.constants.canIDs;
 import frc.robot.commands.driveWithJoysticks;
 import frc.robot.commands.xLockCommand;
 import frc.robot.constants.swerveConstants;
@@ -55,8 +56,11 @@ public class RobotContainer {
     //==========================================================================
 
 
-    private static final double[] WHEEL_BASE_IN = { 22.0, 22.0 };
-    private static final double[] FRAME_IN      = { 26.0, 26.0 };
+    // Thrifty Narrow pivot center is 2.625" from outer frame edge on each side.
+    // Wheel base = 27.0 - 2 × 2.625 = 21.75"
+    // TODO: verify 2.625" offset against actual CAD/physical measurement.
+    private static final double[] WHEEL_BASE_IN = { 21.75, 21.75 };
+    private static final double[] FRAME_IN      = { 27.0, 27.0 };
     private static final double[] BUMPER_IN     = { 33.0, 33.0 };
     private static final double   WHEEL_DIAM_IN = 4.0;
 
@@ -136,27 +140,28 @@ public class RobotContainer {
 
     public RobotContainer() {
 
+        // TODO: verify drive inversion — FL/BL assumed inverted, FR/BR not inverted.
         swerveModule flModule = new swerveModule("FL", 0,
-            swerveConstants.FL_DRIVE_CAN_ID,    swerveConstants.FL_STEER_CAN_ID,
-            swerveConstants.FL_ANALOG_PORT,     swerveConstants.FL_CANCODER_CAN_ID,
+            canIDs.FL_DRIVE,         canIDs.FL_STEER,
+            canIDs.FL_ANALOG_PORT,   canIDs.FL_CANCODER,
             swerveConstants.FL_STEER_OFFSET_VOLTS, swerveConstants.FL_STEER_OFFSET_ROT,
             true,  FL_DRIVE_PID, FL_STEER_PID);
 
         swerveModule frModule = new swerveModule("FR", 1,
-            swerveConstants.FR_DRIVE_CAN_ID,    swerveConstants.FR_STEER_CAN_ID,
-            swerveConstants.FR_ANALOG_PORT,     swerveConstants.FR_CANCODER_CAN_ID,
+            canIDs.FR_DRIVE,         canIDs.FR_STEER,
+            canIDs.FR_ANALOG_PORT,   canIDs.FR_CANCODER,
             swerveConstants.FR_STEER_OFFSET_VOLTS, swerveConstants.FR_STEER_OFFSET_ROT,
             false, FR_DRIVE_PID, FR_STEER_PID);
 
         swerveModule blModule = new swerveModule("BL", 2,
-            swerveConstants.BL_DRIVE_CAN_ID,    swerveConstants.BL_STEER_CAN_ID,
-            swerveConstants.BL_ANALOG_PORT,     swerveConstants.BL_CANCODER_CAN_ID,
+            canIDs.BL_DRIVE,         canIDs.BL_STEER,
+            canIDs.BL_ANALOG_PORT,   canIDs.BL_CANCODER,
             swerveConstants.BL_STEER_OFFSET_VOLTS, swerveConstants.BL_STEER_OFFSET_ROT,
             true,  BL_DRIVE_PID, BL_STEER_PID);
 
         swerveModule brModule = new swerveModule("BR", 3,
-            swerveConstants.BR_DRIVE_CAN_ID,    swerveConstants.BR_STEER_CAN_ID,
-            swerveConstants.BR_ANALOG_PORT,     swerveConstants.BR_CANCODER_CAN_ID,
+            canIDs.BR_DRIVE,         canIDs.BR_STEER,
+            canIDs.BR_ANALOG_PORT,   canIDs.BR_CANCODER,
             swerveConstants.BR_STEER_OFFSET_VOLTS, swerveConstants.BR_STEER_OFFSET_ROT,
             false, BR_DRIVE_PID, BR_STEER_PID);
 
