@@ -1,0 +1,51 @@
+{
+    "fileName": "photonlib.json",
+    "name": "photonlib",
+    "version": "dev-v2027.0.0-alpha-2-73-g4651dbae",
+    "uuid": "515fe07e-bfc6-11fa-b3de-0242ac130004",
+    "wpilibYear": "2027_alpha7",
+    "mavenUrls": [
+        "https://maven.photonvision.org/snapshots",
+        "https://maven.photonvision.org/releases"
+    ],
+    "jsonUrl": "https://maven.photonvision.org/repository/internal/org/photonvision/photonlib-json/1.0/photonlib-json-1.0.json",
+    "javaDependencies": [
+        {
+            "groupId": "org.photonvision",
+            "artifactId": "photonlib-java",
+            "version": "dev-v2027.0.0-alpha-2-73-g4651dbae"
+        },
+        {
+            "groupId": "org.photonvision",
+            "artifactId": "photontargeting-java",
+            "version": "dev-v2027.0.0-alpha-2-73-g4651dbae"
+        }
+    ],
+    "jniDependencies": [
+        {
+            "groupId": "org.photonvision",
+            "artifactId": "photontargeting-cpp",
+            "version": "dev-v2027.0.0-alpha-2-73-g4651dbae",
+            "skipInvalidPlatforms": true,
+            "isJar": false,
+            "validPlatforms": [
+                "linuxsystemcore",
+                "linuxx86-64",
+                "linuxarm64",
+                "osxuniversal"
+            ]
+        },
+        {
+            "groupId": "org.wpilib.fields",
+            "artifactId": "fields-cpp",
+            "version": "2027.0.0-alpha-7",
+            "skipInvalidPlatforms": true,
+            "isJar": false,
+            "validPlatforms": [
+                "linuxsystemcore",
+                "linuxx86-64"
+            ]
+        }
+    ],
+    "cppDependencies": []
+}
