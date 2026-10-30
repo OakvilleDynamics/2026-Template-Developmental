@@ -1,17 +1,20 @@
 package frc.robot.constants;
 
+import frc.lib.mechanisms.shooter.ShotProfile;
+import frc.lib.mechanisms.shooter.ShotProfile.LookupEntry;
+
 /**
  * shooterConstants.java
  * PATH: src/main/java/frc/robot/constants/shooterConstants.java
  *
- * Shot profile lookup table and shooter geometry constants.
+ * Shot profile lookup table and shooter geometry constants for THIS robot.
+ * Bundled into PROFILE and passed to ShooterCalculator from RobotContainer.
  *
  * ─── WHAT LIVES HERE ─────────────────────────────────────────────────────────
- * LookupEntry      — data class for one row of the shot profile table
  * LOOKUP_TABLE     — RPM / hood angle / ToF indexed by distance per target type
  * Pivot geometry   — shooter pivot offset in robot frame (inches)
- * Turret limits    — soft and hard stop angles (robot-relative degrees)
  * Warning threshold — robot speed above which ROBOT_SPEED_TOO_HIGH is flagged
+ * PROFILE          — the three above as one ShotProfile
  *
  * ─── IN-SEASON TUNING ────────────────────────────────────────────────────────
  * Edit LOOKUP_TABLE entries to tune shot profiles without touching the calculator.
@@ -23,53 +26,10 @@ package frc.robot.constants;
  * picks the group whose bracket midpoint best matches the actual distance.
  *
  * ─── TURRET LIMITS ───────────────────────────────────────────────────────────
- * Robot-relative degrees. 0° = turret aligned with robot forward, CCW positive.
- * Pass TURRET_SOFT/HARD constants into the ShooterCalculator constructor from
- * RobotContainer so they remain overridable for testing.
+ * Turret soft limits live in the turret's mechanismConfig (single source of
+ * truth); ShooterCalculator reads them from there.
  */
 public final class shooterConstants {
-
-    // =========================================================================
-    // LookupEntry — data class for one shot profile row
-    // =========================================================================
-
-    /**
-     * One row of the shot profile lookup table.
-     *
-     * @param targetType    String key — must match the targetType passed to
-     *                      ShooterCalculator.calculate*() at the call site.
-     * @param rpm           Flywheel shaft speed (RPM) at this distance.
-     * @param hoodAngle     Hood angle (degrees) at this distance.
-     * @param distance      Distance from shooter pivot to target (feet).
-     * @param xExitVelocity Horizontal ball exit velocity (ft/s) — for future use.
-     * @param timeOfFlight  Ball time-of-flight (seconds). Use 0.0 as a placeholder
-     *                      until measured; OnTheMove accuracy requires real values.
-     */
-    public static class LookupEntry {
-
-        public final String targetType;
-        public final double rpm;
-        public final double hoodAngle;
-        public final double distance;        // feet
-        public final double xExitVelocity;   // ft/s — stored for future use
-        public final double timeOfFlight;    // seconds (0.0 = placeholder)
-
-        public LookupEntry(
-                String targetType,
-                double rpm,
-                double hoodAngle,
-                double distance,
-                double xExitVelocity,
-                double timeOfFlight) {
-
-            this.targetType    = targetType;
-            this.rpm           = rpm;
-            this.hoodAngle     = hoodAngle;
-            this.distance      = distance;
-            this.xExitVelocity = xExitVelocity;
-            this.timeOfFlight  = timeOfFlight;
-        }
-    }
 
     // =========================================================================
     // Shot Profile Lookup Table
@@ -113,4 +73,9 @@ public final class shooterConstants {
     // =========================================================================
     public static final double ROBOT_SPEED_WARNING_THRESHOLD_FT_S = 10.0;
 
+    /** Everything above, bundled for ShooterCalculator. */
+    public static final ShotProfile PROFILE = new ShotProfile(
+        LOOKUP_TABLE, PIVOT_OFFSET_X_IN, PIVOT_OFFSET_Y_IN, ROBOT_SPEED_WARNING_THRESHOLD_FT_S);
+
+    private shooterConstants() {}
 }

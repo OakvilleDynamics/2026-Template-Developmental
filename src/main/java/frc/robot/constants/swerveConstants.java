@@ -1,6 +1,9 @@
 package frc.robot.constants;
 
-import frc.robot.util.units;
+import frc.lib.swerve.swerveHardware.AbsoluteEncoderType;
+import frc.lib.swerve.swerveHardware.DriveMotorType;
+import frc.lib.swerve.swerveHardware.SteerMotorType;
+import frc.lib.util.units;
 
 /**
  * swerveConstants.java
@@ -23,11 +26,8 @@ public final class swerveConstants {
      * Select the drive and steer motor types and absolute encoder type for this
      * robot build. All four modules always use the same hardware. Change these
      * three constants when swapping hardware — no other code changes required.
+     * The type → vendor / current limit mapping lives in frc.lib.swerve.swerveHardware.
      */
-    public enum DriveMotorType  { KRAKEN_X60, KRAKEN_X44, NEO_VORTEX, NEO, NOVA_PULSAR }
-    public enum SteerMotorType  { KRAKEN_X60, KRAKEN_X44, MINION, NOVA, NEO_VORTEX, NEO, NEO_550 }
-    public enum AbsoluteEncoderType { THRIFTY_ANALOG, CTRE_CANCODER, REV_THROUGH_BORE }
-
     public static final DriveMotorType      DRIVE_MOTOR_TYPE  = DriveMotorType.KRAKEN_X60;
     // NOVA = Thrifty Nova controller (driving a Minion motor in this build)
     public static final SteerMotorType      STEER_MOTOR_TYPE  = SteerMotorType.NOVA;
@@ -69,9 +69,7 @@ public final class swerveConstants {
 
     // ── CAN IDs and port assignments ─────────────────────────────────────────
     // All CAN IDs and roboRIO port assignments are in canIDs.java.
-
-    /** Thrifty encoder full-scale output voltage */
-    public static final double ANALOG_FULL_SCALE_VOLTS = 3.3;
+    // Thrifty encoder full-scale voltage: ThriftyAnalogEncoder.DEFAULT_FULL_SCALE_VOLTS.
 
     // ── Steering zero offsets ─────────────────────────────────────────────────
 

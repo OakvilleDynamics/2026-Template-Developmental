@@ -25,8 +25,12 @@ import frc.robot.constants.pathplannerConstants;
 import frc.robot.constants.canIDs;
 import frc.robot.constants.swerveConstants;
 import frc.robot.constants.visionConstants;
-import frc.robot.util.RobotLogger;
-import frc.robot.util.units;
+import frc.lib.util.RobotLogger;
+import frc.lib.mechanisms.shooter.AimDriveState;
+import frc.lib.swerve.driveInput;
+import frc.lib.swerve.driveOdometryState;
+import frc.lib.swerve.swerveModule;
+import frc.lib.util.units;
 
 /**
  * swerveDrive.java
@@ -59,7 +63,7 @@ import frc.robot.util.units;
  * ─── X-LOCK ──────────────────────────────────────────────────────────────────
  * lockWheelsX() — sets all four modules to X brace pattern, zero drive speed.
  */
-public class swerveDrive extends SubsystemBase {
+public class swerveDrive extends SubsystemBase implements AimDriveState {
 
     // ─────────────────────────────────────────────────────────────────────────
     // Geometry query result — carries both unit systems

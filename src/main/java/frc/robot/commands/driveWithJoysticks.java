@@ -5,9 +5,10 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.constants.swerveConstants;
-import frc.robot.subsystems.swerveDrive.driveInput;
+import frc.lib.swerve.driveInput;
 import frc.robot.subsystems.swerveDrive.swerveDrive;
-import frc.robot.util.units;
+import frc.lib.mechanisms.shooter.AimDriveModes;
+import frc.lib.util.units;
 
 /**
  * driveWithJoysticks.java
@@ -48,7 +49,7 @@ import frc.robot.util.units;
  * squareInput() squares magnitude while preserving sign.
  * Gives finer low-speed control without losing full power at full deflection.
  */
-public class driveWithJoysticks extends Command {
+public class driveWithJoysticks extends Command implements AimDriveModes {
 
     // ── Logitech Extreme 3D Pro axis indices ──────────────────────────────────
     private static final int AXIS_X     = 0;  // stick left/right

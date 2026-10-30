@@ -16,8 +16,11 @@ import frc.robot.pathplanning.gamePieceHuntCommand;
 import frc.robot.pathplanning.gamePieceHuntCommand.HuntMode;
 import frc.robot.pathplanning.pathfindCommand;
 import frc.robot.subsystems.swerveDrive.swerveDrive;
-import frc.robot.subsystems.swerveDrive.swerveModule;
-import frc.robot.util.ConfigVerifier;
+import frc.lib.hardware.encoder.AbsoluteEncoderIO;
+import frc.lib.hardware.motor.MotorIO;
+import frc.lib.swerve.swerveHardware;
+import frc.lib.swerve.swerveModule;
+import frc.lib.util.ConfigVerifier;
 import frc.robot.subsystems.vision.AprilTagFieldCalTab;
 import frc.robot.subsystems.vision.gamePieceVisionSubsystem;
 import frc.robot.subsystems.vision.robotPoseEstimate;
@@ -141,25 +144,25 @@ public class RobotContainer {
     public RobotContainer() {
 
         // TODO: verify drive inversion — FL/BL assumed inverted, FR/BR not inverted.
-        swerveModule flModule = new swerveModule("FL", 0,
+        swerveModule flModule = buildModule("FL", 0,
             canIDs.FL_DRIVE,                 canIDs.FL_STEER,
             portIDs.AI_FL_STEER_ENCODER,     canIDs.FL_CANCODER,
             swerveConstants.FL_STEER_OFFSET_VOLTS, swerveConstants.FL_STEER_OFFSET_ROT,
             true,  FL_DRIVE_PID, FL_STEER_PID);
 
-        swerveModule frModule = new swerveModule("FR", 1,
+        swerveModule frModule = buildModule("FR", 1,
             canIDs.FR_DRIVE,                 canIDs.FR_STEER,
             portIDs.AI_FR_STEER_ENCODER,     canIDs.FR_CANCODER,
             swerveConstants.FR_STEER_OFFSET_VOLTS, swerveConstants.FR_STEER_OFFSET_ROT,
             false, FR_DRIVE_PID, FR_STEER_PID);
 
-        swerveModule blModule = new swerveModule("BL", 2,
+        swerveModule blModule = buildModule("BL", 2,
             canIDs.BL_DRIVE,                 canIDs.BL_STEER,
             portIDs.AI_BL_STEER_ENCODER,     canIDs.BL_CANCODER,
             swerveConstants.BL_STEER_OFFSET_VOLTS, swerveConstants.BL_STEER_OFFSET_ROT,
             true,  BL_DRIVE_PID, BL_STEER_PID);
 
-        swerveModule brModule = new swerveModule("BR", 3,
+        swerveModule brModule = buildModule("BR", 3,
             canIDs.BR_DRIVE,                 canIDs.BR_STEER,
             portIDs.AI_BR_STEER_ENCODER,     canIDs.BR_CANCODER,
             swerveConstants.BR_STEER_OFFSET_VOLTS, swerveConstants.BR_STEER_OFFSET_ROT,
@@ -212,6 +215,39 @@ public class RobotContainer {
 
         configureDefaultCommands();
         configureButtonBindings();
+    }
+
+    /**
+     * Build one swerve module from the hardware types selected in swerveConstants.
+     * Changing DRIVE_MOTOR_TYPE / STEER_MOTOR_TYPE / ABS_ENCODER_TYPE there is the
+     * only change needed to swap module hardware.
+     */
+    private static swerveModule buildModule(
+            String name, int index,
+            int driveCanId, int steerCanId, int analogPort, int cancoderCanId,
+            double offsetVolts, double offsetRot,
+            boolean driveInverted, double[] drivePID, double[] steerPID) {
+
+        MotorIO driveMotor = MotorIO.create(swerveHardware
+            .driveMotorConfig(swerveConstants.DRIVE_MOTOR_TYPE, driveCanId, driveInverted,
+                              drivePID, swerveConstants.DRIVE_GEAR_RATIO)
+            .withCanSignals(swerveConstants.SIGNAL_UPDATE_HZ, swerveConstants.SIGNAL_UPDATE_HZ_TEMP,
+                            swerveConstants.OPTIMIZE_CAN_UTILIZATION)
+            .build());
+
+        MotorIO steerMotor = MotorIO.create(swerveHardware
+            .steerMotorConfig(swerveConstants.STEER_MOTOR_TYPE, steerCanId,
+                              steerPID, swerveConstants.STEER_GEAR_RATIO)
+            .withCanSignals(swerveConstants.SIGNAL_UPDATE_HZ, swerveConstants.SIGNAL_UPDATE_HZ_TEMP,
+                            swerveConstants.OPTIMIZE_CAN_UTILIZATION)
+            .build());
+
+        AbsoluteEncoderIO absEncoder = swerveHardware.buildEncoder(
+            swerveConstants.ABS_ENCODER_TYPE, steerMotor,
+            analogPort, cancoderCanId, offsetVolts, offsetRot);
+
+        return new swerveModule(name, index, driveMotor, steerMotor, absEncoder,
+                                swerveConstants.WHEEL_DIAMETER_INCHES);
     }
 
     private void configureDefaultCommands() {

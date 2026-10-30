@@ -29,7 +29,32 @@ gamePieceVisionSubsystem                  + IMU              (AprilTags)
 
 ## Folder Structure
 
+The code is split into two areas:
+
+- **`frc/lib/`** — reusable building blocks. Nothing here knows about *this* robot's CAN IDs, tables, or constants, so any folder can be copied into another robot project. Only `lib/hardware/` talks to vendor libraries (CTRE, REV, ThriftyBot).
+- **`frc/robot/`** — this robot: lifecycle, wiring, constants, driver commands, and the drivetrain / vision subsystems.
+
+`ArchitectureTest` (run by `./gradlew test`) fails the build if `lib` ever imports `robot`, or if vendor APIs appear outside `lib/hardware/`.
+
 ```
+src/main/java/frc/lib/
+│
+├── util/                   ← units, RobotLogger, ConfigVerifier
+├── hardware/
+│   ├── motor/              ← MotorIO interface + CTREMotor / REVMotor / NovaMotor, MotorIOConfig, motorModels
+│   └── encoder/            ← AbsoluteEncoderIO + Thrifty analog / CANcoder / Through Bore
+├── control/
+│   ├── mechanismUnit       ← One mechanism's motor group on MotorIO (FF, ramps, sync, limits, homing)
+│   ├── mechanismConfig     ← Immutable config (Builder); derives one MotorIOConfig per motor
+│   ├── motorConstants      ← FollowMode enum + loop/sync constants
+│   └── ff/                 ← ffProvider + FF physics factories
+├── swerve/                 ← swerveModule, swerveHardware (type → motor config), driveInput, driveOdometryState
+└── mechanisms/             ← One folder per mechanism, each self-contained
+    ├── shooter/            ← shooterMechanism, ShooterCalculator, ShotProfile, shooterAimController
+    └── elevator/           ← elevatorMechanism
+
+src/test/java/frc/lib/      ← Unit tests mirroring lib/ (FakeMotorIO stands in for real motors)
+
 src/main/java/frc/robot/
 │
 ├── Robot.java              ← Top-level lifecycle (init, periodic per mode)
@@ -46,7 +71,8 @@ src/main/java/frc/robot/
 │   ├── visionConstants         ← AprilTag camera names, transforms, filter thresholds
 │   ├── gamePieceConstants      ← Game piece camera, clustering, hunt behavior
 │   ├── pathplannerConstants    ← PathPlanner config, robot mass/MOI, constraints
-│   ├── shooterConstants        ← Shooter lookup table, pivot geometry, speed warning threshold
+│   ├── shooterConstants        ← Shooter lookup table, pivot geometry → PROFILE (a ShotProfile)
+│   ├── canIDs / portIDs        ← Every CAN ID and roboRIO port in one place
 │   └── AprilTagIgnore          ← Tag IDs to suppress at specific events
 │
 ├── pathplanning/           ← PathPlanner integration
@@ -56,10 +82,7 @@ src/main/java/frc/robot/
 │
 ├── subsystems/
 │   ├── swerveDrive/        ← Drivetrain
-│   │   ├── swerveDrive         ← Manages all 4 modules + pose estimator + pose history
-│   │   ├── swerveModule        ← One wheel/motor pair
-│   │   ├── driveInput          ← Data object: vx, vy, omega, center of rotation
-│   │   └── driveOdometryState  ← Motion state snapshot (velocity, accel, etc.)
+│   │   └── swerveDrive         ← Manages all 4 modules (from lib/swerve) + pose estimator + pose history
 │   └── vision/             ← Vision
 │       ├── visionSubsystem         ← Public interface: AprilTag pose estimates
 │       ├── gamePieceVisionSubsystem ← Game piece detection, field position tracking
@@ -68,20 +91,14 @@ src/main/java/frc/robot/
 │       └── AprilTagFieldCalTab      ← Shuffleboard calibration interface
 │
 └── util/
-    ├── units.java          ← All unit conversions (inches↔m, lbs↔kg, etc.) + normalizeAngleDeg()
-    ├── AprilTagFieldCal    ← Field layout, per-tag offsets, geometry
-    ├── ShooterCalculator   ← Pure-math ballistics (StaticShot + OnTheMove), outputs headingBoundsDeg
-    ├── shooterAimController ← Orchestration: drivetrain state → calculator → mechanism + drive mode
-    └── motors/             ← Vendor-agnostic mechanism motor abstraction
-        ├── ffProvider          ← @FunctionalInterface: (pos, vel, accel) → volts
-        ├── motorConstants      ← Vendor/FollowMode enums + package constants
-        ├── motorModels         ← Motor datasheet constants (kT, stall, free speed)
-        ├── mechanismConfig     ← Immutable config (Builder pattern)
-        ├── mechanismUnit       ← Abstract base + static factory + FF library
-        ├── CTREMechanismUnit   ← TalonFX (Phoenix 6) implementation
-        ├── REVMechanismUnit    ← SparkMax / SparkFlex implementation
-        └── NovaMechanismUnit   ← ThriftyBot Nova implementation
+    └── AprilTagFieldCal    ← Field layout, per-tag offsets, geometry
 ```
+
+### Pulling a mechanism into a competition robot
+
+1. Copy `frc/lib/util/`, `frc/lib/hardware/`, `frc/lib/control/`, and the mechanism's folder (e.g. `frc/lib/mechanisms/shooter/`). Add `frc/lib/swerve/` too if the mechanism uses drivetrain state (elevator FF, aim controller).
+2. Copy the matching test folders from `src/test/java/frc/lib/` and run `./gradlew test`.
+3. In the new robot's `RobotContainer`, build the mechanism's `mechanismConfig` with that robot's CAN IDs and vendor, construct it, and `ConfigVerifier.register()` it.
 
 ---
 
@@ -302,21 +319,23 @@ The last one is the only place in the codebase that bypasses `driveInput`. PathP
 
 The drivetrain is CTRE every year. Mechanisms are currently REV (SparkMax/SparkFlex + NEO), but the team is actively transitioning to ThriftyBot Nova over the next two seasons — while keeping REV NEO 550 + UltraPlanetary for small/lightweight mechanisms permanently (no Nova equivalent yet). Without an abstraction layer, every subsystem would contain vendor-specific API calls, and swapping a motor controller on a mechanism would require touching subsystem code everywhere.
 
-With `mechanismUnit`, upgrading a mechanism from NEO to Nova is one line change: the `Vendor` enum in its config. The subsystem is untouched.
+With `mechanismUnit`, upgrading a mechanism from NEO to Nova is one line change: the `MotorVendor` in its config. The subsystem is untouched.
 
 ### The pattern
 
-`mechanismUnit` is an **abstract base class** holding all shared logic once. Vendor subclasses (`CTREMechanismUnit`, `REVMechanismUnit`, `NovaMechanismUnit`) only implement the ~10 hardware calls specific to their controller. A static factory method returns the correct implementation based on the config:
+There is **one motor interface for the whole robot: `MotorIO`** (`lib/hardware/motor/`). Each vendor class (`CTREMotor`, `REVMotor`, `NovaMotor`) implements it for a single controller — configure, command (duty / velocity / position + FF volts), read back, follow, verify. The swerve modules and every mechanism are built on it, so the vendor code exists exactly once.
+
+`mechanismUnit` holds all shared mechanism logic (FF, ramps, encoder sync, travel limits, homing, telemetry) once, on top of a leader `MotorIO` and optional follower `MotorIO`s. `mechanismUnit.create(config)` builds one `MotorIO` per CAN ID with the vendor named in the config. Tests pass `FakeMotorIO`s to the constructor instead, so all of this logic is testable without hardware:
 
 ```java
 mechanismUnit arm = mechanismUnit.create(
     new mechanismConfig.Builder("Arm",
             new int[]{ 11 },
-            new motorConstants.Vendor[]{ motorConstants.Vendor.REV_SPARKMAX })
+            MotorVendor.REV_SPARKMAX)
         .withGearRatio(125.0)
         .withPID(new double[]{ 0.3, 0, 0.01, 0, 0.05, 0 })
         .withSetpointDeadband(1.0)   // ±1°
-        .withTier2FF(mechanismUnit.FF.rotatingArm(
+        .withTier2FF(FF.rotatingArm(
             motorModels.NEO, 125.0,
             3.5, 12.0,               // arm: 3.5 lbs, CG 12 in from pivot
             new double[0], new double[0], new Supplier[0]))
@@ -346,8 +365,7 @@ Followers are configured via `mechanismConfig.Builder`. Two builder methods are 
 //   canIds[3]=13 (D — MECHANICAL to C, rigidly coupled to C)
 new mechanismConfig.Builder("Flywheel",
         new int[]{ 10, 11, 12, 13 },
-        new motorConstants.Vendor[]{ REV_SPARKFLEX, REV_SPARKFLEX,
-                                     REV_SPARKFLEX, REV_SPARKFLEX })
+        MotorVendor.REV_SPARKFLEX)
     .withFollowerConfig(
         new motorConstants.FollowMode[]{
             motorConstants.FollowMode.MECHANICAL,    // B → A
@@ -391,13 +409,13 @@ Three tiers, each additive:
 
 Tier-2 and tier-3 are `ffProvider` lambdas: `(positionDeg, velocityRps, accelRpss) → volts`. They're called automatically each cycle and summed before injection.
 
-**All physics-based lambdas are built from motor datasheet constants** via `mechanismUnit.FF` factories — no empirical holding-voltage calibration required. The formula used throughout is:
+**All physics-based lambdas are built from motor datasheet constants** via `FF` (`lib/control/ff/FF.java`) factories — no empirical holding-voltage calibration required. The formula used throughout is:
 
 ```
 V_ff = τ_mechanism × 12V / (gearRatio × motor.stallTorqueNm)
 ```
 
-Available factories in `mechanismUnit.FF`:
+Available factories in `FF` (`lib/control/ff/FF.java`):
 
 | Factory | Tier | Use case |
 |---|---|---|
@@ -411,14 +429,14 @@ Motor constants live in `motorModels.java` (sourced from vendor datasheets). Pas
 
 ```java
 // Rotating arm with game piece CG shift — Tier 2
-.withTier2FF(mechanismUnit.FF.rotatingArm(
+.withTier2FF(FF.rotatingArm(
     motorModels.NEO, 100.0,
     3.5 /*armLbs*/, 12.0 /*armCgIn*/,
     new double[]{ 1.5 } /*pieceLbs*/, new double[]{ 8.0 } /*pieceCgIn*/,
     new Supplier[]{ indexer::getPieceCount }))
 
 // Vertical elevator with game pieces — Tier 3 (built in RobotContainer)
-.withTier3FF(mechanismUnit.FF.multiStageElevator(
+.withTier3FF(FF.multiStageElevator(
     motorModels.NEO, 20.0, 0.75 /*spoolIn*/,
     8.0 /*carriageLbs*/, new double[]{ 3.0 } /*stageLbs*/,
     0.05 /*frictionUp*/, -0.02 /*frictionDown*/,
@@ -481,7 +499,7 @@ When you're reading or writing values:
 | Mechanism torque (FF calibration) | lb·in | N·m |
 | Angles | degrees (at interface) | radians |
 
-All conversion functions live in `util/units.java`. Never convert inline — use those functions.
+All conversion functions live in `lib/util/units.java`. Never convert inline — use those functions.
 
 ---
 
