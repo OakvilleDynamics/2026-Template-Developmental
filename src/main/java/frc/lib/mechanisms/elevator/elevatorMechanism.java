@@ -8,6 +8,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.lib.swerve.driveOdometryState;
 import frc.lib.util.ConfigVerifiable;
 import frc.lib.util.ConfigVerifyResult;
+import frc.lib.control.ff.FF;
 import frc.lib.control.ff.ffProvider;
 import frc.lib.control.mechanismConfig;
 import frc.lib.control.mechanismUnit;
@@ -144,7 +145,7 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
 
         // Wire pivot Tier-3 FF and create pivot unit
         if (b.pivotConfig != null) {
-            mechanismConfig pivotConfigWithFF = applyPivotFF(b, angleSupplier);
+            mechanismConfig pivotConfigWithFF = applyPivotFF(b);
             pivot = mechanismUnit.create(pivotConfigWithFF);
             pivotHolder[0] = pivot;
         } else {
@@ -348,48 +349,18 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
 
     /**
      * Returns a copy of the pivot mechanismConfig with Tier-3 FF wired.
-     * Only called when a pivot is configured.
+     * Only called when a pivot is configured (withPivot and withExternalAngleSupplier
+     * are mutually exclusive, so the pivot's own position is the elevator angle).
+     * Physics: FF.pivotingElevator — gravity + drivetrain inertia + centripetal.
      */
-    private static mechanismConfig applyPivotFF(Builder b,
-                                                 Supplier<Double> angleSupplier) {
-        motorModels.MotorModel motor   = b.pivotMotorModel;
-        double gearRatio               = b.pivotConfig.gearRatio;
-        double cgDistM                 = units.inches_m(b.cgDistanceFromPivotIn);
-        double cgOffsetM               = units.inches_m(b.cgOffsetFromRobotCenterIn);
-        double carriageKg              = units.lbs_kg(b.carriageLbs);
-        double[] stageKg               = toKgArray(b.stageMassesLbs);
-        double[] pieceKg               = toKgArray(b.gamePieceTypesLbs);
-
-        ffProvider physicsFF = (positionDeg, velocityRps, accelRpss) -> {
-            double totalKg = carriageKg;
-            for (double s : stageKg) totalKg += s;
-            for (int i = 0; i < pieceKg.length; i++)
-                totalKg += pieceKg[i] * b.pieceCountSuppliers[i].get();
-
-            double pivotRad = Math.toRadians(angleSupplier.get());
-
-            // 1. Gravity — cos(pivot): max at 0° (horizontal), zero at 90° (vertical)
-            //    Sign is automatic: positive 0°–90°, negative 90°–180°
-            double torqueGravNm  = totalKg * 9.80665 * cgDistM * Math.cos(pivotRad);
-            double voltsGrav     = torqueGravNm * 12.0 / (gearRatio * motor.stallTorqueNm);
-
-            // 2. Drivetrain linear inertia projected onto pivot load axis via sin(pivot)
-            driveOdometryState odom = b.odometrySupplier.get();
-            double robotHeading     = b.headingSupplier.get();
-            double accelMag         = odom.blendedState.linearAccelerationMagnitude;
-            double accelHeading     = odom.blendedState.linearAccelerationHeading;
-            double accelFwd         = accelMag * Math.cos(accelHeading - robotHeading);
-            double torqueInertNm    = totalKg * accelFwd * cgDistM * Math.sin(pivotRad);
-            double voltsInert       = torqueInertNm * 12.0 / (gearRatio * motor.stallTorqueNm);
-
-            // 3. Centripetal
-            double omega            = odom.blendedState.angularVelocity;
-            double aCentripetal     = omega * omega * cgOffsetM;
-            double torqueCentNm     = totalKg * aCentripetal * cgDistM * Math.sin(pivotRad);
-            double voltsCent        = torqueCentNm * 12.0 / (gearRatio * motor.stallTorqueNm);
-
-            return voltsGrav + voltsInert + voltsCent;
-        };
+    private static mechanismConfig applyPivotFF(Builder b) {
+        ffProvider physicsFF = FF.pivotingElevator(
+            b.pivotMotorModel, b.pivotConfig.gearRatio,
+            b.cgDistanceFromPivotIn, b.cgOffsetFromRobotCenterIn,
+            b.carriageLbs, b.stageMassesLbs,
+            0.0, 0.0,                         // friction: set via kS / tier-2 instead
+            b.gamePieceTypesLbs, b.pieceCountSuppliers,
+            b.odometrySupplier, b.headingSupplier);
 
         ffProvider existing = b.pivotConfig.tier3FF;
         ffProvider combined = (pos, vel, accel) ->
