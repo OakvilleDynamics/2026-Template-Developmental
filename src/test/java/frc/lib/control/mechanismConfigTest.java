@@ -80,6 +80,41 @@ class mechanismConfigTest {
     }
 
     @Test
+    void toBuilderPreservesEveryField() {
+        // Regression: elevatorMechanism used to rebuild configs by hand and silently
+        // dropped travel limits, homing offset, Nova motor type, and CAN signal rates.
+        ffProvider t2 = (p, v, a) -> 1.0;
+        mechanismConfig src = threeMotorElevator()
+            .withTier2FF(t2)
+            .withLeadTravelLimits(30, 0.1, 40, 0.2)
+            .withFollowerTravelLimits(31, 0.11, 41, 0.21)
+            .withStallDetectionCycles(7)
+            .withHomingZeroOffset(-3.0)
+            .withNovaMotorType(MotorIOConfig.NovaMotorType.MINION)
+            .withCanSignals(100, 2, true)
+            .withSetpointDeadband(0.5)
+            .withEncoderSync(0.02, 0.9)
+            .build();
+
+        ffProvider t3 = (p, v, a) -> 2.0;
+        mechanismConfig copy = src.toBuilder().withTier3FF(t3).build();
+
+        assertSame(t2, copy.tier2FF);
+        assertSame(t3, copy.tier3FF);
+        assertEquals(30.0, copy.leadLowerCurrentAmps, EPS);
+        assertEquals(0.21, copy.followerUpperMaxSpeedRps, EPS);
+        assertEquals(7, copy.stallDetectionCycles);
+        assertEquals(-3.0, copy.homingZeroOffsetDeg, EPS);
+        assertEquals(MotorIOConfig.NovaMotorType.MINION, copy.novaMotorType);
+        assertEquals(100.0, copy.signalUpdateHz, EPS);
+        assertTrue(copy.optimizeCanUtilization);
+        assertEquals(0.5, copy.setpointDeadband, EPS);
+        assertEquals(0.9, copy.encoderSyncKp, EPS);
+        assertEquals(motorConstants.FollowMode.ENCODER_SYNC, copy.followModeOf(2));
+        assertEquals(-36.0, copy.softLimitReverseDeg, EPS);
+    }
+
+    @Test
     void mixedVendorsAreRejected() {
         assertThrows(IllegalArgumentException.class, () ->
             new mechanismConfig.Builder("Bad", new int[]{ 1, 2 },

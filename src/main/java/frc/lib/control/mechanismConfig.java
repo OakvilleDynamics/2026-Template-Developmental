@@ -393,6 +393,50 @@ public final class mechanismConfig {
         this.optimizeCanUtilization  = b.optimizeCanUtilization;
     }
 
+    /**
+     * Copy every field into a new Builder — e.g. to swap in a combined tier-3
+     * FF without losing travel limits, homing, or other settings.
+     */
+    public Builder toBuilder() {
+        Builder b = new Builder(name, canIds, vendors);
+        b.followerInverted         = followerInverted;
+        b.followerModes            = followerModes;
+        b.followerLeaderIndices    = followerLeaderIndices;
+        b.gearRatio                = gearRatio;
+        b.inverted                 = inverted;
+        b.pid                      = pid;
+        b.softLimitForwardDeg      = softLimitForwardDeg;
+        b.softLimitReverseDeg      = softLimitReverseDeg;
+        b.supplyCurrentLimitAmps   = supplyCurrentLimitAmps;
+        b.statorCurrentLimitAmps   = statorCurrentLimitAmps;
+        b.openLoopRampSecs         = openLoopRampSecs;
+        b.closedLoopRampSecs       = closedLoopRampSecs;
+        b.motionCruiseVelocityRps  = motionCruiseVelocityRps;
+        b.motionAccelerationRpss   = motionAccelerationRpss;
+        b.motionJerkRpss3          = motionJerkRpss3;
+        b.tier2FF                  = tier2FF;
+        b.tier3FF                  = tier3FF;
+        b.setpointDeadband         = setpointDeadband;
+        b.brakeOnNeutral           = brakeOnNeutral;
+        b.encoderSyncDeadbandRot   = encoderSyncDeadbandRot;
+        b.encoderSyncKp            = encoderSyncKp;
+        b.leadLowerCurrentAmps     = leadLowerCurrentAmps;
+        b.leadLowerMaxSpeedRps     = leadLowerMaxSpeedRps;
+        b.leadUpperCurrentAmps     = leadUpperCurrentAmps;
+        b.leadUpperMaxSpeedRps     = leadUpperMaxSpeedRps;
+        b.followerLowerCurrentAmps = followerLowerCurrentAmps;
+        b.followerLowerMaxSpeedRps = followerLowerMaxSpeedRps;
+        b.followerUpperCurrentAmps = followerUpperCurrentAmps;
+        b.followerUpperMaxSpeedRps = followerUpperMaxSpeedRps;
+        b.stallDetectionCycles     = stallDetectionCycles;
+        b.homingZeroOffsetDeg      = homingZeroOffsetDeg;
+        b.novaMotorType            = novaMotorType;
+        b.signalUpdateHz           = signalUpdateHz;
+        b.tempSignalUpdateHz       = tempSignalUpdateHz;
+        b.optimizeCanUtilization   = optimizeCanUtilization;
+        return b;
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Builder
     // ─────────────────────────────────────────────────────────────────────────

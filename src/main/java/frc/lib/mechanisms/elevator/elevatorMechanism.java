@@ -399,26 +399,11 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
     }
 
     /**
-     * Rebuild a mechanismConfig with a replacement tier3FF, preserving all other fields.
+     * Copy a mechanismConfig with a replacement tier3FF, preserving every other
+     * field (travel limits, homing, Nova motor type, CAN signals included).
      */
     private static mechanismConfig rebuildWithTier3FF(mechanismConfig src, ffProvider ff) {
-        return new mechanismConfig.Builder(src.name, src.canIds, src.vendors)
-            .withFollowerConfig(src.followerModes, src.followerInverted,
-                                src.followerLeaderIndices)
-            .withGearRatio(src.gearRatio)
-            .withInverted(src.inverted)
-            .withPID(src.pid)
-            .withSoftLimits(src.softLimitReverseDeg, src.softLimitForwardDeg)
-            .withCurrentLimits(src.supplyCurrentLimitAmps, src.statorCurrentLimitAmps)
-            .withRampRates(src.openLoopRampSecs, src.closedLoopRampSecs)
-            .withMotionProfile(src.motionCruiseVelocityRps,
-                               src.motionAccelerationRpss, src.motionJerkRpss3)
-            .withTier2FF(src.tier2FF)
-            .withTier3FF(ff)
-            .withSetpointDeadband(src.setpointDeadband)
-            .withBrakeOnNeutral(src.brakeOnNeutral)
-            .withEncoderSync(src.encoderSyncDeadbandRot, src.encoderSyncKp)
-            .build();
+        return src.toBuilder().withTier3FF(ff).build();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
