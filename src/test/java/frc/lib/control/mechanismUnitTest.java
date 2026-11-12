@@ -35,7 +35,7 @@ class mechanismUnitTest {
 
     @BeforeAll
     static void initHal() {
-        assertTrue(HAL.initialize(500, 0));
+        assertTrue(HAL.initialize());
     }
 
     private static String uniqueName() {
