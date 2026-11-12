@@ -11,7 +11,6 @@ import frc.lib.util.ConfigVerifyResult;
 import frc.lib.control.ff.ffProvider;
 import frc.lib.control.mechanismConfig;
 import frc.lib.control.mechanismUnit;
-import frc.lib.control.motorConstants;
 import frc.lib.hardware.motor.motorModels;
 import frc.lib.util.units;
 
@@ -440,12 +439,12 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
     private void printConfigStatus(Builder b) {
         StringBuilder sb = new StringBuilder();
         sb.append("[ElevatorMechanism] '").append(b.name).append("' initialized:\n");
-        sb.append("  Elevator : ").append(describeConfig(b.elevatorConfig))
+        sb.append("  Elevator : ").append(b.elevatorConfig)
           .append(" | pulley ").append(b.pulleyRadiusIn).append(" in")
           .append(" | default ").append(b.defaultElevatorIn).append(" in\n");
 
         if (b.pivotConfig != null) {
-            sb.append("  Pivot    : ").append(describeConfig(b.pivotConfig))
+            sb.append("  Pivot    : ").append(b.pivotConfig)
               .append(" | default ").append(b.defaultPivotDeg).append("°\n");
         } else if (b.externalAngleSupplier != null) {
             sb.append("  Pivot    : external angle supplier\n");
@@ -463,19 +462,6 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
         sb.append("\n");
         sb.append("  Hold threshold : ").append(b.holdThresholdIn).append(" in");
         System.out.println(sb);
-    }
-
-    private static String describeConfig(mechanismConfig config) {
-        int count = config.canIds.length;
-        motorConstants.Vendor vendor = config.vendors[0];
-        String vendorStr = switch (vendor) {
-            case CTRE_TALONFX    -> "CTRE TalonFX";
-            case REV_SPARKMAX    -> "REV SparkMax";
-            case REV_SPARKFLEX   -> "REV SparkFlex";
-            case THRIFTYBOT_NOVA -> "ThriftyBot Nova";
-            default              -> vendor.toString();
-        };
-        return count + "× " + vendorStr + " | CAN " + java.util.Arrays.toString(config.canIds);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

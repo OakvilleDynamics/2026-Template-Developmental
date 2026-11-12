@@ -9,7 +9,6 @@ import frc.lib.util.ConfigVerifiable;
 import frc.lib.util.ConfigVerifyResult;
 import frc.lib.control.mechanismConfig;
 import frc.lib.control.mechanismUnit;
-import frc.lib.control.motorConstants;
 
 /**
  * shooterMechanism.java
@@ -270,18 +269,18 @@ public class shooterMechanism extends SubsystemBase implements ConfigVerifiable 
     private void printConfigStatus(Builder b) {
         StringBuilder sb = new StringBuilder();
         sb.append("[ShooterMechanism] '").append(b.name).append("' initialized:\n");
-        sb.append("  Flywheel : ").append(describeConfig(b.flywheelConfig))
+        sb.append("  Flywheel : ").append(b.flywheelConfig)
           .append(" | default ").append((int)(b.defaultFlywheelRpm)).append(" RPM\n");
 
         if (b.turretConfig != null) {
-            sb.append("  Turret   : ").append(describeConfig(b.turretConfig))
+            sb.append("  Turret   : ").append(b.turretConfig)
               .append(" | default ").append(b.defaultTurretDeg).append("°\n");
         } else {
             sb.append("  Turret   : NOT configured\n");
         }
 
         if (b.hoodConfig != null) {
-            sb.append("  Hood     : ").append(describeConfig(b.hoodConfig))
+            sb.append("  Hood     : ").append(b.hoodConfig)
               .append(" | default ").append(b.defaultHoodDeg).append("°\n");
         } else {
             sb.append("  Hood     : NOT configured\n");
@@ -289,20 +288,6 @@ public class shooterMechanism extends SubsystemBase implements ConfigVerifiable 
 
         sb.append("  Hold threshold : ").append((int) b.holdThresholdRpm).append(" RPM");
         System.out.println(sb);
-    }
-
-    /** Produces a short human-readable description of a mechanismConfig's motor roster. */
-    private static String describeConfig(mechanismConfig config) {
-        int count = config.canIds.length;
-        motorConstants.Vendor vendor = config.vendors[0];
-        String vendorStr = switch (vendor) {
-            case CTRE_TALONFX    -> "CTRE TalonFX";
-            case REV_SPARKMAX    -> "REV SparkMax";
-            case REV_SPARKFLEX   -> "REV SparkFlex";
-            case THRIFTYBOT_NOVA -> "ThriftyBot Nova";
-            default              -> vendor.toString();
-        };
-        return count + "× " + vendorStr + " | CAN " + java.util.Arrays.toString(config.canIds);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

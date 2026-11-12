@@ -4,29 +4,11 @@ package frc.lib.control;
  * motorConstants.java
  * PATH: src/main/java/frc/lib/control/motorConstants.java
  *
- * Enumerations and package-level constants shared across all mechanismUnit
- * implementations. No vendor-specific imports.
+ * Enumerations and constants shared by mechanismUnit and mechanismConfig.
+ * No vendor-specific imports. The vendor enum lives in
+ * frc.lib.hardware.motor.MotorVendor.
  */
 public final class motorConstants {
-
-    // ── Vendor enum ───────────────────────────────────────────────────────────
-
-    /**
-     * Motor controller vendor. All motors in a single mechanismUnit must share
-     * the same vendor — mixed-vendor mechanisms are not supported.
-     *
-     * Vendor assignment by robot subsystem:
-     *   CTRE_TALONFX   — drivetrain (all years); Kraken X60, X44, Minion
-     *   REV_SPARKMAX    — mechanisms using NEO / NEO 550 (current season)
-     *   REV_SPARKFLEX   — mechanisms using NEO Vortex
-     *   THRIFTYBOT_NOVA — mechanisms transitioning from REV (go-forward platform)
-     */
-    public enum Vendor {
-        CTRE_TALONFX,
-        REV_SPARKMAX,
-        REV_SPARKFLEX,
-        THRIFTYBOT_NOVA
-    }
 
     // ── Follow mode enum ──────────────────────────────────────────────────────
 
@@ -58,7 +40,7 @@ public final class motorConstants {
      * Used for:
      *   - Software duty cycle ramp rate calculations
      *   - Finite-difference acceleration estimation (dv/dt)
-     *   - Nova software setpoint step limiter
+     *   - Software motion-profile step limiter (controllers without one, e.g. Nova)
      */
     public static final double LOOP_PERIOD_SECS = 0.020;
 
@@ -78,20 +60,6 @@ public final class motorConstants {
      * Tune per-mechanism via mechanismConfig.Builder.withEncoderSync().
      */
     public static final double ENCODER_SYNC_KP_DEFAULT = 0.5;
-
-    // ── Nova FF approximation ─────────────────────────────────────────────────
-
-    /**
-     * Minimum battery voltage used as divisor when converting FF volts to duty
-     * cycle for ThriftyBot Nova (which has no native per-cycle voltage injection).
-     *
-     * Actual divisor = max(RobotController.getBatteryVoltage(), MIN_BATTERY_VOLTAGE)
-     *
-     * Clamped to prevent divide-by-near-zero during simulation or deep brownout.
-     * Actual battery voltage is read live from RobotController each cycle, so the
-     * approximation tracks sag under load rather than assuming a fixed 12V.
-     */
-    public static final double MIN_BATTERY_VOLTAGE = 7.0;
 
     private motorConstants() {}
 }

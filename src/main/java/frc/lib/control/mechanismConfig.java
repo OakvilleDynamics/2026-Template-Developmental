@@ -1,6 +1,11 @@
 package frc.lib.control;
 
+import java.util.Arrays;
+
+import frc.lib.control.ff.FF;
 import frc.lib.control.ff.ffProvider;
+import frc.lib.hardware.motor.MotorIOConfig;
+import frc.lib.hardware.motor.MotorVendor;
 
 /**
  * mechanismConfig.java
@@ -40,8 +45,8 @@ import frc.lib.control.ff.ffProvider;
  *   Tier 2 (Rio-computed, self-contained): tier2FF lambda.
  *   Tier 3 (Rio-computed, cross-system): tier3FF lambda.
  *   See ffProvider.java for full documentation and examples.
- *   Physics-based factories: mechanismUnit.FF.rotatingArm(), multiStageElevator(),
- *     pivotingElevator(), springTurret().
+ *   Physics-based factories: FF.rotatingArm(), multiStageElevator(),
+ *     pivotingElevator(), springTurret(), gyroscopicTurret().
  *   Convenience factory for no-FF case: mechanismConfig.noFF().
  *
  * ─── MOTION PROFILE ──────────────────────────────────────────────────────────
@@ -66,7 +71,7 @@ public final class mechanismConfig {
     public final int[] canIds;
 
     /** Vendor for each motor, parallel to canIds. All must be identical. */
-    public final motorConstants.Vendor[] vendors;
+    public final MotorVendor[] vendors;
 
     /** Whether each follower is inverted relative to its designated leader.
      *  Length = canIds.length - 1. Parallel to followerModes and followerLeaderIndices. */
@@ -258,7 +263,16 @@ public final class mechanismConfig {
      * Set this whenever using a ThriftyBot Nova so a wrong-motor-type
      * mismatch (a known silent-failure mode) is caught at startup.
      */
-    public final com.thethriftybot.devices.ThriftyNova.MotorType novaMotorType;
+    public final MotorIOConfig.NovaMotorType novaMotorType;
+
+    // ── CAN signals (CTRE only) ───────────────────────────────────────────────
+
+    /** Status signal rate for velocity/position/current/voltage (Hz). Default 250. */
+    public final double  signalUpdateHz;
+    /** Status signal rate for temperature (Hz). Default 4. */
+    public final double  tempSignalUpdateHz;
+    /** Silence un-registered signals. Default false — flip after on-robot validation. */
+    public final boolean optimizeCanUtilization;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Convenience FF factory
@@ -270,11 +284,68 @@ public final class mechanismConfig {
      * tier-2/3 feed-forward is not needed.
      *
      * For physics-based gravity and spring compensation, use the factories in
-     * {@link mechanismUnit.FF}: rotatingArm(), multiStageElevator(),
-     * pivotingElevator(), springTurret().
+     * {@link FF}: rotatingArm(), multiStageElevator(), pivotingElevator(),
+     * springTurret(), gyroscopicTurret().
      */
     public static ffProvider noFF() {
-        return (pos, vel, accel) -> 0.0;
+        return FF.none();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Derived hardware configs
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Hardware config for motor {@code index} (0 = leader, 1..n = followers).
+     *
+     * The leader gets every setting. Followers get the same gear ratio, current
+     * limits, neutral mode and CAN signal rates with their own CAN ID, and no
+     * gains, soft limits, or motion profile — those only matter on the controller
+     * running the closed loop. Only ENCODER_SYNC followers get an inversion
+     * setting; a MECHANICAL follower's direction comes from MotorIO.follow().
+     */
+    public MotorIOConfig motorConfig(int index) {
+        if (index < 0 || index >= canIds.length)
+            throw new IllegalArgumentException("mechanismConfig '" + name + "': motor index "
+                                               + index + " out of range for " + canIds.length + " motors");
+        MotorIOConfig.Builder b = MotorIOConfig.builder(canIds[index], vendors[index])
+            .withBrakeOnNeutral(brakeOnNeutral)
+            .withGearRatio(gearRatio)
+            .withCurrentLimits(supplyCurrentLimitAmps, statorCurrentLimitAmps)
+            .withRampRates(openLoopRampSecs, closedLoopRampSecs)
+            .withCanSignals(signalUpdateHz, tempSignalUpdateHz, optimizeCanUtilization)
+            .withNovaMotorType(novaMotorType);
+        if (index == 0) {
+            b.withInverted(inverted)
+             .withGains(pid)
+             .withSoftLimits(softLimitReverseDeg / 360.0, softLimitForwardDeg / 360.0)
+             .withMotionProfile(motionCruiseVelocityRps, motionAccelerationRpss, motionJerkRpss3);
+        } else if (followModeOf(index) == motorConstants.FollowMode.ENCODER_SYNC) {
+            b.withInverted(isFollowerInverted(index));
+        }
+        return b.build();
+    }
+
+    /** Whether motor {@code index} (1..n) is inverted relative to its leader. */
+    public boolean isFollowerInverted(int index) {
+        return index - 1 < followerInverted.length && followerInverted[index - 1];
+    }
+
+    /** canIds[] index of the motor that motor {@code index} (1..n) tracks. */
+    public int followerLeaderIndexOf(int index) {
+        return index - 1 < followerLeaderIndices.length ? followerLeaderIndices[index - 1] : 0;
+    }
+
+    /** Follow mode of motor {@code index} (1..n). NONE when unspecified. */
+    public motorConstants.FollowMode followModeOf(int index) {
+        return index - 1 < followerModes.length
+            ? followerModes[index - 1] : motorConstants.FollowMode.NONE;
+    }
+
+    /** Short roster description, e.g. "2× REV SparkMax | CAN [20, 21]". */
+    @Override
+    public String toString() {
+        return canIds.length + "× " + vendors[0].displayName + " | CAN " + Arrays.toString(canIds);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -317,6 +388,9 @@ public final class mechanismConfig {
         this.stallDetectionCycles    = b.stallDetectionCycles;
         this.homingZeroOffsetDeg     = b.homingZeroOffsetDeg;
         this.novaMotorType           = b.novaMotorType;
+        this.signalUpdateHz          = b.signalUpdateHz;
+        this.tempSignalUpdateHz      = b.tempSignalUpdateHz;
+        this.optimizeCanUtilization  = b.optimizeCanUtilization;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -333,15 +407,13 @@ public final class mechanismConfig {
      * Example — single CTRE leader, arm with gravity compensation:
      * <pre>{@code
      * mechanismConfig cfg = new mechanismConfig.Builder(
-     *         "Shoulder",
-     *         new int[]{ 15 },
-     *         new motorConstants.Vendor[]{ motorConstants.Vendor.CTRE_TALONFX })
+     *         "Shoulder", new int[]{ 15 }, MotorVendor.CTRE_TALONFX)
      *     .withGearRatio(100.0)
      *     .withPID(new double[]{ 0.5, 0, 0.01, 0.15, 0.12, 0 })
      *     .withMotionProfile(80, 200, 0)
      *     .withSoftLimits(-10.0, 220.0)
      *     .withCurrentLimits(40, 80)
-     *     .withTier2FF(mechanismUnit.FF.rotatingArm(
+     *     .withTier2FF(FF.rotatingArm(
      *         motorModels.NEO, 100.0, 3.5, 12.0, new double[0], new double[0], null))
      *     .build();
      * }</pre>
@@ -349,14 +421,12 @@ public final class mechanismConfig {
      * Example — two REV SparkMax followers (mechanical), vertical elevator:
      * <pre>{@code
      * mechanismConfig cfg = new mechanismConfig.Builder(
-     *         "Elevator",
-     *         new int[]{ 20, 21 },
-     *         new motorConstants.Vendor[]{ REV_SPARKMAX, REV_SPARKMAX })
+     *         "Elevator", new int[]{ 20, 21 }, MotorVendor.REV_SPARKMAX)
      *     .withFollowMode(motorConstants.FollowMode.MECHANICAL, new boolean[]{ false })
      *     .withGearRatio(20.0)
      *     .withPID(new double[]{ 0.1, 0, 0, 0.1, 0, 0 })
      *     .withMotionProfile(40, 80, 0)
-     *     .withTier3FF(mechanismUnit.FF.multiStageElevator(
+     *     .withTier3FF(FF.multiStageElevator(
      *         motorModels.NEO, 20.0, 0.75, 8.0, new double[0], 0.0, 0.0,
      *         new double[0], null, () -> 90.0))
      *     .build();
@@ -367,7 +437,7 @@ public final class mechanismConfig {
         // Required
         private final String name;
         private final int[] canIds;
-        private final motorConstants.Vendor[] vendors;
+        private final MotorVendor[] vendors;
 
         // Optional — defaults
         private boolean[] followerInverted             = new boolean[0];
@@ -401,14 +471,17 @@ public final class mechanismConfig {
         private double followerUpperMaxSpeedRps   = Double.NaN;
         private int    stallDetectionCycles       = 3;
         private double homingZeroOffsetDeg        = Double.NaN;
-        private com.thethriftybot.devices.ThriftyNova.MotorType novaMotorType = null;
+        private MotorIOConfig.NovaMotorType novaMotorType = null;
+        private double  signalUpdateHz            = 250.0;
+        private double  tempSignalUpdateHz        = 4.0;
+        private boolean optimizeCanUtilization    = false;
 
         /**
          * @param name    mechanism name — used for logging and dashboard
          * @param canIds  CAN IDs: index 0 = leader, 1..n = followers
          * @param vendors vendor per motor, parallel to canIds; all must match
          */
-        public Builder(String name, int[] canIds, motorConstants.Vendor[] vendors) {
+        public Builder(String name, int[] canIds, MotorVendor[] vendors) {
             if (name == null || name.isEmpty())
                 throw new IllegalArgumentException("mechanismConfig: name must not be empty");
             if (canIds == null || canIds.length == 0)
@@ -416,9 +489,30 @@ public final class mechanismConfig {
             if (vendors == null || vendors.length != canIds.length)
                 throw new IllegalArgumentException(
                     "mechanismConfig: vendors[] must be same length as canIds[]");
+            for (int i = 1; i < vendors.length; i++) {
+                if (vendors[i] != vendors[0])
+                    throw new IllegalArgumentException(
+                        "mechanismConfig '" + name + "': mixed vendors are not supported. "
+                        + "Motor 0 is " + vendors[0] + " but motor " + i + " is " + vendors[i]
+                        + ". All motors in a mechanism must use the same vendor.");
+            }
             this.name    = name;
             this.canIds  = canIds;
             this.vendors = vendors;
+        }
+
+        /**
+         * Convenience constructor — every motor uses the same vendor.
+         * Swapping the mechanism to another vendor is a change to this one argument.
+         */
+        public Builder(String name, int[] canIds, MotorVendor vendor) {
+            this(name, canIds, sameVendor(vendor, canIds == null ? 0 : canIds.length));
+        }
+
+        private static MotorVendor[] sameVendor(MotorVendor vendor, int count) {
+            MotorVendor[] v = new MotorVendor[count];
+            Arrays.fill(v, vendor);
+            return v;
         }
 
         /**
@@ -665,10 +759,26 @@ public final class mechanismConfig {
          * as a fault. A wrong motor type (NEO vs Minion) is a known silent-failure mode.
          * Only needed on THRIFTYBOT_NOVA mechanisms. Defaults to null (no check).
          *
-         * @param type ThriftyNova.MotorType.NEO, MINION, or BRUSHED
+         * @param type MotorIOConfig.NovaMotorType.NEO, MINION, or BRUSHED
          */
-        public Builder withNovaMotorType(com.thethriftybot.devices.ThriftyNova.MotorType type) {
+        public Builder withNovaMotorType(MotorIOConfig.NovaMotorType type) {
             this.novaMotorType = type;
+            return this;
+        }
+
+        /**
+         * CAN status signal rates (CTRE only). Defaults: 250 Hz, 4 Hz temps,
+         * no bus optimization.
+         *
+         * @param updateHz         velocity / position / current / voltage signals
+         * @param tempUpdateHz     temperature signal
+         * @param optimizeCanUsage true = silence un-registered signals (flip only
+         *                         after the mechanism is validated on the robot)
+         */
+        public Builder withCanSignals(double updateHz, double tempUpdateHz, boolean optimizeCanUsage) {
+            this.signalUpdateHz         = updateHz;
+            this.tempSignalUpdateHz     = tempUpdateHz;
+            this.optimizeCanUtilization = optimizeCanUsage;
             return this;
         }
 

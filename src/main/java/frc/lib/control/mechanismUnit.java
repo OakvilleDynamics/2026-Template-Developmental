@@ -1,43 +1,43 @@
 package frc.lib.control;
 
-import java.util.function.Supplier;
+import java.util.ArrayList;
+import java.util.List;
 
 import edu.wpi.first.util.datalog.*;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
-import frc.lib.swerve.driveOdometryState;
-import frc.lib.util.units;
-
-import java.util.List;
+import frc.lib.hardware.motor.MotorIO;
 import frc.lib.util.ConfigVerifiable;
 import frc.lib.util.ConfigVerifyResult;
-import frc.lib.hardware.motor.motorModels;
-import frc.lib.control.ff.ffProvider;
-import frc.robot.util.motors.CTREMechanismUnit;
-import frc.robot.util.motors.REVMechanismUnit;
-import frc.robot.util.motors.NovaMechanismUnit;
 
 /**
  * mechanismUnit.java
  * PATH: src/main/java/frc/lib/control/mechanismUnit.java
  *
- * Abstract base class for all motor controller abstractions.
+ * One mechanism's motor group (leader + optional followers) with all shared
+ * control logic. Built on MotorIO, so it contains no vendor code — the vendor
+ * for every motor comes from the mechanismConfig.
  *
  * Instantiate via factory:
  *   mechanismUnit arm = mechanismUnit.create(config);
  *
- * Or directly for CTRE-specific features:
- *   CTREMechanismUnit arm = new CTREMechanismUnit(config);
+ * Or with pre-built MotorIOs (unit tests use FakeMotorIO this way):
+ *   mechanismUnit arm = new mechanismUnit(config, leaderIO, followerIO);
+ *
+ * Vendor-only features (CTRE torque control, Nova PID slot 1, ...) are reached
+ * by casting getLeader() to CTREMotor / REVMotor / NovaMotor.
  *
  * ─── SHARED LOGIC IN THIS CLASS ──────────────────────────────────────────────
- *   • Static factory with vendor dispatch and mixed-vendor validation
+ *   • Follower topology wiring (MECHANICAL hardware follow, ENCODER_SYNC)
  *   • Tier-2 + Tier-3 FF computation (lambda calls + sum)
  *   • Finite-difference acceleration estimation (dv/dt)
  *   • Software duty cycle ramp (fallback when hardware ramp unavailable)
- *   • PID live-tuning loop (SmartDashboard read-back → applyPIDToController)
+ *   • Software motion-profile step limiter (controllers without MotionMagic/MAXMotion)
+ *   • PID live-tuning loop (SmartDashboard read-back → MotorIO.applyGains)
  *   • ENCODER_SYNC follower correction (position error → duty cycle output)
+ *   • Current-based end-of-travel detection and homing
  *   • DataLog entry lifecycle (per-instance, not static)
  *   • SmartDashboard telemetry publishing
  *
@@ -50,7 +50,7 @@ import frc.robot.util.motors.NovaMechanismUnit;
  *   (CommandScheduler.run() context). No synchronization is performed.
  *   The tier-2/3 FF lambdas and all state fields assume single-threaded access.
  */
-public abstract class mechanismUnit implements ConfigVerifiable {
+public class mechanismUnit implements ConfigVerifiable {
 
     // ── Homing direction (public — used in startHoming() calls) ───────────────
 
@@ -65,8 +65,11 @@ public abstract class mechanismUnit implements ConfigVerifiable {
     /** Homing state machine states (private — implementation detail). */
     private enum HomingState { IDLE, IN_PROGRESS, COMPLETE }
 
-    // ── Config ────────────────────────────────────────────────────────────────
+    // ── Config + hardware ─────────────────────────────────────────────────────
     protected final mechanismConfig config;
+    private   final MotorIO         leader;
+    /** followers[i] drives canIds[i + 1]. */
+    private   final MotorIO[]       followers;
 
     // ── Live PID gains (read back from SmartDashboard each loop) ─────────────
     protected double kP, kI, kD, kS, kV, kA;
@@ -83,10 +86,11 @@ public abstract class mechanismUnit implements ConfigVerifiable {
     // ── Software duty cycle ramp state ────────────────────────────────────────
     private double rampedDutyCycle = 0.0;
 
-    // ── Nova software setpoint ramp state ─────────────────────────────────────
-    private double rampedVelocitySetpoint  = 0.0;
-    private double rampedPositionSetpoint  = 0.0;
-    private boolean positionInitialized    = false;
+    // ── Software motion-profile state ─────────────────────────────────────────
+    private final boolean softwareMotionProfile;
+    private double  rampedVelocitySetpoint  = 0.0;
+    private double  rampedPositionSetpoint  = 0.0;
+    private boolean positionInitialized     = false;
 
     // ── Cached ENCODER_SYNC follower index ────────────────────────────────────
     // 1-based index into config.canIds[]. -1 when no ENCODER_SYNC follower exists.
@@ -152,40 +156,38 @@ public abstract class mechanismUnit implements ConfigVerifiable {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Create a mechanismUnit for the given config.
-     * Validates that all motors in the config share the same vendor.
-     * Returns the correct vendor implementation.
-     *
-     * @throws IllegalArgumentException if canIds and vendors arrays are
-     *         mismatched, or if mixed vendors are specified.
+     * Create a mechanismUnit for the given config, constructing one MotorIO per
+     * CAN ID with the vendor named in the config.
      */
     public static mechanismUnit create(mechanismConfig config) {
-        motorConstants.Vendor v = config.vendors[0];
-        for (int i = 1; i < config.vendors.length; i++) {
-            if (config.vendors[i] != v) {
-                throw new IllegalArgumentException(
-                    "mechanismUnit '" + config.name + "': mixed vendors are not supported. "
-                    + "Motor 0 is " + v + " but motor " + i + " is " + config.vendors[i]
-                    + ". All motors in a mechanism must use the same vendor.");
-            }
+        MotorIO   leader    = MotorIO.create(config.motorConfig(0));
+        MotorIO[] followers = new MotorIO[config.canIds.length - 1];
+        for (int i = 0; i < followers.length; i++) {
+            followers[i] = MotorIO.create(config.motorConfig(i + 1));
         }
-        switch (v) {
-            case CTRE_TALONFX:    return new CTREMechanismUnit(config);
-            case REV_SPARKMAX:    return new REVMechanismUnit(config, false);
-            case REV_SPARKFLEX:   return new REVMechanismUnit(config, true);
-            case THRIFTYBOT_NOVA: return new NovaMechanismUnit(config);
-            default:
-                throw new IllegalArgumentException(
-                    "mechanismUnit '" + config.name + "': unknown vendor " + v);
-        }
+        return new mechanismUnit(config, leader, followers);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Constructor
     // ─────────────────────────────────────────────────────────────────────────
 
-    protected mechanismUnit(mechanismConfig config) {
+    /**
+     * @param config    mechanism config
+     * @param leader    MotorIO for canIds[0]
+     * @param followers MotorIOs for canIds[1..n], in order
+     * @throws IllegalArgumentException if the follower count does not match the
+     *         config, or an ENCODER_SYNC follower uses a controller that cannot sync
+     */
+    public mechanismUnit(mechanismConfig config, MotorIO leader, MotorIO... followers) {
+        if (followers.length != config.canIds.length - 1)
+            throw new IllegalArgumentException(
+                "mechanismUnit '" + config.name + "': expected " + (config.canIds.length - 1)
+                + " follower MotorIOs, got " + followers.length);
+
         this.config     = config;
+        this.leader     = leader;
+        this.followers  = followers;
         this.dashPrefix = config.name + "/";
         this.pidPrefix  = config.name + "/PID/";
 
@@ -196,17 +198,20 @@ public abstract class mechanismUnit implements ConfigVerifiable {
         kV = config.pid[4];
         kA = config.pid[5];
 
+        softwareMotionProfile = config.motionCruiseVelocityRps > 0.0 && !leader.hasHardwareMotionProfile();
+
         // Cache the ENCODER_SYNC follower index once — avoids a per-cycle array scan.
         // Must be set before initLogEntries(), which uses it to allocate log entries.
         int syncIdx = -1;
-        for (int i = 0; i < config.followerModes.length; i++) {
-            if (config.followerModes[i] == motorConstants.FollowMode.ENCODER_SYNC) {
-                syncIdx = i + 1;  // 1-based to match getFollowerPositionImpl convention
+        for (int i = 1; i < config.canIds.length; i++) {
+            if (config.followModeOf(i) == motorConstants.FollowMode.ENCODER_SYNC) {
+                syncIdx = i;
                 break;
             }
         }
         this.encoderSyncFollowerIndex = syncIdx;
 
+        configureFollowers();
         initLogEntries();
         publishPIDToDashboard();
 
@@ -216,6 +221,31 @@ public abstract class mechanismUnit implements ConfigVerifiable {
                 + "isAtSetpoint() will always return false. "
                 + "Call withSetpointDeadband() in the mechanismConfig.Builder to enable it.", false);
         }
+    }
+
+    /**
+     * Wire MECHANICAL followers to their designated leader in hardware and
+     * reject ENCODER_SYNC on controllers that cannot support it.
+     */
+    private void configureFollowers() {
+        for (int i = 1; i < config.canIds.length; i++) {
+            motorConstants.FollowMode mode = config.followModeOf(i);
+            if (mode == motorConstants.FollowMode.MECHANICAL) {
+                // Follows the designated leader (may be another follower)
+                followers[i - 1].follow(motorAt(config.followerLeaderIndexOf(i)),
+                                        config.isFollowerInverted(i));
+            } else if (mode == motorConstants.FollowMode.ENCODER_SYNC
+                       && !followers[i - 1].supportsEncoderSync()) {
+                throw new IllegalArgumentException(
+                    "mechanismUnit '" + config.name + "': ENCODER_SYNC follow mode is not supported by "
+                    + followers[i - 1].getConfig() + " (motor index " + i + "). Use MECHANICAL instead.");
+            }
+        }
+    }
+
+    /** MotorIO for canIds[index] (0 = leader). */
+    private MotorIO motorAt(int index) {
+        return index == 0 ? leader : followers[index - 1];
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -239,8 +269,8 @@ public abstract class mechanismUnit implements ConfigVerifiable {
         checkTravelLimits();
         duty = applyTravelLimitBlock(duty, Math.signum(duty));
         applyDashboardPIDUpdates();
-        double ramped = usesHardwareDutyCycleRamp() ? duty : applyDutyCycleRamp(duty);
-        applyDutyCycleImpl(ramped);
+        double ramped = leader.hasHardwareDutyCycleRamp() ? duty : applyDutyCycleRamp(duty);
+        leader.setDutyCycle(ramped);
         logDutyCycle.append(ramped);
         logTelemetry();
         logTravelLimitState();
@@ -266,7 +296,8 @@ public abstract class mechanismUnit implements ConfigVerifiable {
         applyDashboardPIDUpdates();
         updateAcceleration();
         double ffVolts = computeTotalFF();
-        applyVelocityImpl(velocityRps, ffVolts);
+        double target  = softwareMotionProfile ? applyVelocityRamp(velocityRps) : velocityRps;
+        leader.setVelocity(target, ffVolts);
         lastSetpoint           = velocityRps;
         lastSetpointIsVelocity = true;
         logCommandedVelocityRps.append(velocityRps);
@@ -293,7 +324,7 @@ public abstract class mechanismUnit implements ConfigVerifiable {
         checkTravelLimits();
         // Position blocking: substitute current position to hold in place when
         // commanded into a latched limit. Clear the opposite latch when moving away.
-        double currentDeg = getPositionImpl() * 360.0;
+        double currentDeg = leader.getPositionRot() * 360.0;
         double direction  = Math.signum(positionDeg - currentDeg);
         if (direction > 0 && isUpperLimitReached()) {
             positionDeg = currentDeg;
@@ -306,9 +337,10 @@ public abstract class mechanismUnit implements ConfigVerifiable {
         }
         applyDashboardPIDUpdates();
         updateAcceleration();
-        double ffVolts      = computeTotalFF();
-        double positionRot  = positionDeg / 360.0;
-        applyPositionImpl(positionRot, ffVolts);
+        double ffVolts     = computeTotalFF();
+        double positionRot = positionDeg / 360.0;
+        double targetRot   = softwareMotionProfile ? applyPositionRamp(positionRot) : positionRot;
+        leader.setPosition(targetRot, ffVolts);
         lastSetpoint           = positionDeg;
         lastSetpointIsVelocity = false;
         logCommandedPositionDeg.append(positionDeg);
@@ -325,7 +357,7 @@ public abstract class mechanismUnit implements ConfigVerifiable {
         rampedDutyCycle          = 0.0;
         rampedVelocitySetpoint   = 0.0;
         positionInitialized      = false;
-        stopImpl();
+        leader.stop();
         logTelemetry();
     }
 
@@ -337,24 +369,24 @@ public abstract class mechanismUnit implements ConfigVerifiable {
      * issuing a new command (e.g. reading state during disabled mode).
      */
     public final void logTelemetry() {
-        double vel = getVelocityImpl();
-        double pos = getPositionImpl() * 360.0;
+        double vel = leader.getVelocityRps();
+        double pos = leader.getPositionRot() * 360.0;
 
         logActualVelocityRps.append(vel);
         logActualPositionDeg.append(pos);
-        logSupplyCurrentA.append(getSupplyCurrentImpl());
-        logStatorCurrentA.append(getStatorCurrentImpl());
-        logMotorVoltageV.append(getMotorVoltageImpl());
-        logTempC.append(getTemperatureImpl());
-        logForwardLimit.append(isForwardLimitHitImpl());
-        logReverseLimit.append(isReverseLimitHitImpl());
+        logSupplyCurrentA.append(leader.getSupplyCurrentAmps());
+        logStatorCurrentA.append(leader.getStatorCurrentAmps());
+        logMotorVoltageV.append(leader.getMotorVoltage());
+        logTempC.append(leader.getTemperatureC());
+        logForwardLimit.append(leader.isForwardSoftLimitHit());
+        logReverseLimit.append(leader.isReverseSoftLimitHit());
 
         SmartDashboard.putNumber(dashPrefix + "Velocity_rps",    vel);
         SmartDashboard.putNumber(dashPrefix + "Position_deg",    pos);
-        SmartDashboard.putNumber(dashPrefix + "SupplyCurrent_A", getSupplyCurrentImpl());
-        SmartDashboard.putNumber(dashPrefix + "MotorVoltage_V",  getMotorVoltageImpl());
-        SmartDashboard.putBoolean(dashPrefix + "FwdLimit",       isForwardLimitHitImpl());
-        SmartDashboard.putBoolean(dashPrefix + "RevLimit",       isReverseLimitHitImpl());
+        SmartDashboard.putNumber(dashPrefix + "SupplyCurrent_A", leader.getSupplyCurrentAmps());
+        SmartDashboard.putNumber(dashPrefix + "MotorVoltage_V",  leader.getMotorVoltage());
+        SmartDashboard.putBoolean(dashPrefix + "FwdLimit",       leader.isForwardSoftLimitHit());
+        SmartDashboard.putBoolean(dashPrefix + "RevLimit",       leader.isReverseSoftLimitHit());
     }
 
     /**
@@ -363,21 +395,18 @@ public abstract class mechanismUnit implements ConfigVerifiable {
      * No-op when no followers use ENCODER_SYNC mode.
      */
     private void runEncoderSync() {
-        for (int i = 0; i < config.followerModes.length; i++) {
-            if (config.followerModes[i] != motorConstants.FollowMode.ENCODER_SYNC) continue;
+        for (int i = 1; i < config.canIds.length; i++) {
+            if (config.followModeOf(i) != motorConstants.FollowMode.ENCODER_SYNC) continue;
 
-            int leaderIndex = config.followerLeaderIndices[i];
-            double leaderPosRot   = leaderIndex == 0
-                ? getPositionImpl()
-                : getFollowerPositionImpl(leaderIndex);
-            double followerPosRot = getFollowerPositionImpl(i + 1);
+            double leaderPosRot   = motorAt(config.followerLeaderIndexOf(i)).getPositionRot();
+            double followerPosRot = followers[i - 1].getPositionRot();
             double errorRot       = leaderPosRot - followerPosRot;
 
             if (logSyncErrorRot != null) logSyncErrorRot.append(errorRot);
             if (Math.abs(errorRot) > config.encoderSyncDeadbandRot) {
                 double correction = config.encoderSyncKp * errorRot;
                 correction = Math.max(-1.0, Math.min(1.0, correction));
-                applyFollowerCorrectionImpl(i + 1, correction);
+                followers[i - 1].setDutyCycle(correction);
                 if (logSyncOutput != null) logSyncOutput.append(correction);
             } else {
                 if (logSyncOutput != null) logSyncOutput.append(0.0);
@@ -388,25 +417,25 @@ public abstract class mechanismUnit implements ConfigVerifiable {
     // ── Getters ───────────────────────────────────────────────────────────────
 
     /** Current mechanism shaft velocity (rotations/second, signed). */
-    public final double getVelocityRps()    { return getVelocityImpl(); }
+    public final double getVelocityRps()    { return leader.getVelocityRps(); }
 
     /** Current mechanism shaft position (degrees). */
-    public final double getPositionDeg()    { return getPositionImpl() * 360.0; }
+    public final double getPositionDeg()    { return leader.getPositionRot() * 360.0; }
 
     /** Supply (input) current in amps. */
-    public final double getSupplyCurrent()  { return getSupplyCurrentImpl(); }
+    public final double getSupplyCurrent()  { return leader.getSupplyCurrentAmps(); }
 
-    /** Stator (output) current in amps. CTRE only; returns 0 for REV/Nova. */
-    public final double getStatorCurrent()  { return getStatorCurrentImpl(); }
+    /** Stator (output) current in amps. 0 on REV (not exposed). */
+    public final double getStatorCurrent()  { return leader.getStatorCurrentAmps(); }
 
     /** Motor terminal voltage in volts. */
-    public final double getMotorVoltage()   { return getMotorVoltageImpl(); }
+    public final double getMotorVoltage()   { return leader.getMotorVoltage(); }
 
     /** True if the forward soft/hard limit is currently triggered. */
-    public final boolean isForwardLimit()   { return isForwardLimitHitImpl(); }
+    public final boolean isForwardLimit()   { return leader.isForwardSoftLimitHit(); }
 
     /** True if the reverse soft/hard limit is currently triggered. */
-    public final boolean isReverseLimit()   { return isReverseLimitHitImpl(); }
+    public final boolean isReverseLimit()   { return leader.isReverseSoftLimitHit(); }
 
     /**
      * Returns true when the mechanism is within its configured setpoint deadband.
@@ -430,15 +459,21 @@ public abstract class mechanismUnit implements ConfigVerifiable {
             }
             return false;
         }
-        double actual = lastSetpointIsVelocity ? getVelocityImpl() : getPositionImpl() * 360.0;
+        double actual = lastSetpointIsVelocity ? leader.getVelocityRps() : leader.getPositionRot() * 360.0;
         return Math.abs(actual - lastSetpoint) <= config.setpointDeadband;
     }
 
     /** The immutable config this unit was built from. */
     public final mechanismConfig getConfig() { return config; }
 
+    /**
+     * The leader MotorIO. Cast to CTREMotor / REVMotor / NovaMotor for
+     * vendor-only features. Prefer the mechanismUnit API where possible.
+     */
+    public final MotorIO getLeader() { return leader; }
+
     // ─────────────────────────────────────────────────────────────────────────
-    // Shared internal logic — runs in this base, not duplicated in vendor classes
+    // Shared internal logic
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
@@ -446,8 +481,8 @@ public abstract class mechanismUnit implements ConfigVerifiable {
      * Both lambdas receive the same (position, velocity, acceleration) snapshot.
      */
     protected final double computeTotalFF() {
-        double positionDeg = getPositionImpl() * 360.0;
-        double velocityRps = getVelocityImpl();
+        double positionDeg = leader.getPositionRot() * 360.0;
+        double velocityRps = leader.getVelocityRps();
         double t2 = config.tier2FF.compute(positionDeg, velocityRps, accelRpss);
         double t3 = config.tier3FF.compute(positionDeg, velocityRps, accelRpss);
         return t2 + t3;
@@ -459,7 +494,7 @@ public abstract class mechanismUnit implements ConfigVerifiable {
      * Uses the previous velocity sample stored in prevVelocityRps.
      */
     private void updateAcceleration() {
-        double currentVel = getVelocityImpl();
+        double currentVel = leader.getVelocityRps();
         accelRpss     = (currentVel - prevVelocityRps) / motorConstants.LOOP_PERIOD_SECS;
         prevVelocityRps = currentVel;
     }
@@ -483,13 +518,12 @@ public abstract class mechanismUnit implements ConfigVerifiable {
     }
 
     /**
-     * Software velocity setpoint step-limiter.
-     * Used by NovaMechanismUnit for soft-start on closed-loop velocity.
-     * Steps rampedVelocitySetpoint toward target by at most
-     * motionAccelerationRpss * LOOP_PERIOD_SECS per cycle.
+     * Software velocity setpoint step-limiter, used when the leader has no
+     * hardware motion profile. Steps rampedVelocitySetpoint toward target by at
+     * most motionAccelerationRpss * LOOP_PERIOD_SECS per cycle.
      * Returns target unchanged when motionAccelerationRpss <= 0.
      */
-    protected final double applyVelocityRamp(double targetRps) {
+    private double applyVelocityRamp(double targetRps) {
         if (config.motionAccelerationRpss <= 0.0) return targetRps;
         double maxDelta = config.motionAccelerationRpss * motorConstants.LOOP_PERIOD_SECS;
         double delta    = targetRps - rampedVelocitySetpoint;
@@ -499,14 +533,14 @@ public abstract class mechanismUnit implements ConfigVerifiable {
     }
 
     /**
-     * Software position setpoint step-limiter.
-     * Used by NovaMechanismUnit for soft-start on closed-loop position.
-     * Seeds from current position on first call after construction or stop().
+     * Software position setpoint step-limiter, used when the leader has no
+     * hardware motion profile. Seeds from current position on first call after
+     * construction or stop().
      */
-    protected final double applyPositionRamp(double targetRot) {
+    private double applyPositionRamp(double targetRot) {
         if (config.motionAccelerationRpss <= 0.0) return targetRot;
         if (!positionInitialized) {
-            rampedPositionSetpoint = getPositionImpl();
+            rampedPositionSetpoint = leader.getPositionRot();
             positionInitialized    = true;
         }
         double maxDelta = config.motionAccelerationRpss * motorConstants.LOOP_PERIOD_SECS;
@@ -520,7 +554,7 @@ public abstract class mechanismUnit implements ConfigVerifiable {
      * Read PID gains from SmartDashboard and apply to controller if any changed.
      * Called at the start of every setDutyCycle/setVelocity/setPosition call.
      * Changes are only written to the controller when a value actually changes,
-     * avoiding unnecessary CAN/SPI traffic.
+     * avoiding unnecessary CAN traffic.
      *
      * NOTE: Live tuning via SmartDashboard is a development tool.
      * For REV controllers, applying new gains triggers a configure() call
@@ -536,7 +570,7 @@ public abstract class mechanismUnit implements ConfigVerifiable {
         double nkA = SmartDashboard.getNumber(pidPrefix + "kA", kA);
         if (nkP != kP || nkI != kI || nkD != kD || nkS != kS || nkV != kV || nkA != kA) {
             kP = nkP; kI = nkI; kD = nkD; kS = nkS; kV = nkV; kA = nkA;
-            applyPIDToController();
+            leader.applyGains(kP, kI, kD, kS, kV, kA);
         }
     }
 
@@ -565,10 +599,7 @@ public abstract class mechanismUnit implements ConfigVerifiable {
         logForwardLimit         = new BooleanLogEntry(log, p + "ForwardLimit");
         logReverseLimit         = new BooleanLogEntry(log, p + "ReverseLimit");
         // Allocate sync log entries if any follower uses ENCODER_SYNC
-        boolean hasEncoderSync = false;
-        for (motorConstants.FollowMode m : config.followerModes)
-            if (m == motorConstants.FollowMode.ENCODER_SYNC) { hasEncoderSync = true; break; }
-        if (hasEncoderSync) {
+        if (encoderSyncFollowerIndex > 0) {
             logSyncErrorRot = new DoubleLogEntry(log, p + "EncoderSync/Error_rot");
             logSyncOutput   = new DoubleLogEntry(log, p + "EncoderSync/Output");
         }
@@ -602,8 +633,8 @@ public abstract class mechanismUnit implements ConfigVerifiable {
         if (Double.isNaN(config.leadLowerCurrentAmps) && Double.isNaN(config.leadUpperCurrentAmps))
             return;
 
-        double leadCurrent = getDetectionCurrentImpl();
-        double leadAbsVel  = Math.abs(getVelocityImpl());
+        double leadCurrent = leader.getStallDetectionCurrentAmps();
+        double leadAbsVel  = Math.abs(leader.getVelocityRps());
 
         if (!Double.isNaN(config.leadLowerCurrentAmps) && !leadLowerLimitLatched) {
             if (leadCurrent >= config.leadLowerCurrentAmps && leadAbsVel <= config.leadLowerMaxSpeedRps) {
@@ -628,8 +659,9 @@ public abstract class mechanismUnit implements ConfigVerifiable {
         double effUpperCurrent = Double.isNaN(config.followerUpperCurrentAmps) ? config.leadUpperCurrentAmps : config.followerUpperCurrentAmps;
         double effUpperSpeed   = Double.isNaN(config.followerUpperMaxSpeedRps)  ? config.leadUpperMaxSpeedRps  : config.followerUpperMaxSpeedRps;
 
-        double followerCurrent = getFollowerDetectionCurrentImpl(encoderSyncFollowerIndex);
-        double followerAbsVel  = Math.abs(getFollowerVelocityImpl(encoderSyncFollowerIndex));
+        MotorIO syncFollower   = followers[encoderSyncFollowerIndex - 1];
+        double followerCurrent = syncFollower.getStallDetectionCurrentAmps();
+        double followerAbsVel  = Math.abs(syncFollower.getVelocityRps());
 
         if (!Double.isNaN(effLowerCurrent) && !followerLowerLimitLatched) {
             if (followerCurrent >= effLowerCurrent && followerAbsVel <= effLowerSpeed) {
@@ -806,30 +838,31 @@ public abstract class mechanismUnit implements ConfigVerifiable {
 
         // ── Lead side ────────────────────────────────────────────────────────
         if (!leadHomed) {
-            double leadCurrent = getDetectionCurrentImpl();
-            double leadAbsVel  = Math.abs(getVelocityImpl());
+            double leadCurrent = leader.getStallDetectionCurrentAmps();
+            double leadAbsVel  = Math.abs(leader.getVelocityRps());
             boolean leadStalled = leadCurrent >= homingLeadCurrentAmps
                                && leadAbsVel  <= homingLeadSpeedRps;
             if (leadStalled) {
                 if (++homingLeadStallCount >= config.stallDetectionCycles) {
-                    applyDutyCycleImpl(0.0);
+                    leader.setDutyCycle(0.0);
                     leadHomed = true;
                 }
             } else {
                 homingLeadStallCount = 0;
-                applyDutyCycleImpl(leadDuty);
+                leader.setDutyCycle(leadDuty);
             }
         }
 
         // ── Follower side (ENCODER_SYNC only) ─────────────────────────────────
         if (encoderSyncFollowerIndex > 0 && !followerHomed) {
-            double followerCurrent = getFollowerDetectionCurrentImpl(encoderSyncFollowerIndex);
-            double followerAbsVel  = Math.abs(getFollowerVelocityImpl(encoderSyncFollowerIndex));
+            MotorIO syncFollower    = followers[encoderSyncFollowerIndex - 1];
+            double followerCurrent  = syncFollower.getStallDetectionCurrentAmps();
+            double followerAbsVel   = Math.abs(syncFollower.getVelocityRps());
             boolean followerStalled = followerCurrent >= homingFollowerCurrentAmps
                                    && followerAbsVel  <= homingFollowerSpeedRps;
             if (followerStalled) {
                 if (++homingFollowerStallCount >= config.stallDetectionCycles) {
-                    applyFollowerCorrectionImpl(encoderSyncFollowerIndex, 0.0);
+                    syncFollower.setDutyCycle(0.0);
                     followerHomed = true;
                 }
             } else {
@@ -837,7 +870,7 @@ public abstract class mechanismUnit implements ConfigVerifiable {
                 // Drive follower in same mechanism direction.
                 // The follower's own hardware inversion config handles physical direction;
                 // no extra sign flip is needed here.
-                applyFollowerCorrectionImpl(encoderSyncFollowerIndex, leadDuty);
+                syncFollower.setDutyCycle(leadDuty);
             }
         }
 
@@ -845,8 +878,8 @@ public abstract class mechanismUnit implements ConfigVerifiable {
         if (leadHomed && followerHomed) {
             double zeroRot = Double.isNaN(config.homingZeroOffsetDeg)
                 ? 0.0 : config.homingZeroOffsetDeg / 360.0;
-            resetLeadEncoderImpl(zeroRot);
-            if (encoderSyncFollowerIndex > 0) resetFollowerEncoderImpl(encoderSyncFollowerIndex, zeroRot);
+            leader.setEncoderPosition(zeroRot);
+            if (encoderSyncFollowerIndex > 0) followers[encoderSyncFollowerIndex - 1].setEncoderPosition(zeroRot);
             homingState = HomingState.COMPLETE;
         }
 
@@ -864,9 +897,9 @@ public abstract class mechanismUnit implements ConfigVerifiable {
      */
     public final void cancelHoming() {
         if (homingState != HomingState.IN_PROGRESS) return;
-        applyDutyCycleImpl(0.0);
+        leader.setDutyCycle(0.0);
         if (encoderSyncFollowerIndex > 0)
-            applyFollowerCorrectionImpl(encoderSyncFollowerIndex, 0.0);
+            followers[encoderSyncFollowerIndex - 1].setDutyCycle(0.0);
         homingState   = HomingState.IDLE;
         leadHomed     = false;
         followerHomed = false;
@@ -891,140 +924,23 @@ public abstract class mechanismUnit implements ConfigVerifiable {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Abstract methods — vendor implementations must provide these
+    // ConfigVerifiable
     // ─────────────────────────────────────────────────────────────────────────
 
-    /** Apply duty cycle to the leader motor. Value is already ramped. */
-    protected abstract void applyDutyCycleImpl(double duty);
-
     /**
-     * Apply velocity setpoint to the leader motor.
-     * @param rps      mechanism shaft RPS target
-     * @param ffVolts  tier-2 + tier-3 summed feed-forward (volts)
-     */
-    protected abstract void applyVelocityImpl(double rps, double ffVolts);
-
-    /**
-     * Apply position setpoint to the leader motor.
-     * @param rotations mechanism shaft rotations target (already converted from degrees)
-     * @param ffVolts   tier-2 + tier-3 summed feed-forward (volts)
-     */
-    protected abstract void applyPositionImpl(double rotations, double ffVolts);
-
-    /** Neutral-stop the motor. */
-    protected abstract void stopImpl();
-
-    /**
-     * Apply the current kP/kI/kD/kS/kV/kA values to the motor controller.
-     * Called by applyDashboardPIDUpdates() when a change is detected.
-     */
-    protected abstract void applyPIDToController();
-
-    /** @return current mechanism shaft velocity (rotations/second, signed) */
-    protected abstract double getVelocityImpl();
-
-    /** @return current mechanism shaft position (rotations) */
-    protected abstract double getPositionImpl();
-
-    /** @return supply (input) current in amps */
-    protected abstract double getSupplyCurrentImpl();
-
-    /** @return stator (output) current in amps. Return 0 if not available. */
-    protected abstract double getStatorCurrentImpl();
-
-    /** @return motor terminal voltage in volts */
-    protected abstract double getMotorVoltageImpl();
-
-    /** @return motor temperature in degrees Celsius */
-    protected abstract double getTemperatureImpl();
-
-    /** @return true if the forward limit is currently triggered */
-    protected abstract boolean isForwardLimitHitImpl();
-
-    /** @return true if the reverse limit is currently triggered */
-    protected abstract boolean isReverseLimitHitImpl();
-
-    /**
-     * Get position of a follower motor (ENCODER_SYNC mode only).
-     * @param followerIndex 1-based index into config.canIds[]
-     * @return follower mechanism shaft position (rotations)
-     */
-    protected abstract double getFollowerPositionImpl(int followerIndex);
-
-    /**
-     * Apply a duty cycle correction to a follower motor (ENCODER_SYNC mode only).
-     * @param followerIndex 1-based index into config.canIds[]
-     * @param duty          correction duty cycle [-1.0, 1.0]
-     */
-    protected abstract void applyFollowerCorrectionImpl(int followerIndex, double duty);
-
-    /**
-     * Return the current reading best suited for stall detection on the lead motor.
-     * Vendor contracts:
-     *   CTRE  — stator current (directly proportional to torque, ideal for stall)
-     *   REV   — output current (best approximation available on SparkMax/Flex)
-     *   Nova  — stator current (ThriftyNova exposes stator current natively)
-     *
-     * @return detection current in amps
-     */
-    protected abstract double getDetectionCurrentImpl();
-
-    /**
-     * Return the stall-detection current for an ENCODER_SYNC follower motor.
-     * Same vendor-selection logic as {@link #getDetectionCurrentImpl()}.
-     * Only called when encoderSyncFollowerIndex > 0.
-     *
-     * @param followerIndex 1-based index into config.canIds[]
-     * @return detection current in amps
-     */
-    protected abstract double getFollowerDetectionCurrentImpl(int followerIndex);
-
-    /**
-     * Return the velocity of an ENCODER_SYNC follower motor (mechanism shaft RPS).
-     * Only called when encoderSyncFollowerIndex > 0.
-     *
-     * @param followerIndex 1-based index into config.canIds[]
-     * @return follower velocity in rotations/second (signed)
-     */
-    protected abstract double getFollowerVelocityImpl(int followerIndex);
-
-    /**
-     * Write a new encoder position to the lead motor.
-     * Called once by the homing system after both sides have confirmed contact.
-     *
-     * @param positionRot mechanism shaft rotations to set as the current position
-     */
-    protected abstract void resetLeadEncoderImpl(double positionRot);
-
-    /**
-     * Write a new encoder position to an ENCODER_SYNC follower motor.
-     * Called in the same homing completion sequence as {@link #resetLeadEncoderImpl}.
-     * Only called when encoderSyncFollowerIndex > 0.
-     *
-     * @param followerIndex 1-based index into config.canIds[]
-     * @param positionRot   mechanism shaft rotations to set as the current position
-     */
-    protected abstract void resetFollowerEncoderImpl(int followerIndex, double positionRot);
-
-    /**
-     * Returns true when the vendor implementation has configured a hardware duty
-     * cycle ramp, making the software ramp in this base class redundant.
-     * CTRE and REV override this to return true when openLoopRampSecs > 0.
-     * Nova returns false — its ramp support is less reliable and the software
-     * fallback is preferred.
-     */
-    protected boolean usesHardwareDutyCycleRamp() { return false; }
-
-    /**
-     * Verify this mechanism's motor controller configuration(s).
-     * Called once by ConfigVerifier.runAll() in robotInit(), before any
-     * motor is commanded. Retries apply up to 5×, then reads back and
-     * diffs key fields (inversion, brake mode, current limits, etc.).
-     *
-     * @return one ConfigVerifyResult per physical motor controller verified
-     *         (leader + any ENCODER_SYNC followers)
+     * Verify the leader and every ENCODER_SYNC follower. MECHANICAL followers
+     * mirror the leader in hardware, so there is nothing independent to diff.
+     * Called once by ConfigVerifier.runAll() in robotInit().
      */
     @Override
-    public abstract List<ConfigVerifyResult> verifyConfig();
-
+    public List<ConfigVerifyResult> verifyConfig() {
+        List<ConfigVerifyResult> results = new ArrayList<>();
+        results.add(leader.verifyConfig(config.name + " Leader"));
+        for (int i = 1; i < config.canIds.length; i++) {
+            if (config.followModeOf(i) == motorConstants.FollowMode.ENCODER_SYNC) {
+                results.add(followers[i - 1].verifyConfig(config.name + " Follower[" + i + "]"));
+            }
+        }
+        return results;
+    }
 }
