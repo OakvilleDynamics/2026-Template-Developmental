@@ -14,7 +14,6 @@ import frc.lib.util.units;
 
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
-import org.photonvision.PhotonPoseEstimator.PoseStrategy;
 import org.photonvision.targeting.PhotonPipelineResult;
 import org.photonvision.targeting.PhotonTrackedTarget;
 
@@ -300,7 +299,9 @@ public class visionSubsystem extends SubsystemBase {
             return robotPoseEstimate.invalid();
         }
 
-        var estimated = estimator.update(result);
+        // Multi-tag PnP on the coprocessor, falling back to lowest ambiguity
+        var estimated = estimator.estimateCoprocMultiTagPose(result);
+        if (estimated.isEmpty()) estimated = estimator.estimateLowestAmbiguityPose(result);
         if (estimated.isEmpty()) {
             SmartDashboard.putString("Vision/" + name + "/Rejected", "Estimator empty");
             return robotPoseEstimate.invalid();
@@ -380,17 +381,10 @@ public class visionSubsystem extends SubsystemBase {
     private void buildEstimators() {
         var layout = fieldCal.getCalibratedLayout();
 
-        frontEstimator = new PhotonPoseEstimator(
-            layout, PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR,
-            visionConstants.FRONT_CAMERA_TRANSFORM
-        );
-        frontEstimator.setMultiTagFallbackStrategy(PoseStrategy.LOWEST_AMBIGUITY);
-
-        rearEstimator = new PhotonPoseEstimator(
-            layout, PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR,
-            visionConstants.REAR_CAMERA_TRANSFORM
-        );
-        rearEstimator.setMultiTagFallbackStrategy(PoseStrategy.LOWEST_AMBIGUITY);
+        // Strategy is chosen per call in processCamera(); the PoseStrategy
+        // constructor argument is deprecated (removed in PhotonLib 2027).
+        frontEstimator = new PhotonPoseEstimator(layout, visionConstants.FRONT_CAMERA_TRANSFORM);
+        rearEstimator  = new PhotonPoseEstimator(layout, visionConstants.REAR_CAMERA_TRANSFORM);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
