@@ -7,6 +7,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import frc.lib.util.Dashboard;
 
 import frc.lib.hardware.encoder.AbsoluteEncoderIO;
 import frc.lib.hardware.encoder.ThriftyAnalogEncoder;
@@ -37,7 +38,7 @@ import frc.lib.util.units;
  * the absolute encoder — to avoid noise at 20 ms update rates.
  *
  * ─── PID LIVE TUNING ─────────────────────────────────────────────────────────
- * All PID values are published to SmartDashboard at startup and re-read every
+ * All PID values are published as dashboard tunables at startup and re-read every
  * loop. When a value changes, applyDashboardPIDUpdates() delegates to the
  * MotorIO — no vendor-specific logic here.
  */
@@ -56,6 +57,10 @@ public class swerveModule implements ConfigVerifiable {
     // ── Live PID values (read back from dashboard each loop) ──────────────────
     private double drive_kP, drive_kI, drive_kD, drive_kS, drive_kV, drive_kA;
     private double steer_kP, steer_kI, steer_kD, steer_kS, steer_kV;
+
+    // ── Dashboard tunables (under Swerve/<name>/PID/) ─────────────────────────
+    private Dashboard.TunableNumber tDrive_kP, tDrive_kI, tDrive_kD, tDrive_kS, tDrive_kV, tDrive_kA;
+    private Dashboard.TunableNumber tSteer_kP, tSteer_kI, tSteer_kD, tSteer_kS, tSteer_kV;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Constructor
@@ -145,32 +150,31 @@ public class swerveModule implements ConfigVerifiable {
 
     private void publishPIDToDashboard() {
         String p = "Swerve/" + name + "/PID/";
-        SmartDashboard.putNumber(p + "Drive kP", drive_kP);
-        SmartDashboard.putNumber(p + "Drive kI", drive_kI);
-        SmartDashboard.putNumber(p + "Drive kD", drive_kD);
-        SmartDashboard.putNumber(p + "Drive kS", drive_kS);
-        SmartDashboard.putNumber(p + "Drive kV", drive_kV);
-        SmartDashboard.putNumber(p + "Drive kA", drive_kA);
-        SmartDashboard.putNumber(p + "Steer kP", steer_kP);
-        SmartDashboard.putNumber(p + "Steer kI", steer_kI);
-        SmartDashboard.putNumber(p + "Steer kD", steer_kD);
-        SmartDashboard.putNumber(p + "Steer kS", steer_kS);
-        SmartDashboard.putNumber(p + "Steer kV", steer_kV);
+        tDrive_kP = Dashboard.tunable(p + "Drive kP", drive_kP);
+        tDrive_kI = Dashboard.tunable(p + "Drive kI", drive_kI);
+        tDrive_kD = Dashboard.tunable(p + "Drive kD", drive_kD);
+        tDrive_kS = Dashboard.tunable(p + "Drive kS", drive_kS);
+        tDrive_kV = Dashboard.tunable(p + "Drive kV", drive_kV);
+        tDrive_kA = Dashboard.tunable(p + "Drive kA", drive_kA);
+        tSteer_kP = Dashboard.tunable(p + "Steer kP", steer_kP);
+        tSteer_kI = Dashboard.tunable(p + "Steer kI", steer_kI);
+        tSteer_kD = Dashboard.tunable(p + "Steer kD", steer_kD);
+        tSteer_kS = Dashboard.tunable(p + "Steer kS", steer_kS);
+        tSteer_kV = Dashboard.tunable(p + "Steer kV", steer_kV);
     }
 
     private void applyDashboardPIDUpdates() {
-        String pfx = "Swerve/" + name + "/PID/";
-        double ndkP = SmartDashboard.getNumber(pfx + "Drive kP", drive_kP);
-        double ndkI = SmartDashboard.getNumber(pfx + "Drive kI", drive_kI);
-        double ndkD = SmartDashboard.getNumber(pfx + "Drive kD", drive_kD);
-        double ndkS = SmartDashboard.getNumber(pfx + "Drive kS", drive_kS);
-        double ndkV = SmartDashboard.getNumber(pfx + "Drive kV", drive_kV);
-        double ndkA = SmartDashboard.getNumber(pfx + "Drive kA", drive_kA);
-        double nskP = SmartDashboard.getNumber(pfx + "Steer kP", steer_kP);
-        double nskI = SmartDashboard.getNumber(pfx + "Steer kI", steer_kI);
-        double nskD = SmartDashboard.getNumber(pfx + "Steer kD", steer_kD);
-        double nskS = SmartDashboard.getNumber(pfx + "Steer kS", steer_kS);
-        double nskV = SmartDashboard.getNumber(pfx + "Steer kV", steer_kV);
+        double ndkP = tDrive_kP.get();
+        double ndkI = tDrive_kI.get();
+        double ndkD = tDrive_kD.get();
+        double ndkS = tDrive_kS.get();
+        double ndkV = tDrive_kV.get();
+        double ndkA = tDrive_kA.get();
+        double nskP = tSteer_kP.get();
+        double nskI = tSteer_kI.get();
+        double nskD = tSteer_kD.get();
+        double nskS = tSteer_kS.get();
+        double nskV = tSteer_kV.get();
 
         boolean driveChanged = ndkP!=drive_kP||ndkI!=drive_kI||ndkD!=drive_kD
                             || ndkS!=drive_kS||ndkV!=drive_kV||ndkA!=drive_kA;

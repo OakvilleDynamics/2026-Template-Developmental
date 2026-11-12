@@ -22,6 +22,7 @@ import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import frc.lib.util.Dashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.pathplannerConstants;
 import frc.robot.constants.canIDs;
@@ -126,6 +127,10 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
     private final Alert pathPlannerAlert =
         new Alert("PathPlanner unavailable", AlertType.kError);
 
+    // Dashboard tunables (under Drive/...)
+    private final Dashboard.TunableNumber headingKpTunable, headingKiTunable, headingKdTunable;
+    private final Dashboard.TunableNumber blendAlphaTunable;
+
     // Last commanded speeds — captured in commandModules() for logging
     private ChassisSpeeds lastCommandedSpeeds = new ChassisSpeeds();
 
@@ -196,9 +201,10 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
         this.headingPID.enableContinuousInput(-Math.PI, Math.PI);
         this.headingPID.setTolerance(units.deg_rad(1.0));
 
-        SmartDashboard.putNumber("Drive/HeadingPID/kP", headingPID[0]);
-        SmartDashboard.putNumber("Drive/HeadingPID/kI", headingPID[1]);
-        SmartDashboard.putNumber("Drive/HeadingPID/kD", headingPID[2]);
+        headingKpTunable  = Dashboard.tunable("Drive/HeadingPID/kP", headingPID[0]);
+        headingKiTunable  = Dashboard.tunable("Drive/HeadingPID/kI", headingPID[1]);
+        headingKdTunable  = Dashboard.tunable("Drive/HeadingPID/kD", headingPID[2]);
+        blendAlphaTunable = Dashboard.tunable("Drive/Blend Alpha", blendAlpha);
 
         // Pigeon 2 self-calibrates on power-up. Temperature calibration is performed
         // once in Phoenix Tuner X — no runtime calibrate() call needed.
@@ -224,14 +230,14 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
         currentState = computeOdometryState(dt);
 
         // Live-tune heading PID from dashboard
-        double kP = SmartDashboard.getNumber("Drive/HeadingPID/kP", headingPID.getP());
-        double kI = SmartDashboard.getNumber("Drive/HeadingPID/kI", headingPID.getI());
-        double kD = SmartDashboard.getNumber("Drive/HeadingPID/kD", headingPID.getD());
+        double kP = headingKpTunable.get();
+        double kI = headingKiTunable.get();
+        double kD = headingKdTunable.get();
         if (kP != headingPID.getP() || kI != headingPID.getI() || kD != headingPID.getD()) {
             headingPID.setPID(kP, kI, kD);
         }
 
-        blendAlpha = SmartDashboard.getNumber("Drive/Blend Alpha", blendAlpha);
+        blendAlpha = blendAlphaTunable.get();
 
         SmartDashboard.putBoolean("Drive/HeadingLock Active", headingLockActive);
         headingLockActive = false; // reset; drivePointAt() sets it if called this loop
@@ -714,7 +720,6 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
         SmartDashboard.putNumber("Drive/Geometry/Bumper Y (in)",     units.m_inches(bumperPerimeterM[1]));
         SmartDashboard.putNumber("Drive/Geometry/WheelBase X (m)",   wheelBaseM[0]);
         SmartDashboard.putNumber("Drive/Geometry/WheelBase Y (m)",   wheelBaseM[1]);
-        SmartDashboard.putNumber("Drive/Blend Alpha",                 blendAlpha);
     }
 
     private void publishTelemetry() {

@@ -7,6 +7,7 @@ import edu.wpi.first.util.datalog.*;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import frc.lib.util.Dashboard;
 
 import frc.lib.hardware.motor.MotorIO;
 import frc.lib.util.ConfigVerifiable;
@@ -35,7 +36,7 @@ import frc.lib.util.ConfigVerifyResult;
  *   • Finite-difference acceleration estimation (dv/dt)
  *   • Software duty cycle ramp (fallback when hardware ramp unavailable)
  *   • Software motion-profile step limiter (controllers without MotionMagic/MAXMotion)
- *   • PID live-tuning loop (SmartDashboard read-back → MotorIO.applyGains)
+ *   • PID live-tuning loop (dashboard read-back → MotorIO.applyGains)
  *   • ENCODER_SYNC follower correction (position error → duty cycle output)
  *   • Current-based end-of-travel detection and homing
  *   • DataLog entry lifecycle (per-instance, not static)
@@ -71,7 +72,7 @@ public class mechanismUnit implements ConfigVerifiable {
     /** followers[i] drives canIds[i + 1]. */
     private   final MotorIO[]       followers;
 
-    // ── Live PID gains (read back from SmartDashboard each loop) ─────────────
+    // ── Live PID gains (read back from the dashboard each loop) ─────────────
     protected double kP, kI, kD, kS, kV, kA;
 
     // ── Setpoint tracking (for isAtSetpoint) ─────────────────────────────────
@@ -123,7 +124,11 @@ public class mechanismUnit implements ConfigVerifiable {
     private boolean         leadHomed                 = false;
     private boolean         followerHomed             = false;
 
-    // ── SmartDashboard key prefixes ───────────────────────────────────────────
+    // ── Dashboard tunables (under [Name]/PID/) ────────────────────────────────
+    // Package-private so tests can stand in for a dashboard edit.
+    Dashboard.TunableNumber kPTunable, kITunable, kDTunable, kSTunable, kVTunable, kATunable;
+
+    // ── Dashboard key prefixes ────────────────────────────────────────────────
     protected final String dashPrefix;   // "[Name]/"
     private   final String pidPrefix;    // "[Name]/PID/"
 
@@ -279,7 +284,7 @@ public class mechanismUnit implements ConfigVerifiable {
     /**
      * Command velocity setpoint (mechanism shaft, rotations/second).
      * Runs encoder-sync correction, computes and injects tier-2 + tier-3 FF,
-     * updates PID from SmartDashboard, and logs telemetry — all automatically.
+     * updates PID from the dashboard, and logs telemetry — all automatically.
      * No additional calls needed in periodic().
      *
      * @param velocityRps target velocity (rotations/second, mechanism shaft)
@@ -309,7 +314,7 @@ public class mechanismUnit implements ConfigVerifiable {
     /**
      * Command position setpoint (mechanism shaft, degrees).
      * Runs encoder-sync correction, computes and injects tier-2 + tier-3 FF,
-     * updates PID from SmartDashboard, and logs telemetry — all automatically.
+     * updates PID from the dashboard, and logs telemetry — all automatically.
      * No additional calls needed in periodic().
      *
      * @param positionDeg target position (degrees, mechanism shaft)
@@ -551,23 +556,23 @@ public class mechanismUnit implements ConfigVerifiable {
     }
 
     /**
-     * Read PID gains from SmartDashboard and apply to controller if any changed.
+     * Read PID gains from the dashboard tunables and apply to controller if any changed.
      * Called at the start of every setDutyCycle/setVelocity/setPosition call.
      * Changes are only written to the controller when a value actually changes,
      * avoiding unnecessary CAN traffic.
      *
-     * NOTE: Live tuning via SmartDashboard is a development tool.
+     * NOTE: Live tuning via the dashboard is a development tool.
      * For REV controllers, applying new gains triggers a configure() call
      * which may briefly interrupt closed-loop control. Do not rely on this
      * at competition with time-critical mechanisms.
      */
     private void applyDashboardPIDUpdates() {
-        double nkP = SmartDashboard.getNumber(pidPrefix + "kP", kP);
-        double nkI = SmartDashboard.getNumber(pidPrefix + "kI", kI);
-        double nkD = SmartDashboard.getNumber(pidPrefix + "kD", kD);
-        double nkS = SmartDashboard.getNumber(pidPrefix + "kS", kS);
-        double nkV = SmartDashboard.getNumber(pidPrefix + "kV", kV);
-        double nkA = SmartDashboard.getNumber(pidPrefix + "kA", kA);
+        double nkP = kPTunable.get();
+        double nkI = kITunable.get();
+        double nkD = kDTunable.get();
+        double nkS = kSTunable.get();
+        double nkV = kVTunable.get();
+        double nkA = kATunable.get();
         if (nkP != kP || nkI != kI || nkD != kD || nkS != kS || nkV != kV || nkA != kA) {
             kP = nkP; kI = nkI; kD = nkD; kS = nkS; kV = nkV; kA = nkA;
             leader.applyGains(kP, kI, kD, kS, kV, kA);
@@ -575,12 +580,12 @@ public class mechanismUnit implements ConfigVerifiable {
     }
 
     private void publishPIDToDashboard() {
-        SmartDashboard.putNumber(pidPrefix + "kP", kP);
-        SmartDashboard.putNumber(pidPrefix + "kI", kI);
-        SmartDashboard.putNumber(pidPrefix + "kD", kD);
-        SmartDashboard.putNumber(pidPrefix + "kS", kS);
-        SmartDashboard.putNumber(pidPrefix + "kV", kV);
-        SmartDashboard.putNumber(pidPrefix + "kA", kA);
+        kPTunable = Dashboard.tunable(pidPrefix + "kP", kP);
+        kITunable = Dashboard.tunable(pidPrefix + "kI", kI);
+        kDTunable = Dashboard.tunable(pidPrefix + "kD", kD);
+        kSTunable = Dashboard.tunable(pidPrefix + "kS", kS);
+        kVTunable = Dashboard.tunable(pidPrefix + "kV", kV);
+        kATunable = Dashboard.tunable(pidPrefix + "kA", kA);
     }
 
     private void initLogEntries() {

@@ -13,7 +13,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import edu.wpi.first.hal.HAL;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 import frc.lib.hardware.motor.FakeMotorIO;
 import frc.lib.hardware.motor.MotorVendor;
@@ -27,7 +26,7 @@ import frc.lib.util.ConfigVerifyResult;
  * follower wiring, encoder sync, travel limits, homing, live PID tuning.
  * No motor hardware or vendor library is touched.
  *
- * Each test uses a unique mechanism name so SmartDashboard keys never collide.
+ * Each test uses a unique mechanism name so dashboard keys never collide.
  */
 class mechanismUnitTest {
 
@@ -291,7 +290,7 @@ class mechanismUnitTest {
         unit.setPosition(0.0);
         assertNull(leader.lastGains, "unchanged gains must not be re-sent");
 
-        SmartDashboard.putNumber(cfg.name + "/PID/kP", 4.0);
+        unit.kPTunable.set(4.0);   // stands in for a dashboard edit
         unit.setPosition(0.0);
         assertEquals(4.0, leader.lastGains[0], EPS);
     }

@@ -2,13 +2,13 @@ package frc.robot.subsystems.vision;
 
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import frc.lib.util.Dashboard;
 import frc.robot.constants.AprilTagIgnore;
 import frc.robot.constants.visionConstants;
 import frc.lib.util.units;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * AprilTagFieldCalTab.java
@@ -18,8 +18,8 @@ import java.util.Set;
  * Only talks to visionSubsystem — no direct access to internal vision objects.
  *
  * Widget placement, sizes and types are defined in the Elastic layout file, not
- * in code. Values and operator inputs are published under
- * /SmartDashboard/Field Calibration/.
+ * in code. Values and operator inputs are published through Dashboard under
+ * "Field Calibration/" (see Dashboard for the NetworkTables root).
  *
  * ─── TAB LAYOUT (build in Elastic) ───────────────────────────────────────────
  *
@@ -54,18 +54,18 @@ public class AprilTagFieldCalTab {
     // ── Single reference to all vision data ───────────────────────────────────
     private final visionSubsystem vision;
 
-    // ── Dashboard keys (/SmartDashboard/Field Calibration/...) ───────────────
-    private static final String DASH_PREFIX    = "Field Calibration/";
-    private static final String TOLERANCE_KEY  = DASH_PREFIX + "Cal Tolerance (in)";
-    private static final String GENERATE_KEY   = DASH_PREFIX + "Offsets File/Generate File";
+    // ── Dashboard key prefix ──────────────────────────────────────────────────
+    private static final String DASH_PREFIX = "Field Calibration/";
 
     // ── Threshold input ───────────────────────────────────────────────────────
-    private double toleranceInches = visionConstants.CALIBRATION_TOLERANCE_INCHES;
+    private final Dashboard.TunableNumber toleranceTunable;
+    private double              toleranceInches = visionConstants.CALIBRATION_TOLERANCE_INCHES;
 
-    // ── Per-tag offset inputs: X (in), Y (in), Z (in), Yaw (deg) ──────────────
-    private static final String[] OFFSET_INPUT_NAMES =
-        { "X offset (in)", "Y offset (in)", "Z offset (in)", "Yaw offset (deg)" };
-    private final Set<Integer> offsetInputsPublished = new HashSet<>();
+    // ── Generate offsets file button ──────────────────────────────────────────
+    private final Dashboard.TunableToggle generateButton;
+
+    // ── Per-tag offset inputs: { X (in), Y (in), Z (in), Yaw (deg) } ──────────
+    private final Map<Integer, Dashboard.TunableNumber[]> offsetInputs = new HashMap<>();
 
     // ── NetworkTables for Glass tag table ─────────────────────────────────────
     private final NetworkTable tagTable;
@@ -79,13 +79,14 @@ public class AprilTagFieldCalTab {
         this.tagTable = NetworkTableInstance.getDefault()
             .getTable("FieldCalibration").getSubTable("Tags");
 
-        SmartDashboard.putNumber(TOLERANCE_KEY, visionConstants.CALIBRATION_TOLERANCE_INCHES);
-        SmartDashboard.putBoolean(GENERATE_KEY, false);
-        SmartDashboard.putString(DASH_PREFIX + "Offsets File/Last saved", "never");
+        toleranceTunable = Dashboard.tunable(
+            DASH_PREFIX + "Cal Tolerance (in)", visionConstants.CALIBRATION_TOLERANCE_INCHES);
+        generateButton = Dashboard.toggle(DASH_PREFIX + "Offsets File/Generate File", false);
+        Dashboard.log(DASH_PREFIX + "Offsets File/Last saved", "never");
 
         double[] farCorner = vision.getFarCornerFt();
-        SmartDashboard.putNumber(DASH_PREFIX + "Field Far Corner/X (ft)", farCorner[0]);
-        SmartDashboard.putNumber(DASH_PREFIX + "Field Far Corner/Y (ft)", farCorner[1]);
+        Dashboard.log(DASH_PREFIX + "Field Far Corner/X (ft)", farCorner[0]);
+        Dashboard.log(DASH_PREFIX + "Field Far Corner/Y (ft)", farCorner[1]);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -93,8 +94,7 @@ public class AprilTagFieldCalTab {
     // ─────────────────────────────────────────────────────────────────────────
 
     public void update() {
-        toleranceInches = SmartDashboard.getNumber(
-            TOLERANCE_KEY, visionConstants.CALIBRATION_TOLERANCE_INCHES);
+        toleranceInches = toleranceTunable.get();
         updateBottomStrip();
         updateTagTable();
         checkGenerateButton();
@@ -113,13 +113,13 @@ public class AprilTagFieldCalTab {
     private void publishPose(String group, robotPoseEstimate estimate) {
         String prefix = DASH_PREFIX + group;
         if (estimate.isValid) {
-            SmartDashboard.putNumber(prefix + "X (ft)",      units.m_feet(estimate.pose.getX()));
-            SmartDashboard.putNumber(prefix + "Y (ft)",      units.m_feet(estimate.pose.getY()));
-            SmartDashboard.putNumber(prefix + "Theta (deg)", units.rad_deg(estimate.pose.getRotation().getZ()));
+            Dashboard.log(prefix + "X (ft)",      units.m_feet(estimate.pose.getX()));
+            Dashboard.log(prefix + "Y (ft)",      units.m_feet(estimate.pose.getY()));
+            Dashboard.log(prefix + "Theta (deg)", units.rad_deg(estimate.pose.getRotation().getZ()));
         } else {
-            SmartDashboard.putNumber(prefix + "X (ft)",      0.0);
-            SmartDashboard.putNumber(prefix + "Y (ft)",      0.0);
-            SmartDashboard.putNumber(prefix + "Theta (deg)", 0.0);
+            Dashboard.log(prefix + "X (ft)",      0.0);
+            Dashboard.log(prefix + "Y (ft)",      0.0);
+            Dashboard.log(prefix + "Theta (deg)", 0.0);
         }
     }
 
@@ -286,12 +286,15 @@ public class AprilTagFieldCalTab {
                                      visionSubsystem.tagReading rear) {
         if (!recommendation.contains("offset")) return;
 
-        String prefix = DASH_PREFIX + "Tag " + tagId + " Offset Input/";
-        String[] keys = new String[OFFSET_INPUT_NAMES.length];
-        for (int i = 0; i < keys.length; i++) keys[i] = prefix + OFFSET_INPUT_NAMES[i];
-        if (offsetInputsPublished.add(tagId)) {
-            for (String key : keys) SmartDashboard.putNumber(key, 0.0);
-        }
+        Dashboard.TunableNumber[] entries = offsetInputs.computeIfAbsent(tagId, id -> {
+            String prefix = DASH_PREFIX + "Tag " + id + " Offset Input/";
+            return new Dashboard.TunableNumber[] {
+                Dashboard.tunable(prefix + "X offset (in)",    0.0),
+                Dashboard.tunable(prefix + "Y offset (in)",    0.0),
+                Dashboard.tunable(prefix + "Z offset (in)",    0.0),
+                Dashboard.tunable(prefix + "Yaw offset (deg)", 0.0),
+            };
+        });
 
         // Pre-populate with negated average delta as suggested correction
         double suggestX = 0, suggestY = 0;
@@ -306,14 +309,14 @@ public class AprilTagFieldCalTab {
             suggestY = -rear.deltaYInches();
         }
 
-        SmartDashboard.putNumber(keys[0], suggestX);
-        SmartDashboard.putNumber(keys[1], suggestY);
+        entries[0].set(suggestX);
+        entries[1].set(suggestY);
 
         // Apply if user has entered non-zero values
-        double xIn  = SmartDashboard.getNumber(keys[0], 0);
-        double yIn  = SmartDashboard.getNumber(keys[1], 0);
-        double zIn  = SmartDashboard.getNumber(keys[2], 0);
-        double yDeg = SmartDashboard.getNumber(keys[3], 0);
+        double xIn  = entries[0].get();
+        double yIn  = entries[1].get();
+        double zIn  = entries[2].get();
+        double yDeg = entries[3].get();
 
         if (Math.abs(xIn) > 0.01 || Math.abs(yIn) > 0.01 ||
             Math.abs(zIn) > 0.01 || Math.abs(yDeg) > 0.01) {
@@ -326,10 +329,10 @@ public class AprilTagFieldCalTab {
     // ─────────────────────────────────────────────────────────────────────────
 
     private void checkGenerateButton() {
-        if (SmartDashboard.getBoolean(GENERATE_KEY, false)) {
+        if (generateButton.get()) {
             vision.generateOffsetsOutput();
-            SmartDashboard.putBoolean(GENERATE_KEY, false);
-            SmartDashboard.putString("FieldCal/Tab/GenerateStatus",
+            generateButton.set(false);
+            Dashboard.log("FieldCal/Tab/GenerateStatus",
                 "Generated — check Documents/FieldCalibration/");
         }
     }
