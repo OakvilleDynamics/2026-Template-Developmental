@@ -58,6 +58,7 @@ public class pathfindCommand extends Command {
     );
 
     private Command pathfinder = null;
+    private boolean unavailable = false;
 
     // Shown in the dashboard's alerts widget (Elastic: "Alerts" group).
     // Static so several pathfindCommands share one alert instead of stacking duplicates.
@@ -87,6 +88,14 @@ public class pathfindCommand extends Command {
 
     @Override
     public void initialize() {
+        // PathPlanner failed to load (see swerveDrive.configureForAutoBuilder) — end immediately
+        if (!drive.isPathPlannerAvailable()) {
+            pathfinder = null;
+            unavailable = true;
+            return;
+        }
+        unavailable = false;
+
         boolean visionStale = checkVisionStaleness();
         RobotLogger.pathfindVisionStale.append(visionStale);
         RobotLogger.pathfindActive.append(true);
@@ -104,6 +113,7 @@ public class pathfindCommand extends Command {
 
     @Override
     public void execute() {
+        if (unavailable) return;
         // PathPlanner drives the robot via the AutoBuilder lambdas registered in
         // RobotContainer. Nothing to do here — isFinished() polls for completion.
         Pose2d current = drive.getPose();
@@ -125,7 +135,7 @@ public class pathfindCommand extends Command {
 
     @Override
     public boolean isFinished() {
-        return pathfinder != null && !pathfinder.isScheduled();
+        return unavailable || (pathfinder != null && !pathfinder.isScheduled());
     }
 
     // ─────────────────────────────────────────────────────────────────────────

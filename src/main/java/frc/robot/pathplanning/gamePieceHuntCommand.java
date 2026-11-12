@@ -153,6 +153,9 @@ public class gamePieceHuntCommand extends Command {
         consumedTargets.clear();
         pathfinder     = null;
         stateEnteredTimestamp = Timer.getTimestamp();
+
+        // PathPlanner failed to load (see swerveDrive.configureForAutoBuilder) — end immediately
+        if (!drive.isPathPlannerAvailable()) state = State.DONE;
     }
 
     @Override

@@ -17,6 +17,8 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.*;
 import edu.wpi.first.math.system.plant.DCMotor;
 import com.ctre.phoenix6.hardware.Pigeon2;
+import edu.wpi.first.wpilibj.Alert;
+import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -118,6 +120,11 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
 
     // Blend weight (encoder vs IMU)
     private double blendAlpha = swerveConstants.ODOMETRY_BLEND_ALPHA;
+
+    // PathPlanner availability — see configureForAutoBuilder()
+    private boolean pathPlannerAvailable = false;
+    private final Alert pathPlannerAlert =
+        new Alert("PathPlanner unavailable", AlertType.kError);
 
     // Last commanded speeds — captured in commandModules() for logging
     private ChassisSpeeds lastCommandedSpeeds = new ChassisSpeeds();
@@ -419,47 +426,63 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
      * remains unaware of PathPlanner internals.
      */
     public void configureForAutoBuilder() {
-        Translation2d flPos = new Translation2d( wheelBaseM[0] / 2.0,  wheelBaseM[1] / 2.0);
-        Translation2d frPos = new Translation2d( wheelBaseM[0] / 2.0, -wheelBaseM[1] / 2.0);
-        Translation2d blPos = new Translation2d(-wheelBaseM[0] / 2.0,  wheelBaseM[1] / 2.0);
-        Translation2d brPos = new Translation2d(-wheelBaseM[0] / 2.0, -wheelBaseM[1] / 2.0);
+        // If PathPlannerLib fails to initialize (bad RobotConfig, library/WPILib
+        // version mismatch), keep the robot running with pathfinding disabled
+        // instead of crashing at startup. Commands that use AutoBuilder check
+        // isPathPlannerAvailable() first.
+        try {
+            Translation2d flPos = new Translation2d( wheelBaseM[0] / 2.0,  wheelBaseM[1] / 2.0);
+            Translation2d frPos = new Translation2d( wheelBaseM[0] / 2.0, -wheelBaseM[1] / 2.0);
+            Translation2d blPos = new Translation2d(-wheelBaseM[0] / 2.0,  wheelBaseM[1] / 2.0);
+            Translation2d brPos = new Translation2d(-wheelBaseM[0] / 2.0, -wheelBaseM[1] / 2.0);
 
-        ModuleConfig moduleConfig = new ModuleConfig(
-            units.inches_m(swerveConstants.WHEEL_DIAMETER_INCHES / 2.0),
-            pathplannerConstants.MAX_PATH_VEL_MPS,
-            pathplannerConstants.WHEEL_COF,
-            DCMotor.getKrakenX60(1),
-            pathplannerConstants.DRIVE_CURRENT_LIMIT_AMPS,
-            1
-        );
+            ModuleConfig moduleConfig = new ModuleConfig(
+                units.inches_m(swerveConstants.WHEEL_DIAMETER_INCHES / 2.0),
+                pathplannerConstants.MAX_PATH_VEL_MPS,
+                pathplannerConstants.WHEEL_COF,
+                DCMotor.getKrakenX60(1),
+                pathplannerConstants.DRIVE_CURRENT_LIMIT_AMPS,
+                1
+            );
 
-        RobotConfig robotConfig = new RobotConfig(
-            pathplannerConstants.ROBOT_MASS_KG,
-            pathplannerConstants.ROBOT_MOI_KGM2,
-            moduleConfig,
-            flPos, frPos, blPos, brPos
-        );
+            RobotConfig robotConfig = new RobotConfig(
+                pathplannerConstants.ROBOT_MASS_KG,
+                pathplannerConstants.ROBOT_MOI_KGM2,
+                moduleConfig,
+                flPos, frPos, blPos, brPos
+            );
 
-        AutoBuilder.configure(
-            this::getPose,
-            this::resetPose,
-            this::getRobotRelativeSpeeds,
-            this::driveRobotRelative,
-            new PPHolonomicDriveController(
-                new PIDConstants(pathplannerConstants.TRANSLATION_PID_kP,
-                                 pathplannerConstants.TRANSLATION_PID_kI,
-                                 pathplannerConstants.TRANSLATION_PID_kD),
-                new PIDConstants(pathplannerConstants.ROTATION_PID_kP,
-                                 pathplannerConstants.ROTATION_PID_kI,
-                                 pathplannerConstants.ROTATION_PID_kD)
-            ),
-            robotConfig,
-            () -> DriverStation.getAlliance()
-                    .filter(a -> a == DriverStation.Alliance.Red)
-                    .isPresent(),
-            this
-        );
+            AutoBuilder.configure(
+                this::getPose,
+                this::resetPose,
+                this::getRobotRelativeSpeeds,
+                this::driveRobotRelative,
+                new PPHolonomicDriveController(
+                    new PIDConstants(pathplannerConstants.TRANSLATION_PID_kP,
+                                     pathplannerConstants.TRANSLATION_PID_kI,
+                                     pathplannerConstants.TRANSLATION_PID_kD),
+                    new PIDConstants(pathplannerConstants.ROTATION_PID_kP,
+                                     pathplannerConstants.ROTATION_PID_kI,
+                                     pathplannerConstants.ROTATION_PID_kD)
+                ),
+                robotConfig,
+                () -> DriverStation.getAlliance()
+                        .filter(a -> a == DriverStation.Alliance.Red)
+                        .isPresent(),
+                this
+            );
+            pathPlannerAvailable = true;
+        } catch (Throwable t) {
+            pathPlannerAvailable = false;
+            pathPlannerAlert.setText("PathPlanner unavailable — pathfinding disabled: " + t);
+            pathPlannerAlert.set(true);
+            DriverStation.reportError(
+                "PathPlanner failed to initialize — pathfinding disabled: " + t, false);
+        }
     }
+
+    /** False if PathPlannerLib failed to initialize; AutoBuilder must not be used. */
+    public boolean isPathPlannerAvailable() { return pathPlannerAvailable; }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Geometry query
