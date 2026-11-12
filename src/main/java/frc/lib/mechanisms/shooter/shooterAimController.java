@@ -2,11 +2,8 @@ package frc.lib.mechanisms.shooter;
 
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
-import frc.robot.commands.driveWithJoysticks;
 import frc.lib.swerve.driveOdometryState;
-import frc.robot.subsystems.swerveDrive.swerveDrive;
 import frc.lib.mechanisms.shooter.ShooterCalculator.ShooterOutput;
-import frc.lib.mechanisms.shooter.shooterMechanism;
 import frc.lib.util.units;
 
 /**
@@ -17,10 +14,10 @@ import frc.lib.util.units;
  * shooterMechanism. Runs every loop as a SubsystemBase.
  *
  * ─── RESPONSIBILITIES ─────────────────────────────────────────────────────────
- * 1. Reads robot pose and odometry state from swerveDrive each loop.
+ * 1. Reads robot pose and odometry state from the drivetrain (AimDriveState) each loop.
  * 2. Calls ShooterCalculator with the live state to produce setpoints.
  * 3. Pushes RPM, hood angle, and (if PHYSICAL_TURRET) turret angle to shooterMechanism.
- * 4. Directs driveWithJoysticks into the appropriate drive mode:
+ * 4. Directs the driver drive command (AimDriveModes) into the appropriate drive mode:
  *      STATIC_SHOT    → X-lock (physical turret) or aim-then-lock (swerve turret)
  *      ON_THE_MOVE    → heading-bounded driver control
  *      IDLE           → full driver control (no override)
@@ -128,9 +125,9 @@ public class shooterAimController extends SubsystemBase {
     // =========================================================================
 
     private final ShooterCalculator    calc;
-    private final swerveDrive          drive;
+    private final AimDriveState      drive;
     private final shooterMechanism     shooter;
-    private final driveWithJoysticks   driveCmd;
+    private final AimDriveModes      driveCmd;
     private final TurretMode           turretMode;
 
     // =========================================================================
@@ -200,9 +197,9 @@ public class shooterAimController extends SubsystemBase {
 
     /**
      * @param calc              ShooterCalculator instance.
-     * @param drive             swerveDrive subsystem.
+     * @param drive             drivetrain state (swerveDrive implements AimDriveState).
      * @param shooter           shooterMechanism subsystem.
-     * @param driveCmd          driveWithJoysticks default drive command.
+     * @param driveCmd          driver drive command (driveWithJoysticks implements AimDriveModes).
      * @param turretMode        Whether a physical turret motor exists.
      * @param flipThresholdPct  Fraction of dead-zone width at which the turret
      *                          flips from one parked limit to the other during
@@ -210,9 +207,9 @@ public class shooterAimController extends SubsystemBase {
      */
     public shooterAimController(
             ShooterCalculator  calc,
-            swerveDrive        drive,
+            AimDriveState      drive,
             shooterMechanism   shooter,
-            driveWithJoysticks driveCmd,
+            AimDriveModes      driveCmd,
             TurretMode         turretMode,
             double             flipThresholdPct) {
 
@@ -229,9 +226,9 @@ public class shooterAimController extends SubsystemBase {
      */
     public shooterAimController(
             ShooterCalculator  calc,
-            swerveDrive        drive,
+            AimDriveState      drive,
             shooterMechanism   shooter,
-            driveWithJoysticks driveCmd,
+            AimDriveModes      driveCmd,
             TurretMode         turretMode) {
         this(calc, drive, shooter, driveCmd, turretMode, 0.5);
     }
