@@ -25,8 +25,11 @@ public class Robot extends TimedRobot {
     private RobotContainer robotContainer;
     private Command        autoCommand;
 
-    @Override
-    public void robotInit() {
+    /**
+     * Robot-wide initialization. WPILib recommends the constructor over robotInit()
+     * (robotInit() is removed in WPILib 2027).
+     */
+    public Robot() {
         // Start loggers before constructing subsystems so no early signals are missed.
         // SignalLogger writes Phoenix 6 motor signals (.hoot) to USB if present.
         SignalLogger.setPath("/u/");

@@ -12,7 +12,7 @@ import java.util.List;
  * shooterMechanism).
  *
  * Register any ConfigVerifiable with ConfigVerifier.register(), then call
- * ConfigVerifier.runAll() once in robotInit() before enabling motors.
+ * ConfigVerifier.runAll() once at robot startup before enabling motors.
  */
 public interface ConfigVerifiable {
 

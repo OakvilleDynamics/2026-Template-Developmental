@@ -9,7 +9,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
  * PATH: src/main/java/frc/lib/util/RobotLogger.java
  *
  * Static singleton that owns the WPILib DataLog instance and all log entry handles.
- * Call RobotLogger.init() once in Robot.robotInit() before any subsystem uses it.
+ * Call RobotLogger.init() once in the Robot constructor before any subsystem uses it.
  * Subsystems call the static log*() methods the same way they call SmartDashboard.
  *
  * ─── STORAGE ─────────────────────────────────────────────────────────────────
@@ -113,7 +113,7 @@ public final class RobotLogger {
 
     /**
      * Initializes DataLogManager and all log entry handles.
-     * Call once from Robot.robotInit(), before any subsystem logs anything.
+     * Call once from the Robot constructor, before any subsystem logs anything.
      * Safe to call multiple times — subsequent calls are no-ops.
      */
     public static void init() {

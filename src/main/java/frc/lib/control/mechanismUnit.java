@@ -930,7 +930,7 @@ public class mechanismUnit implements ConfigVerifiable {
     /**
      * Verify the leader and every ENCODER_SYNC follower. MECHANICAL followers
      * mirror the leader in hardware, so there is nothing independent to diff.
-     * Called once by ConfigVerifier.runAll() in robotInit().
+     * Called once by ConfigVerifier.runAll() at robot startup.
      */
     @Override
     public List<ConfigVerifyResult> verifyConfig() {

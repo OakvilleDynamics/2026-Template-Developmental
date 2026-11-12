@@ -16,7 +16,7 @@ import frc.lib.util.ConfigVerifyResult;
  * Startup motor config verification registry.
  *
  * ─── USAGE ───────────────────────────────────────────────────────────────────
- * In robotInit(), after constructing all subsystems and before enabling:
+ * At robot startup, after constructing all subsystems and before enabling:
  *
  *   // Swerve — one call per module
  *   ConfigVerifier.register(frontLeftModule);
@@ -64,7 +64,7 @@ public final class ConfigVerifier {
 
     /**
      * Run verification for all registered devices and surface results.
-     * Call once in robotInit(), after all register() calls.
+     * Call once at robot startup, after all register() calls.
      * Blocks for up to (5 retries × 50ms × device count) — typically < 2s total.
      */
     public static void runAll() {

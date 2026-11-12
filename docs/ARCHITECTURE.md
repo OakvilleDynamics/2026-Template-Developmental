@@ -552,7 +552,7 @@ Both files land on the same USB drive. AdvantageScope opens them simultaneously 
 
 ### USB drive best practices
 
-- **Insert before power-on.** `SignalLogger` and `RobotLogger` both attempt to open `/u/` at `robotInit()`. A drive inserted after init will not be used until the next reboot.
+- **Insert before power-on.** `SignalLogger` and `RobotLogger` both attempt to open `/u/` in the `Robot` constructor. A drive inserted after init will not be used until the next reboot.
 - **Check SmartDashboard before each match.** `Logger/Storage Path` shows the active path. If it reads `Internal (/home/lvuser/logs/) — INSERT USB`, the drive is missing or unreadable.
 - **Eject safely in the pit.** Power down the robot before removing the drive. The roboRIO does not support hot-eject for FAT32.
 - **Copy logs immediately after each match.** Don't wait until end of day — a robot reboot with a full internal fallback storage can overwrite earlier logs.
