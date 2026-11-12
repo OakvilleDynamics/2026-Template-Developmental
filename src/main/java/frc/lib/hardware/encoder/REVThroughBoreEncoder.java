@@ -40,6 +40,6 @@ public class REVThroughBoreEncoder implements AbsoluteEncoderIO {
 
     @Override
     public double getAbsoluteAngleRad() {
-        return CTRECANcoderEncoder.rotationsToAngleRad(encoder.getPosition(), offsetRotations);
+        return CTRECANcoderEncoder.rotationsToAngleRad(encoder.getPosition().get(), offsetRotations);
     }
 }

@@ -6,10 +6,10 @@ import com.revrobotics.ResetMode;
 import com.revrobotics.spark.ClosedLoopSlot;
 import com.revrobotics.spark.FeedbackSensor;
 import com.revrobotics.spark.SparkBase;
-import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkClosedLoopController.ArbFFUnits;
 import com.revrobotics.spark.SparkFlex;
+import com.revrobotics.spark.SparkLowLevel.ControlType;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.FeedForwardConfig;
@@ -29,23 +29,28 @@ import frc.lib.util.ConfigVerifyResult;
  * REVMotor.java
  * PATH: src/main/java/frc/lib/hardware/motor/REVMotor.java
  *
- * MotorIO for REV SparkMax (NEO, NEO 550) and SparkFlex (NEO Vortex), REVLib 2026.
+ * MotorIO for REV SparkMax (NEO, NEO 550) and SparkFlex (NEO Vortex), REVLib 2027.
  * The vendor value selects the controller: REV_SPARKMAX or REV_SPARKFLEX.
  *
- * ─── GEAR RATIO ──────────────────────────────────────────────────────────────
- * positionConversionFactor = 1 / gearRatio (rotations)
- * velocityConversionFactor = 1 / (gearRatio × 60) (RPS, not RPM)
- * All encoder reads return mechanism-shaft units natively.
+ * ─── GEAR RATIO / UNITS ──────────────────────────────────────────────────────
+ * REVLib 2027 removed encoder conversion factors, so the controller works in
+ * native units (motor rotations, motor RPM). This class converts at its
+ * boundary — setpoints, readings, soft limits, motion limits and gains — so
+ * callers keep using mechanism-shaft rotations and RPS.
  *
  * ─── FEED-FORWARD ────────────────────────────────────────────────────────────
- * kP/kI/kD and kV run on-controller in slot 0. kS/kA are not set on-controller.
+ * Gains are given in mechanism units, so velocity and position control need
+ * different scaling: velocity runs in slot 0 (gains per motor RPM), position in
+ * slot 1 (gains per motor rotation). kS/kA are not set on-controller.
  * Rio-computed FF injected via setSetpoint(..., arbFF, ArbFFUnits.kVoltage).
  *
  * ─── MOTION PROFILE ──────────────────────────────────────────────────────────
  * MAXMotion (trapezoidal) when motionCruiseVelocityRps > 0. Jerk is ignored.
  *
  * ─── CONTINUOUS WRAP ─────────────────────────────────────────────────────────
- * positionWrappingEnabled over [-0.5, 0.5) mechanism rotations.
+ * REVLib 2027 removed the position wrapping input range, so continuousWrap is
+ * done in software: setPosition() moves by the error wrapped to [-0.5, 0.5]
+ * mechanism rotations.
  *
  * ─── LIVE PID TUNING ─────────────────────────────────────────────────────────
  * Gain updates use kNoResetSafeParameters + kNoPersistParameters — no flash
@@ -62,6 +67,11 @@ public class REVMotor implements MotorIO {
     private final SparkBase                 spark;
     private final SparkClosedLoopController controller;
     private final String                    vendorName;
+    /** Native motor RPM per mechanism-shaft RPS. */
+    private final double                    rpmPerRps;
+
+    private static final ClosedLoopSlot VELOCITY_SLOT = ClosedLoopSlot.kSlot0;
+    private static final ClosedLoopSlot POSITION_SLOT = ClosedLoopSlot.kSlot1;
 
     // Live gains — updated by applyGains() so verifyConfig() re-applies tuned values
     private double kP, kI, kD, kV;
@@ -77,6 +87,7 @@ public class REVMotor implements MotorIO {
         this.config     = config;
         this.isFlex     = config.vendor == MotorVendor.REV_SPARKFLEX;
         this.vendorName = config.vendor.displayName;
+        this.rpmPerRps  = config.gearRatio * 60.0;
         kP = config.kP; kI = config.kI; kD = config.kD; kV = config.kV;
 
         spark = isFlex
@@ -94,10 +105,6 @@ public class REVMotor implements MotorIO {
         cfg.inverted(config.inverted);
         cfg.idleMode(config.brakeOnNeutral ? IdleMode.kBrake : IdleMode.kCoast);
 
-        cfg.encoder
-            .positionConversionFactor(1.0 / config.gearRatio)
-            .velocityConversionFactor(1.0 / (config.gearRatio * 60.0));
-
         cfg.smartCurrentLimit((int) config.supplyCurrentLimitAmps);
 
         if (config.openLoopRampSecs > 0.0)   cfg.openLoopRampRate(config.openLoopRampSecs);
@@ -105,32 +112,28 @@ public class REVMotor implements MotorIO {
 
         if (!Double.isNaN(config.softLimitForwardRot)) {
             cfg.softLimit
-                .forwardSoftLimit((float) config.softLimitForwardRot)
+                .forwardSoftLimit((float) (config.softLimitForwardRot * config.gearRatio))
                 .forwardSoftLimitEnabled(true);
         }
         if (!Double.isNaN(config.softLimitReverseRot)) {
             cfg.softLimit
-                .reverseSoftLimit((float) config.softLimitReverseRot)
+                .reverseSoftLimit((float) (config.softLimitReverseRot * config.gearRatio))
                 .reverseSoftLimitEnabled(true);
         }
 
         cfg.closedLoop
             .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
-            .pid(kP, kI, kD)
-            .apply(new FeedForwardConfig().kV(kV))
-            .iZone(0);
-
-        if (config.continuousWrap) {
-            cfg.closedLoop
-                .positionWrappingEnabled(true)
-                .positionWrappingInputRange(-0.5, 0.5);
-        }
+            .iZone(0, VELOCITY_SLOT)
+            .iZone(0, POSITION_SLOT)
+            // Shortest-path routing (continuousWrap) is done in setPosition()
+            .positionWrappingEnabled(false);
+        applyGainsTo(cfg);
 
         if (config.hasMotionProfile()) {
             cfg.closedLoop.maxMotion
-                .cruiseVelocity(config.motionCruiseVelocityRps)
-                .maxAcceleration(config.motionAccelerationRpss)
-                .positionMode(MAXMotionPositionMode.kMAXMotionTrapezoidal);
+                .cruiseVelocity(config.motionCruiseVelocityRps * rpmPerRps, POSITION_SLOT)
+                .maxAcceleration(config.motionAccelerationRpss * rpmPerRps, POSITION_SLOT)
+                .positionMode(MAXMotionPositionMode.kMAXMotionTrapezoidal, POSITION_SLOT);
         }
 
         if (followLeader != null) cfg.follow(followLeader, followOpposed);
@@ -139,6 +142,16 @@ public class REVMotor implements MotorIO {
 
     private SparkBaseConfig newConfig() {
         return isFlex ? new SparkFlexConfig() : new SparkMaxConfig();
+    }
+
+    /** Write the live gains, converted to native units, into both slots. */
+    private void applyGainsTo(SparkBaseConfig cfg) {
+        cfg.closedLoop
+            .pid(kP / rpmPerRps, kI / rpmPerRps, kD / rpmPerRps, VELOCITY_SLOT)
+            .pid(kP / config.gearRatio, kI / config.gearRatio, kD / config.gearRatio, POSITION_SLOT)
+            .apply(new FeedForwardConfig()
+                .kV(kV / rpmPerRps, VELOCITY_SLOT)
+                .kV(kV / rpmPerRps, POSITION_SLOT));
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -150,12 +163,12 @@ public class REVMotor implements MotorIO {
 
     @Override
     public void setDutyCycle(double duty) {
-        spark.set(duty);
+        spark.setThrottle(duty);
     }
 
     @Override
     public void setVelocity(double velocityRps, double ffVolts) {
-        controller.setSetpoint(velocityRps, ControlType.kVelocity, ClosedLoopSlot.kSlot0,
+        controller.setSetpoint(velocityRps * rpmPerRps, ControlType.kVelocity, VELOCITY_SLOT,
             ffVolts, ArbFFUnits.kVoltage);
     }
 
@@ -164,7 +177,15 @@ public class REVMotor implements MotorIO {
         ControlType ct = config.hasMotionProfile()
             ? ControlType.kMAXMotionPositionControl
             : ControlType.kPosition;
-        controller.setSetpoint(positionRot, ct, ClosedLoopSlot.kSlot0, ffVolts, ArbFFUnits.kVoltage);
+        double target = positionRot;
+        if (config.continuousWrap) {
+            // Shortest path: move by the wrapped error, in [-0.5, 0.5] mechanism rotations
+            double current = getPositionRot();
+            double error   = positionRot - current;
+            error -= Math.rint(error);
+            target = current + error;
+        }
+        controller.setSetpoint(target * config.gearRatio, ct, POSITION_SLOT, ffVolts, ArbFFUnits.kVoltage);
     }
 
     @Override
@@ -186,16 +207,14 @@ public class REVMotor implements MotorIO {
 
     @Override
     public void setEncoderPosition(double positionRot) {
-        spark.getEncoder().setPosition(positionRot);
+        spark.getEncoder().setPosition(positionRot * config.gearRatio);
     }
 
     @Override
     public void applyGains(double kP, double kI, double kD, double kS, double kV, double kA) {
         this.kP = kP; this.kI = kI; this.kD = kD; this.kV = kV;
         SparkBaseConfig cfg = newConfig();
-        cfg.closedLoop
-            .pid(kP, kI, kD)
-            .apply(new FeedForwardConfig().kV(kV));
+        applyGainsTo(cfg);
         spark.configure(cfg, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
     }
 
@@ -203,19 +222,19 @@ public class REVMotor implements MotorIO {
     // MotorIO — feedback
     // ─────────────────────────────────────────────────────────────────────────
 
-    @Override public double getPositionRot()        { return spark.getEncoder().getPosition(); }
-    @Override public double getVelocityRps()        { return spark.getEncoder().getVelocity(); }
-    @Override public double getSupplyCurrentAmps()  { return spark.getOutputCurrent(); }
+    @Override public double getPositionRot()        { return spark.getEncoder().getPosition().get() / config.gearRatio; }
+    @Override public double getVelocityRps()        { return spark.getEncoder().getVelocity().get() / rpmPerRps; }
+    @Override public double getSupplyCurrentAmps()  { return spark.getOutputCurrent().get(); }
     /** REV does not expose a separate stator current signal. */
     @Override public double getStatorCurrentAmps()  { return 0.0; }
-    @Override public double getMotorVoltage()       { return spark.getBusVoltage() * spark.getAppliedOutput(); }
-    @Override public double getTemperatureC()       { return spark.getMotorTemperature(); }
-    @Override public boolean isForwardSoftLimitHit() { return spark.getForwardSoftLimit().isReached(); }
-    @Override public boolean isReverseSoftLimitHit() { return spark.getReverseSoftLimit().isReached(); }
+    @Override public double getMotorVoltage()       { return spark.getBusVoltage().get() * spark.getAppliedOutput().get(); }
+    @Override public double getTemperatureC()       { return spark.getMotorTemperature().get(); }
+    @Override public boolean isForwardSoftLimitHit() { return spark.getForwardSoftLimit().isReached().get(); }
+    @Override public boolean isReverseSoftLimitHit() { return spark.getReverseSoftLimit().isReached().get(); }
 
     /** Output current is the closest stall-detection signal available on SparkMax/Flex. */
     @Override
-    public double getStallDetectionCurrentAmps() { return spark.getOutputCurrent(); }
+    public double getStallDetectionCurrentAmps() { return spark.getOutputCurrent().get(); }
 
     @Override public boolean hasHardwareMotionProfile() { return true; }
     @Override public boolean supportsEncoderSync()      { return true; }

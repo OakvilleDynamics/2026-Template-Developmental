@@ -30,7 +30,7 @@ import org.wpilib.hardware.bus.CANPort;
  *   motionJerkRpss3        : CTRE MotionMagic S-curve only
  *   kS / kA                : REV and Nova do not run these on-controller
  *                            (Nova maps kS to its FF term)
- *   continuousWrap         : hardware on CTRE/REV, software on Nova
+ *   continuousWrap         : hardware on CTRE, software on REV (REVLib 2027) and Nova
  *   signal rates / optimizeCanUtilization : CTRE only
  *   novaMotorType          : Nova only — checked by ConfigVerifier
  *   canPort                : SystemCore CAN port (CTRE and REV; default CAN_S0)
