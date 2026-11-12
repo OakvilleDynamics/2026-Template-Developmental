@@ -39,7 +39,7 @@ The code is split into two areas:
 ```
 src/main/java/frc/lib/
 │
-├── util/                   ← units, RobotLogger, ConfigVerifier
+├── util/                   ← units, Dashboard, RobotLogger, ConfigVerifier
 ├── hardware/
 │   ├── motor/              ← MotorIO interface + CTREMotor / REVMotor / NovaMotor, MotorIOConfig, motorModels
 │   └── encoder/            ← AbsoluteEncoderIO + Thrifty analog / CANcoder / Through Bore
@@ -124,7 +124,7 @@ The one exception: PathPlanner bypasses `driveInput` (see PathPlanner section be
 
 One Kraken X60 (drive) + one Minion (steer) + one Thrifty analog encoder. The analog encoder measures absolute wheel angle and seeds the Minion's built-in encoder at startup. After that, the Minion's high-resolution internal encoder runs the closed-loop steering — the analog sensor is only used once at power-on.
 
-All PID gains are published to SmartDashboard and can be adjusted live during tuning without redeploying.
+All PID gains are published as dashboard tunables and can be adjusted live during tuning without redeploying.
 
 ### The odometry state
 
@@ -136,7 +136,7 @@ Every 20ms, `swerveDrive` computes a `driveOdometryState` — a rich snapshot of
 | `imuState` | CTRE Pigeon 2.0 IMU | Angular velocity, heading rate |
 | `blendedState` | Complementary filter of both | General-purpose motion monitoring |
 
-The blend weight (how much encoder vs. IMU) is tunable live from SmartDashboard.
+The blend weight (how much encoder vs. IMU) is tunable live from the dashboard.
 
 ---
 
@@ -182,7 +182,7 @@ Frames failing any check are discarded. The filter continues on odometry alone.
 
 ### Vision health monitoring
 
-`visionHealthMonitor` runs pre-match checks and ongoing health tracking. During disabled mode, `Robot.disabledPeriodic()` reads the health status and posts it to SmartDashboard so the drive team knows if vision is ready before auto starts.
+`visionHealthMonitor` runs pre-match checks and ongoing health tracking. During disabled mode, `Robot.disabledPeriodic()` reads the health status and posts it to the dashboard so the drive team knows if vision is ready before auto starts.
 
 ---
 
@@ -265,7 +265,7 @@ The command is decoupled from any specific intake subsystem. It takes a `Runnabl
 
 ### Health monitoring
 
-During disabled mode, `gamePieceVisionSubsystem.publishHealthStatus()` posts to SmartDashboard alongside the AprilTag camera health. Pre-match driver check: place a game piece ~1–2 m in front of the intake and confirm "Piece Detected = true" on the Elastic "Vision Health" tab.
+During disabled mode, `gamePieceVisionSubsystem.publishHealthStatus()` posts to the dashboard alongside the AprilTag camera health. Pre-match driver check: place a game piece ~1–2 m in front of the intake and confirm "Piece Detected = true" on the Elastic "Vision Health" tab.
 
 Every loop during a match, four DataLog entries are written: `CameraConnected`, `PieceDetected`, `TrackedPieceCount`, `Debug/MissFrames` — all under `/GamePieceVision/`. These are post-match reviewable in Advantage Scope.
 
@@ -458,7 +458,7 @@ Motor constants live in `motorModels.java` (sourced from vendor datasheets). Pas
 
 ### Live PID tuning
 
-All six gains (kP, kI, kD, kS, kV, kA) are published to SmartDashboard under `[MechanismName]/PID/` at construction. Each loop, `mechanismUnit` reads them back and calls `applyPIDToController()` only if a value changed — minimizing CAN traffic.
+All six gains (kP, kI, kD, kS, kV, kA) are published as dashboard tunables under `[MechanismName]/PID/` at construction. Each loop, `mechanismUnit` reads them back and calls `applyPIDToController()` only if a value changed — minimizing CAN traffic.
 
 ### Logging
 
@@ -553,7 +553,7 @@ Both files land on the same USB drive. AdvantageScope opens them simultaneously 
 ### USB drive best practices
 
 - **Insert before power-on.** `SignalLogger` and `RobotLogger` both attempt to open `/u/` in the `Robot` constructor. A drive inserted after init will not be used until the next reboot.
-- **Check SmartDashboard before each match.** `Logger/Storage Path` shows the active path. If it reads `Internal (/home/lvuser/logs/) — INSERT USB`, the drive is missing or unreadable.
+- **Check the dashboard before each match.** `Logger/Storage Path` shows the active path. If it reads `Internal (/home/lvuser/logs/) — INSERT USB`, the drive is missing or unreadable.
 - **Eject safely in the pit.** Power down the robot before removing the drive. The roboRIO does not support hot-eject for FAT32.
 - **Copy logs immediately after each match.** Don't wait until end of day — a robot reboot with a full internal fallback storage can overwrite earlier logs.
 - **One drive per event.** Label drives by event name (e.g. `ROBOT_LOG_DCMP`). Keep previous event drives as backups.
@@ -647,7 +647,7 @@ Turret soft/hard limits are **not** in `shooterConstants` — they live in `mech
 These are known gaps — in priority order for competition readiness:
 
 1. **Weigh the robot** → update `ROBOT_MASS_LBS` and `ROBOT_MOI_LBIN2` in `pathplannerConstants.java`
-2. **Measure steer offset voltages** → deploy with offsets = 0, read SmartDashboard, update `swerveConstants.java`
+2. **Measure steer offset voltages** → deploy with offsets = 0, read the dashboard, update `swerveConstants.java`
 3. **Confirm CAN IDs** → verify `swerveConstants.java` matches physical wiring
 4. **Measure camera mounting positions** → update `visionConstants.FRONT_CAMERA_TRANSFORM` and `REAR_CAMERA_TRANSFORM`
 5. **Populate 2026 field targets** → update `FieldTargets.java` when field geometry is published

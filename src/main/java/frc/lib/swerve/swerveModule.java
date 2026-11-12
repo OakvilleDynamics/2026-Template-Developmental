@@ -6,7 +6,6 @@ import java.util.List;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.lib.util.Dashboard;
 
 import frc.lib.hardware.encoder.AbsoluteEncoderIO;
@@ -127,19 +126,19 @@ public class swerveModule implements ConfigVerifiable {
     }
 
     public void publishTelemetry() {
-        SmartDashboard.putNumber("Swerve/" + name + "/Angle Deg",   getSteerAngle().getDegrees());
-        SmartDashboard.putNumber("Swerve/" + name + "/Speed MPS",   getState().speedMetersPerSecond);
-        SmartDashboard.putNumber("Swerve/" + name + "/Drive Amps",  driveMotor.getSupplyCurrentAmps());
-        SmartDashboard.putNumber("Swerve/" + name + "/Steer Amps",  steerMotor.getSupplyCurrentAmps());
+        Dashboard.log("Swerve/" + name + "/Angle Deg",   getSteerAngle().getDegrees());
+        Dashboard.log("Swerve/" + name + "/Speed MPS",   getState().speedMetersPerSecond);
+        Dashboard.log("Swerve/" + name + "/Drive Amps",  driveMotor.getSupplyCurrentAmps());
+        Dashboard.log("Swerve/" + name + "/Steer Amps",  steerMotor.getSupplyCurrentAmps());
 
         // Publish abs encoder rotations for all encoder types — useful for offset calibration
-        SmartDashboard.putNumber("Swerve/" + name + "/Abs Enc Rot",
+        Dashboard.log("Swerve/" + name + "/Abs Enc Rot",
             absEncoder.getAbsoluteAngleRad() / (2.0 * Math.PI));
 
         // Thrifty analog: also publish raw voltage and log to DataLog
         if (absEncoder instanceof ThriftyAnalogEncoder thrifty) {
             double rawVolts = thrifty.getRawVolts();
-            SmartDashboard.putNumber("Swerve/" + name + "/Raw Volts", rawVolts);
+            Dashboard.log("Swerve/" + name + "/Raw Volts", rawVolts);
             RobotLogger.moduleSteerVolts[moduleIndex].append(rawVolts);
         }
     }

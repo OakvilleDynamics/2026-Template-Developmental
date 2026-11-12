@@ -2,7 +2,6 @@ package frc.lib.util;
 
 import edu.wpi.first.util.datalog.*;
 import edu.wpi.first.wpilibj.DataLogManager;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
  * RobotLogger.java
@@ -10,12 +9,12 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
  *
  * Static singleton that owns the WPILib DataLog instance and all log entry handles.
  * Call RobotLogger.init() once in the Robot constructor before any subsystem uses it.
- * Subsystems call the static log*() methods the same way they call SmartDashboard.
+ * Subsystems call the static log*() methods the same way they call Dashboard.log().
  *
  * ─── STORAGE ─────────────────────────────────────────────────────────────────
  * Primary:  /u/  — USB drive plugged into roboRIO (recommended)
  * Fallback: /home/lvuser/logs/ — roboRIO internal flash (limited write cycles)
- * Active path is posted to SmartDashboard: "Logger/Storage Path"
+ * Active path is posted to the dashboard: "Logger/Storage Path"
  *
  * USB drive requirements:
  *   Format: FAT32 (exFAT not supported by roboRIO)
@@ -124,11 +123,11 @@ public final class RobotLogger {
         java.io.File usb = new java.io.File("/u");
         if (usb.exists() && usb.canWrite()) {
             path = "/u/";
-            SmartDashboard.putString("Logger/Storage Path", "USB (/u/)");
+            Dashboard.log("Logger/Storage Path", "USB (/u/)");
         } else {
             path = "/home/lvuser/logs/";
             new java.io.File(path).mkdirs();
-            SmartDashboard.putString("Logger/Storage Path", "Internal (/home/lvuser/logs/) — INSERT USB");
+            Dashboard.log("Logger/Storage Path", "Internal (/home/lvuser/logs/) — INSERT USB");
         }
 
         DataLogManager.start(path);
@@ -142,7 +141,7 @@ public final class RobotLogger {
         initPathfindingEntries();
 
         initialized = true;
-        SmartDashboard.putBoolean("Logger/Initialized", true);
+        Dashboard.log("Logger/Initialized", true);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

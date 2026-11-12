@@ -15,7 +15,7 @@ import edu.wpi.first.util.datalog.BooleanLogEntry;
 import edu.wpi.first.util.datalog.IntegerLogEntry;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import frc.lib.util.Dashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import frc.robot.constants.gamePieceConstants;
@@ -95,7 +95,7 @@ public class gamePieceVisionSubsystem extends SubsystemBase {
     private final IntegerLogEntry logTrackedPieceCount;
     private final IntegerLogEntry logMissFrames;
 
-    // ── Dashboard key prefix (/SmartDashboard/Vision Health/Game Piece Camera/) ─
+    // ── Dashboard key prefix (Vision Health/Game Piece Camera/) ───────────────
     private static final String DASH_PREFIX = "Vision Health/Game Piece Camera/";
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -195,9 +195,9 @@ public class gamePieceVisionSubsystem extends SubsystemBase {
         logMissFrames       .append(missFrameCount);
 
         // Dashboard (live during match) — shown on the Elastic "Vision Health" tab
-        SmartDashboard.putBoolean(DASH_PREFIX + "Intake cam connected", cameraConnected);
-        SmartDashboard.putBoolean(DASH_PREFIX + "Piece detected",       pieceDetected);
-        SmartDashboard.putNumber(DASH_PREFIX + "Tracked pieces",        trackedPieces.size());
+        Dashboard.log(DASH_PREFIX + "Intake cam connected", cameraConnected);
+        Dashboard.log(DASH_PREFIX + "Piece detected",       pieceDetected);
+        Dashboard.log(DASH_PREFIX + "Tracked pieces",        trackedPieces.size());
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -318,7 +318,7 @@ public class gamePieceVisionSubsystem extends SubsystemBase {
      * Call from Robot.disabledPeriodic() so the drive team sees it pre-match.
      */
     public void publishHealthStatus() {
-        SmartDashboard.putString("GamePieceVision/HealthStatus", getHealthStatus());
+        Dashboard.log("GamePieceVision/HealthStatus", getHealthStatus());
     }
 
     // ─────────────────────────────────────────────────────────────────────────

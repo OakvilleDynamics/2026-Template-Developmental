@@ -108,7 +108,7 @@ public final class AprilTagIgnore {
 
     /**
      * Returns a human-readable summary of current ignore rules.
-     * Published to SmartDashboard at startup for visibility.
+     * Published to the dashboard at startup for visibility.
      */
     public static String getSummary() {
         if (IGNORED_TAGS.isEmpty()) return "No tags ignored";

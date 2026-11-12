@@ -6,7 +6,6 @@ import java.util.List;
 import edu.wpi.first.util.datalog.*;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.lib.util.Dashboard;
 
 import frc.lib.hardware.motor.MotorIO;
@@ -40,7 +39,7 @@ import frc.lib.util.ConfigVerifyResult;
  *   • ENCODER_SYNC follower correction (position error → duty cycle output)
  *   • Current-based end-of-travel detection and homing
  *   • DataLog entry lifecycle (per-instance, not static)
- *   • SmartDashboard telemetry publishing
+ *   • dashboard telemetry publishing
  *
  * ─── CALL PATTERN IN SUBSYSTEM PERIODIC ──────────────────────────────────────
  *   // One call per loop — encoder sync, FF, PID tuning, and telemetry are automatic:
@@ -367,7 +366,7 @@ public class mechanismUnit implements ConfigVerifiable {
     }
 
     /**
-     * Log all telemetry for this mechanism to DataLog and SmartDashboard.
+     * Log all telemetry for this mechanism to DataLog and the dashboard.
      * Called automatically by setDutyCycle(), setVelocity(), setPosition(),
      * and stop() — no need to call this from subsystem periodic() directly.
      * Available as public for any case where telemetry is needed without
@@ -386,12 +385,12 @@ public class mechanismUnit implements ConfigVerifiable {
         logForwardLimit.append(leader.isForwardSoftLimitHit());
         logReverseLimit.append(leader.isReverseSoftLimitHit());
 
-        SmartDashboard.putNumber(dashPrefix + "Velocity_rps",    vel);
-        SmartDashboard.putNumber(dashPrefix + "Position_deg",    pos);
-        SmartDashboard.putNumber(dashPrefix + "SupplyCurrent_A", leader.getSupplyCurrentAmps());
-        SmartDashboard.putNumber(dashPrefix + "MotorVoltage_V",  leader.getMotorVoltage());
-        SmartDashboard.putBoolean(dashPrefix + "FwdLimit",       leader.isForwardSoftLimitHit());
-        SmartDashboard.putBoolean(dashPrefix + "RevLimit",       leader.isReverseSoftLimitHit());
+        Dashboard.log(dashPrefix + "Velocity_rps",    vel);
+        Dashboard.log(dashPrefix + "Position_deg",    pos);
+        Dashboard.log(dashPrefix + "SupplyCurrent_A", leader.getSupplyCurrentAmps());
+        Dashboard.log(dashPrefix + "MotorVoltage_V",  leader.getMotorVoltage());
+        Dashboard.log(dashPrefix + "FwdLimit",       leader.isForwardSoftLimitHit());
+        Dashboard.log(dashPrefix + "RevLimit",       leader.isReverseSoftLimitHit());
     }
 
     /**
@@ -718,18 +717,18 @@ public class mechanismUnit implements ConfigVerifiable {
         return value;
     }
 
-    /** Append travel limit latch state to DataLog and SmartDashboard. */
+    /** Append travel limit latch state to DataLog and the dashboard. */
     private void logTravelLimitState() {
         if (logLeadLowerLimit != null) {
             logLeadLowerLimit.append(leadLowerLimitLatched);
             logLeadUpperLimit.append(leadUpperLimitLatched);
-            SmartDashboard.putBoolean(dashPrefix + "TravelLimits/LeadLower", leadLowerLimitLatched);
-            SmartDashboard.putBoolean(dashPrefix + "TravelLimits/LeadUpper", leadUpperLimitLatched);
+            Dashboard.log(dashPrefix + "TravelLimits/LeadLower", leadLowerLimitLatched);
+            Dashboard.log(dashPrefix + "TravelLimits/LeadUpper", leadUpperLimitLatched);
             if (logFollowerLowerLimit != null) {
                 logFollowerLowerLimit.append(followerLowerLimitLatched);
                 logFollowerUpperLimit.append(followerUpperLimitLatched);
-                SmartDashboard.putBoolean(dashPrefix + "TravelLimits/FollowerLower", followerLowerLimitLatched);
-                SmartDashboard.putBoolean(dashPrefix + "TravelLimits/FollowerUpper", followerUpperLimitLatched);
+                Dashboard.log(dashPrefix + "TravelLimits/FollowerLower", followerLowerLimitLatched);
+                Dashboard.log(dashPrefix + "TravelLimits/FollowerUpper", followerUpperLimitLatched);
             }
         }
         logIsHoming.append(isHoming());
@@ -889,10 +888,10 @@ public class mechanismUnit implements ConfigVerifiable {
         }
 
         // ── Telemetry ─────────────────────────────────────────────────────────
-        SmartDashboard.putBoolean(dashPrefix + "Homing/IsHoming",      isHoming());
-        SmartDashboard.putBoolean(dashPrefix + "Homing/LeadHomed",     leadHomed);
+        Dashboard.log(dashPrefix + "Homing/IsHoming",      isHoming());
+        Dashboard.log(dashPrefix + "Homing/LeadHomed",     leadHomed);
         if (encoderSyncFollowerIndex > 0)
-            SmartDashboard.putBoolean(dashPrefix + "Homing/FollowerHomed", followerHomed);
+            Dashboard.log(dashPrefix + "Homing/FollowerHomed", followerHomed);
         logIsHoming.append(isHoming());
     }
 

@@ -233,7 +233,7 @@ public final class visionConstants {
      * 0.0 = pure IMU, 1.0 = pure encoder.
      * Linear velocity/accel: encoder-dominant (alpha weight).
      * Angular velocity/accel: IMU-dominant (1-alpha weight).
-     * Tunable live from SmartDashboard: "Drive/Blend Alpha"
+     * Tunable live from the dashboard: "Drive/Blend Alpha"
      */
     public static final double ODOMETRY_BLEND_ALPHA = 0.7;
 }

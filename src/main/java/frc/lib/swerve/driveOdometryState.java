@@ -22,7 +22,7 @@ package frc.lib.swerve;
  *                 Angular velocity/accel: IMU-dominant (1-alpha weight)
  *                 Best general-purpose estimate for most use cases
  *
- * Blend weight alpha is tunable live from SmartDashboard: "Drive/Blend Alpha"
+ * Blend weight alpha is tunable live from the dashboard: "Drive/Blend Alpha"
  * 0.0 = pure IMU, 1.0 = pure encoder. Default: 0.7 (encoder-dominant linear)
  *
  * ─── UNITS ───────────────────────────────────────────────────────────────────

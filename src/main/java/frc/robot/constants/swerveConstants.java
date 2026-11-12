@@ -80,7 +80,7 @@ public final class swerveConstants {
      * HOW TO MEASURE:
      *   1. Deploy with all offsets = 0.0
      *   2. Rotate each wheel by hand to face straight forward
-     *   3. Read "Swerve/FL/Raw Volts" etc. from SmartDashboard
+     *   3. Read "Swerve/FL/Raw Volts" etc. from the dashboard
      *   4. Paste those values here and redeploy
      *
      * TODO: measure on your physical robot
@@ -98,7 +98,7 @@ public final class swerveConstants {
      * HOW TO MEASURE:
      *   1. Deploy with all offsets = 0.0
      *   2. Rotate each wheel by hand to face straight forward
-     *   3. Read "Swerve/FL/Abs Enc Rot" from SmartDashboard
+     *   3. Read "Swerve/FL/Abs Enc Rot" from the dashboard
      *   4. Paste those values here and redeploy
      *
      * TODO: measure on your physical robot
@@ -118,7 +118,7 @@ public final class swerveConstants {
      * 0.0 = pure IMU, 1.0 = pure encoder.
      * Linear velocity uses alpha (encoder-dominant).
      * Angular velocity uses (1-alpha) (IMU-dominant).
-     * Tunable live from SmartDashboard: "Drive/Blend Alpha"
+     * Tunable live from the dashboard: "Drive/Blend Alpha"
      */
     public static final double ODOMETRY_BLEND_ALPHA = 0.7;
 
@@ -162,7 +162,7 @@ public final class swerveConstants {
     /**
      * Default gains for the heading-lock PID controller in swerveDrive.
      * Input: heading error (radians). Output: omega correction (rad/s).
-     * Tunable live from SmartDashboard: "Drive/HeadingPID/kP" etc.
+     * Tunable live from the dashboard: "Drive/HeadingPID/kP" etc.
      *
      * Tuning: increase kP until robot snaps to heading quickly without oscillating.
      * Add kD to damp overshoot. kI is rarely needed for heading control.

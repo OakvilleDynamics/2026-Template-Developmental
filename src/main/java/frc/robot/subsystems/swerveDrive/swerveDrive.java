@@ -21,7 +21,6 @@ import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.lib.util.Dashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.pathplannerConstants;
@@ -239,7 +238,7 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
 
         blendAlpha = blendAlphaTunable.get();
 
-        SmartDashboard.putBoolean("Drive/HeadingLock Active", headingLockActive);
+        Dashboard.log("Drive/HeadingLock Active", headingLockActive);
         headingLockActive = false; // reset; drivePointAt() sets it if called this loop
 
         publishTelemetry();
@@ -308,11 +307,11 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
         );
         commandModules(fieldRelative, input.getCenterOfRotation());
 
-        SmartDashboard.putNumber("Drive/PointAt/Target X (ft)",     targetFeetX);
-        SmartDashboard.putNumber("Drive/PointAt/Target Y (ft)",     targetFeetY);
-        SmartDashboard.putNumber("Drive/PointAt/Desired Hdg (deg)", units.rad_deg(desiredHeadingRad));
-        SmartDashboard.putNumber("Drive/PointAt/Hdg Error (deg)",   units.rad_deg(headingPID.getError()));
-        SmartDashboard.putBoolean("Drive/PointAt/At Heading",       headingPID.atSetpoint());
+        Dashboard.log("Drive/PointAt/Target X (ft)",     targetFeetX);
+        Dashboard.log("Drive/PointAt/Target Y (ft)",     targetFeetY);
+        Dashboard.log("Drive/PointAt/Desired Hdg (deg)", units.rad_deg(desiredHeadingRad));
+        Dashboard.log("Drive/PointAt/Hdg Error (deg)",   units.rad_deg(headingPID.getError()));
+        Dashboard.log("Drive/PointAt/At Heading",       headingPID.atSetpoint());
     }
 
     /**
@@ -360,18 +359,18 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
                     input.getVxMps(), input.getVyMps(), omegaCorrection, getYaw());
             commandModules(fieldRelative, input.getCenterOfRotation());
 
-            SmartDashboard.putBoolean("Drive/HeadingBound/InBounds", false);
+            Dashboard.log("Drive/HeadingBound/InBounds", false);
         } else {
             // Within bounds — pass driver omega through unchanged
             headingLockActive = false;
             drive(input);
 
-            SmartDashboard.putBoolean("Drive/HeadingBound/InBounds", true);
+            Dashboard.log("Drive/HeadingBound/InBounds", true);
         }
 
-        SmartDashboard.putNumber("Drive/HeadingBound/Min (deg)", minAbsHeadingDeg);
-        SmartDashboard.putNumber("Drive/HeadingBound/Max (deg)", maxAbsHeadingDeg);
-        SmartDashboard.putNumber("Drive/HeadingBound/Current (deg)", currentHeadingDeg);
+        Dashboard.log("Drive/HeadingBound/Min (deg)", minAbsHeadingDeg);
+        Dashboard.log("Drive/HeadingBound/Max (deg)", maxAbsHeadingDeg);
+        Dashboard.log("Drive/HeadingBound/Current (deg)", currentHeadingDeg);
     }
 
     /**
@@ -712,31 +711,31 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
     // ─────────────────────────────────────────────────────────────────────────
 
     private void publishGeometry() {
-        SmartDashboard.putNumber("Drive/Geometry/WheelBase X (in)",  units.m_inches(wheelBaseM[0]));
-        SmartDashboard.putNumber("Drive/Geometry/WheelBase Y (in)",  units.m_inches(wheelBaseM[1]));
-        SmartDashboard.putNumber("Drive/Geometry/Frame X (in)",      units.m_inches(framePerimeterM[0]));
-        SmartDashboard.putNumber("Drive/Geometry/Frame Y (in)",      units.m_inches(framePerimeterM[1]));
-        SmartDashboard.putNumber("Drive/Geometry/Bumper X (in)",     units.m_inches(bumperPerimeterM[0]));
-        SmartDashboard.putNumber("Drive/Geometry/Bumper Y (in)",     units.m_inches(bumperPerimeterM[1]));
-        SmartDashboard.putNumber("Drive/Geometry/WheelBase X (m)",   wheelBaseM[0]);
-        SmartDashboard.putNumber("Drive/Geometry/WheelBase Y (m)",   wheelBaseM[1]);
+        Dashboard.log("Drive/Geometry/WheelBase X (in)",  units.m_inches(wheelBaseM[0]));
+        Dashboard.log("Drive/Geometry/WheelBase Y (in)",  units.m_inches(wheelBaseM[1]));
+        Dashboard.log("Drive/Geometry/Frame X (in)",      units.m_inches(framePerimeterM[0]));
+        Dashboard.log("Drive/Geometry/Frame Y (in)",      units.m_inches(framePerimeterM[1]));
+        Dashboard.log("Drive/Geometry/Bumper X (in)",     units.m_inches(bumperPerimeterM[0]));
+        Dashboard.log("Drive/Geometry/Bumper Y (in)",     units.m_inches(bumperPerimeterM[1]));
+        Dashboard.log("Drive/Geometry/WheelBase X (m)",   wheelBaseM[0]);
+        Dashboard.log("Drive/Geometry/WheelBase Y (m)",   wheelBaseM[1]);
     }
 
     private void publishTelemetry() {
         Pose2d pose = getPose();
-        SmartDashboard.putNumber("Drive/Pose X (ft)",   units.m_feet(pose.getX()));
-        SmartDashboard.putNumber("Drive/Pose Y (ft)",   units.m_feet(pose.getY()));
-        SmartDashboard.putNumber("Drive/Pose X (m)",    pose.getX());
-        SmartDashboard.putNumber("Drive/Pose Y (m)",    pose.getY());
-        SmartDashboard.putNumber("Drive/Heading (deg)", getYaw().getDegrees());
+        Dashboard.log("Drive/Pose X (ft)",   units.m_feet(pose.getX()));
+        Dashboard.log("Drive/Pose Y (ft)",   units.m_feet(pose.getY()));
+        Dashboard.log("Drive/Pose X (m)",    pose.getX());
+        Dashboard.log("Drive/Pose Y (m)",    pose.getY());
+        Dashboard.log("Drive/Heading (deg)", getYaw().getDegrees());
 
         driveOdometryState s = currentState;
-        SmartDashboard.putNumber("Drive/Blended/LinVel (ft-s)",
+        Dashboard.log("Drive/Blended/LinVel (ft-s)",
             units.mps_ftps(s.blendedState.linearVelocityMagnitude));
-        SmartDashboard.putNumber("Drive/Blended/AngVel (rad-s)", s.blendedState.angularVelocity);
-        SmartDashboard.putNumber("Drive/Blended/CoR X (in)",
+        Dashboard.log("Drive/Blended/AngVel (rad-s)", s.blendedState.angularVelocity);
+        Dashboard.log("Drive/Blended/CoR X (in)",
             units.m_inches(s.blendedState.centerOfRotation[0]));
-        SmartDashboard.putNumber("Drive/Blended/CoR Y (in)",
+        Dashboard.log("Drive/Blended/CoR Y (in)",
             units.m_inches(s.blendedState.centerOfRotation[1]));
 
         for (swerveModule m : modules) m.publishTelemetry();

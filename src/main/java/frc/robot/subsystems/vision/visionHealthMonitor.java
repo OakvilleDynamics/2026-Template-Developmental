@@ -3,7 +3,7 @@ package frc.robot.subsystems.vision;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.util.datalog.IntegerLogEntry;
 import edu.wpi.first.wpilibj.DataLogManager;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import frc.lib.util.Dashboard;
 import frc.lib.util.units;
 
 /**
@@ -20,7 +20,7 @@ import frc.lib.util.units;
  * FAULT    — camera lost or pose implausible (action required)
  *
  * ─── DASHBOARD ───────────────────────────────────────────────────────────────
- * Publishes status indicators under /SmartDashboard/Vision Health/ for the
+ * Publishes status indicators through Dashboard under "Vision Health/" for the
  * Elastic "Vision Health" tab. Widget type, colors and placement live in the
  * Elastic layout file, not in code.
  * Drive team should check this tab before every match.
@@ -78,7 +78,7 @@ public class visionHealthMonitor {
     private final IntegerLogEntry logRearHighAmbFrames;
     private final IntegerLogEntry logInterCameraDisagree;
 
-    // ── Dashboard key prefixes (/SmartDashboard/Vision Health/...) ────────────
+    // ── Dashboard key prefixes (Vision Health/...) ─────────────────────────────
     private static final String DASH_PREFIX   = "Vision Health/";
     private static final String STATUS_PREFIX = DASH_PREFIX + "Camera Status/";
     private static final String AMB_PREFIX    = DASH_PREFIX + "Ambiguity/";
@@ -124,7 +124,7 @@ public class visionHealthMonitor {
      */
     public void setExpectedStartPose(Pose3d expectedPose) {
         this.expectedStartPose = expectedPose;
-        SmartDashboard.putString("Vision/Health/Expected Start",
+        Dashboard.log("Vision/Health/Expected Start",
             String.format("(%.2f ft, %.2f ft)",
                 units.m_feet(expectedPose.getX()),
                 units.m_feet(expectedPose.getY())));
@@ -137,7 +137,7 @@ public class visionHealthMonitor {
      */
     public void clearExpectedStartPose() {
         this.expectedStartPose = null;
-        SmartDashboard.putString("Vision/Health/Expected Start", "cleared");
+        Dashboard.log("Vision/Health/Expected Start", "cleared");
     }
 
     public HealthStatus getOverallStatus()    { return overallStatus; }
@@ -230,15 +230,15 @@ public class visionHealthMonitor {
     // ─────────────────────────────────────────────────────────────────────────
 
     private void publishToDashboard(robotPoseEstimate front, robotPoseEstimate rear) {
-        SmartDashboard.putBoolean(STATUS_PREFIX + "Front connected", frontConnected);
-        SmartDashboard.putBoolean(STATUS_PREFIX + "Rear connected", rearConnected);
-        SmartDashboard.putBoolean(STATUS_PREFIX + "Front sees tags", front.isValid);
-        SmartDashboard.putBoolean(STATUS_PREFIX + "Rear sees tags", rear.isValid);
+        Dashboard.log(STATUS_PREFIX + "Front connected", frontConnected);
+        Dashboard.log(STATUS_PREFIX + "Rear connected", rearConnected);
+        Dashboard.log(STATUS_PREFIX + "Front sees tags", front.isValid);
+        Dashboard.log(STATUS_PREFIX + "Rear sees tags", rear.isValid);
 
-        SmartDashboard.putNumber(AMB_PREFIX + "Front ambiguity", front.isValid ? front.ambiguity : 1.0);
-        SmartDashboard.putNumber(AMB_PREFIX + "Rear ambiguity", rear.isValid   ? rear.ambiguity  : 1.0);
+        Dashboard.log(AMB_PREFIX + "Front ambiguity", front.isValid ? front.ambiguity : 1.0);
+        Dashboard.log(AMB_PREFIX + "Rear ambiguity", rear.isValid   ? rear.ambiguity  : 1.0);
 
-        SmartDashboard.putBoolean(CHECK_PREFIX + "Cameras agree", interCameraDisagree < 10);
+        Dashboard.log(CHECK_PREFIX + "Cameras agree", interCameraDisagree < 10);
 
         // Plausibility check — only meaningful when expected pose is set
         boolean plausible = true;
@@ -248,21 +248,21 @@ public class visionHealthMonitor {
                 double dist = expectedStartPose.getTranslation()
                     .getDistance(best.pose.getTranslation());
                 plausible = dist < POSE_PLAUSIBILITY_TOLERANCE_M;
-                SmartDashboard.putNumber("Vision/Health/Start Pose Error (ft)",
+                Dashboard.log("Vision/Health/Start Pose Error (ft)",
                     units.m_feet(dist));
             }
         }
-        SmartDashboard.putBoolean(CHECK_PREFIX + "Pose plausible", plausible);
+        Dashboard.log(CHECK_PREFIX + "Pose plausible", plausible);
 
-        SmartDashboard.putString(DASH_PREFIX + "Overall Status", overallStatus.name());
+        Dashboard.log(DASH_PREFIX + "Overall Status", overallStatus.name());
 
         if (front.isValid) {
-            SmartDashboard.putNumber(POSE_PREFIX + "Front X (ft)", units.m_feet(front.pose.getX()));
-            SmartDashboard.putNumber(POSE_PREFIX + "Front Y (ft)", units.m_feet(front.pose.getY()));
+            Dashboard.log(POSE_PREFIX + "Front X (ft)", units.m_feet(front.pose.getX()));
+            Dashboard.log(POSE_PREFIX + "Front Y (ft)", units.m_feet(front.pose.getY()));
         }
         if (rear.isValid) {
-            SmartDashboard.putNumber(POSE_PREFIX + "Rear X (ft)", units.m_feet(rear.pose.getX()));
-            SmartDashboard.putNumber(POSE_PREFIX + "Rear Y (ft)", units.m_feet(rear.pose.getY()));
+            Dashboard.log(POSE_PREFIX + "Rear X (ft)", units.m_feet(rear.pose.getX()));
+            Dashboard.log(POSE_PREFIX + "Rear Y (ft)", units.m_feet(rear.pose.getY()));
         }
     }
 }

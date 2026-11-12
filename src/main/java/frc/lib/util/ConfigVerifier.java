@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 import frc.lib.util.ConfigVerifiable;
 import frc.lib.util.ConfigVerifyResult;
@@ -39,8 +38,8 @@ import frc.lib.util.ConfigVerifyResult;
  *   ThriftyNova   : inversion, brakeMode, motorType (if withNovaMotorType() was set)
  *
  * ─── FAULT SURFACE ───────────────────────────────────────────────────────────
- * SmartDashboard key  "ConfigVerifier/Status"     "OK" or "FAULTS DETECTED"
- * SmartDashboard key  "ConfigVerifier/Faults"     blank-separated fault details
+ * Dashboard key  "ConfigVerifier/Status"     "OK" or "FAULTS DETECTED"
+ * Dashboard key  "ConfigVerifier/Faults"     blank-separated fault details
  * Driver Station console — DriverStation.reportError() for any failure
  *
  * A per-device pass/fail is also pushed under "ConfigVerifier/<DeviceName>".
@@ -69,8 +68,8 @@ public final class ConfigVerifier {
      */
     public static void runAll() {
         if (registry.isEmpty()) {
-            SmartDashboard.putString("ConfigVerifier/Status", "OK (no devices registered)");
-            SmartDashboard.putString("ConfigVerifier/Faults", "");
+            Dashboard.log("ConfigVerifier/Status", "OK (no devices registered)");
+            Dashboard.log("ConfigVerifier/Faults", "");
             return;
         }
 
@@ -81,7 +80,7 @@ public final class ConfigVerifier {
 
         // Publish per-device pass/fail
         for (ConfigVerifyResult r : allResults) {
-            SmartDashboard.putString(
+            Dashboard.log(
                 "ConfigVerifier/" + r.deviceName,
                 r.passed() ? "OK" : "FAIL");
         }
@@ -93,8 +92,8 @@ public final class ConfigVerifier {
         }
 
         if (failures.isEmpty()) {
-            SmartDashboard.putString("ConfigVerifier/Status", "OK");
-            SmartDashboard.putString("ConfigVerifier/Faults", "");
+            Dashboard.log("ConfigVerifier/Status", "OK");
+            Dashboard.log("ConfigVerifier/Faults", "");
             System.out.println("[ConfigVerifier] All " + allResults.size()
                                + " motor controller(s) verified OK.");
             return;
@@ -107,9 +106,9 @@ public final class ConfigVerifier {
             faultStr.append(r.toString());
         }
 
-        SmartDashboard.putString("ConfigVerifier/Status",
+        Dashboard.log("ConfigVerifier/Status",
             failures.size() + " FAULT(S) DETECTED — CHECK DRIVER STATION");
-        SmartDashboard.putString("ConfigVerifier/Faults", faultStr.toString());
+        Dashboard.log("ConfigVerifier/Faults", faultStr.toString());
 
         // DS console — loud and visible before enabling
         DriverStation.reportError(

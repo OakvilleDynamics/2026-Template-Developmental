@@ -62,7 +62,7 @@ public final class mechanismConfig {
     // ── Identity ──────────────────────────────────────────────────────────────
 
     /** Human-readable mechanism name. Used as DataLog path prefix and
-     *  SmartDashboard namespace. Example: "Shooter", "Elevator", "Wrist". */
+     *  dashboard namespace. Example: "Shooter", "Elevator", "Wrist". */
     public final String name;
 
     // ── Motor roster ──────────────────────────────────────────────────────────
@@ -120,7 +120,7 @@ public final class mechanismConfig {
      *   kV : velocity feed-forward (volts per RPS) — back-EMF compensation
      *   kA : acceleration feed-forward (volts per RPS²) — inertia compensation
      * All run on the motor controller. kA availability varies by vendor.
-     * Live-tunable from SmartDashboard during development.
+     * Live-tunable from the dashboard during development.
      */
     public final double[] pid;
 

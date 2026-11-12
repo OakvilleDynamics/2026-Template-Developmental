@@ -7,7 +7,7 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import frc.lib.util.Dashboard;
 import frc.robot.constants.AprilTagIgnore;
 import frc.lib.util.units;
 
@@ -71,13 +71,13 @@ public class AprilTagFieldCal {
         baseLayout       = AprilTagFieldLayout.loadField(gameYearField);
         calibratedLayout = baseLayout;
 
-        SmartDashboard.putNumber("Field/Length (ft)", getFieldLengthFt());
-        SmartDashboard.putNumber("Field/Width (ft)",  getFieldWidthFt());
+        Dashboard.log("Field/Length (ft)", getFieldLengthFt());
+        Dashboard.log("Field/Width (ft)",  getFieldWidthFt());
         double[] far = getFarCornerFt();
-        SmartDashboard.putNumber("Field/Far Corner X (ft)", far[0]);
-        SmartDashboard.putNumber("Field/Far Corner Y (ft)", far[1]);
-        SmartDashboard.putString("Field/Tag Ignore Rules",  AprilTagIgnore.getSummary());
-        SmartDashboard.putNumber("Field/Total Tags",        baseLayout.getTags().size());
+        Dashboard.log("Field/Far Corner X (ft)", far[0]);
+        Dashboard.log("Field/Far Corner Y (ft)", far[1]);
+        Dashboard.log("Field/Tag Ignore Rules",  AprilTagIgnore.getSummary());
+        Dashboard.log("Field/Total Tags",        baseLayout.getTags().size());
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -111,7 +111,7 @@ public class AprilTagFieldCal {
                 units.deg_rad(yawDeg)
             )
         ));
-        SmartDashboard.putString("FieldCal/Tag " + tagId + " Offset",
+        Dashboard.log("FieldCal/Tag " + tagId + " Offset",
             String.format("x=%.2f\" y=%.2f\" z=%.2f\" yaw=%.1f°",
                 xInches, yInches, zInches, yawDeg));
     }
@@ -119,13 +119,13 @@ public class AprilTagFieldCal {
     /** Removes the offset for a specific tag, reverting to WPILib baseline */
     public void clearTagOffset(int tagId) {
         tagOffsets.remove(tagId);
-        SmartDashboard.putString("FieldCal/Tag " + tagId + " Offset", "cleared");
+        Dashboard.log("FieldCal/Tag " + tagId + " Offset", "cleared");
     }
 
     /** Removes all offsets — full reset to WPILib baseline */
     public void clearAllOffsets() {
         tagOffsets.clear();
-        SmartDashboard.putString("FieldCal/Status", "All offsets cleared");
+        Dashboard.log("FieldCal/Status", "All offsets cleared");
     }
 
     /**
@@ -154,7 +154,7 @@ public class AprilTagFieldCal {
             int tagId = tag.ID;
 
             if (AprilTagIgnore.shouldIgnore(tagId)) {
-                SmartDashboard.putString("FieldCal/Tag " + tagId + " Status", "IGNORED");
+                Dashboard.log("FieldCal/Tag " + tagId + " Status", "IGNORED");
                 continue;
             }
 
@@ -172,9 +172,9 @@ public class AprilTagFieldCal {
             baseLayout.getFieldWidth()
         );
 
-        SmartDashboard.putNumber("FieldCal/Active Tags",     correctedTags.size());
-        SmartDashboard.putNumber("FieldCal/Total Tags",      baseLayout.getTags().size());
-        SmartDashboard.putNumber("FieldCal/Offsets Applied", tagOffsets.size());
+        Dashboard.log("FieldCal/Active Tags",     correctedTags.size());
+        Dashboard.log("FieldCal/Total Tags",      baseLayout.getTags().size());
+        Dashboard.log("FieldCal/Offsets Applied", tagOffsets.size());
     }
 
     // ─────────────────────────────────────────────────────────────────────────

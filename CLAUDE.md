@@ -52,6 +52,7 @@ Both rules are enforced by `src/test/java/frc/lib/ArchitectureTest.java` — `./
 src/main/java/frc/lib/
 ├── util/
 │   ├── units.java                          ← all unit conversions + normalizeAngleDeg()
+│   ├── Dashboard.java                      ← ALL dashboard output (log / tunable / toggle)
 │   ├── RobotLogger.java
 │   ├── ConfigVerifier.java / ConfigVerifiable.java / ConfigVerifyResult.java
 │
@@ -189,6 +190,17 @@ Architectural decisions are discussed and agreed before any code is written. Exp
 
 ---
 
+### 7. All dashboard output goes through `frc.lib.util.Dashboard`
+
+Use `Dashboard.log(key, value)` for values to view and `Dashboard.tunable(key, default)` /
+`Dashboard.toggle(key, default)` (created once, read with `get()` each loop) for values an
+operator edits live. Never call SmartDashboard / Telemetry / Tunables directly: `Dashboard` is
+implemented on SmartDashboard for WPILib 2026 and on Telemetry + Tunables on the 2027 branch,
+so switching WPILib years changes only that file. It is also where publishing policy (what to
+send during a match vs. while tuning) belongs.
+
+---
+
 ## Naming Conventions
 
 | Pattern | Convention | Examples |
@@ -256,7 +268,7 @@ Owns all four modules and the IMU. The only way to move the robot.
 
 ### `swerveModule`
 
-One Thrifty Narrow module. Kraken X60 drive (velocity control), Minion steer (position control). Analog encoder seeded at startup, Minion internal encoder used for closed-loop steering. All PID gains live-tunable from SmartDashboard.
+One Thrifty Narrow module. Kraken X60 drive (velocity control), Minion steer (position control). Analog encoder seeded at startup, Minion internal encoder used for closed-loop steering. All PID gains live-tunable from the dashboard.
 
 ### `driveInput`
 
@@ -267,7 +279,7 @@ Immutable value object. The sole public command interface into `swerveDrive`. Ac
 Full motion state snapshot updated every 20ms. Three buckets:
 - `encoderState` — from wheel encoders + kinematics (reliable linear velocity)
 - `imuState` — from Pigeon 2.0 (reliable angular velocity)
-- `blendedState` — complementary filter blend (alpha tunable live from SmartDashboard)
+- `blendedState` — complementary filter blend (alpha tunable live from the dashboard)
 
 All values SI internally. CoR tracked with velocity and acceleration.
 
@@ -308,7 +320,7 @@ Diagnostic counters (`frontMissFrames`, `rearMissFrames`, `frontHighAmbFrames`, 
 
 ### `AprilTagFieldCal` / `AprilTagFieldCalTab`
 
-Field calibration system. Measures per-tag position offsets vs. WPILib baseline. Outputs correction offsets three ways: Python script capture to laptop, backup to roboRIO, clipboard copy. Values are published under SmartDashboard "Field Calibration/" for the Elastic "Field Calibration" tab.
+Field calibration system. Measures per-tag position offsets vs. WPILib baseline. Outputs correction offsets three ways: Python script capture to laptop, backup to roboRIO, clipboard copy. Values are published through `Dashboard` under "Field Calibration/" for the Elastic "Field Calibration" tab.
 
 ### `gamePieceVisionSubsystem`
 
@@ -334,7 +346,7 @@ Guard: `tan(verticalAngle) ≤ 0` → skip (piece above camera horizon).
 | `getClusters(robotPose)` | Greedy distance clusters sorted by centroid proximity |
 | `isCameraConnected()` | NT connectivity check |
 | `hasPieceDetection()` | True if a piece was detected within `PIECE_STALE_SECS` |
-| `publishHealthStatus()` | Called from `Robot.disabledPeriodic()` — posts to SmartDashboard for the Elastic "Vision Health" tab |
+| `publishHealthStatus()` | Called from `Robot.disabledPeriodic()` — posts to the dashboard for the Elastic "Vision Health" tab |
 
 **DataLog paths:** `/GamePieceVision/CameraConnected`, `/GamePieceVision/PieceDetected`, `/GamePieceVision/TrackedPieceCount`, `/GamePieceVision/Debug/MissFrames`.
 
@@ -503,7 +515,7 @@ new JoystickButton(stick, 5).whileHeld(() -> {
 | Button 3 | Right | X-lock defense (while held) |
 | Button 4 | Right | Pathfind to target (while held) — currently hardcoded to `"speaker"` |
 
-TODO: replace hardcoded pathfind target with a selector (SmartDashboard chooser or button set).
+TODO: replace hardcoded pathfind target with a selector (dashboard chooser or button set).
 
 ---
 

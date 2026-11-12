@@ -3,7 +3,7 @@ package frc.robot;
 import com.ctre.phoenix6.SignalLogger;
 
 import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import frc.lib.util.Dashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.subsystems.vision.visionHealthMonitor.HealthStatus;
@@ -40,7 +40,7 @@ public class Robot extends TimedRobot {
         RobotLogger.init();
 
         robotContainer = new RobotContainer();
-        SmartDashboard.putString("Robot/Status", "Initializing");
+        Dashboard.log("Robot/Status", "Initializing");
     }
 
     @Override
@@ -52,21 +52,21 @@ public class Robot extends TimedRobot {
 
     @Override
     public void disabledInit() {
-        SmartDashboard.putString("Robot/Status", "Disabled");
+        Dashboard.log("Robot/Status", "Disabled");
     }
 
     @Override
     public void disabledPeriodic() {
         HealthStatus health = robotContainer.getVision().getHealthStatus();
-        SmartDashboard.putString("Robot/Vision Health", health.name());
-        SmartDashboard.putBoolean("Robot/Vision Ready", health == HealthStatus.GOOD);
+        Dashboard.log("Robot/Vision Health", health.name());
+        Dashboard.log("Robot/Vision Ready", health == HealthStatus.GOOD);
         robotContainer.getGamePieceVision().publishHealthStatus();
     }
 
     @Override
     public void autonomousInit() {
         robotContainer.getVision().clearExpectedStartPose();
-        SmartDashboard.putString("Robot/Status", "Autonomous");
+        Dashboard.log("Robot/Status", "Autonomous");
         autoCommand = robotContainer.getAutonomousCommand();
         if (autoCommand != null) CommandScheduler.getInstance().schedule(autoCommand);
     }
@@ -77,7 +77,7 @@ public class Robot extends TimedRobot {
     @Override
     public void teleopInit() {
         robotContainer.getVision().clearExpectedStartPose();
-        SmartDashboard.putString("Robot/Status", "Teleop");
+        Dashboard.log("Robot/Status", "Teleop");
         if (autoCommand != null) autoCommand.cancel();
     }
 
@@ -87,7 +87,7 @@ public class Robot extends TimedRobot {
     @Override
     public void testInit() {
         CommandScheduler.getInstance().cancelAll();
-        SmartDashboard.putString("Robot/Status", "Test");
+        Dashboard.log("Robot/Status", "Test");
     }
 
     @Override

@@ -4,7 +4,7 @@ import edu.wpi.first.apriltag.AprilTag;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import frc.lib.util.Dashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.AprilTagIgnore;
 import frc.robot.constants.visionConstants;
@@ -107,7 +107,7 @@ public class visionSubsystem extends SubsystemBase {
 
         buildEstimators();
 
-        SmartDashboard.putString("Vision/Tag Ignore Rules", AprilTagIgnore.getSummary());
+        Dashboard.log("Vision/Tag Ignore Rules", AprilTagIgnore.getSummary());
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -121,7 +121,7 @@ public class visionSubsystem extends SubsystemBase {
             lastKnownAlliance = currentAlliance;
             fieldCal.rebuildLayout();
             buildEstimators();
-            SmartDashboard.putString("Vision/Alliance",
+            Dashboard.log("Vision/Alliance",
                 currentAlliance.isPresent() ? currentAlliance.get().name() : "Unknown");
         }
 
@@ -234,7 +234,7 @@ public class visionSubsystem extends SubsystemBase {
     public void rebuildEstimators() {
         fieldCal.rebuildLayout();
         buildEstimators();
-        SmartDashboard.putString("FieldCal/Status", "Estimators rebuilt");
+        Dashboard.log("FieldCal/Status", "Estimators rebuilt");
     }
 
     /**
@@ -247,12 +247,12 @@ public class visionSubsystem extends SubsystemBase {
     public void generateOffsetsOutput() {
         String snippet = buildOffsetsSnippet();
 
-        SmartDashboard.putString(visionConstants.OFFSETS_OUTPUT_NT_KEY,    snippet);
-        SmartDashboard.putString(visionConstants.OFFSETS_CLIPBOARD_NT_KEY, snippet);
+        Dashboard.log(visionConstants.OFFSETS_OUTPUT_NT_KEY,    snippet);
+        Dashboard.log(visionConstants.OFFSETS_CLIPBOARD_NT_KEY, snippet);
 
         writeToRoboRIO(snippet);
 
-        SmartDashboard.putString("FieldCal/Last Generated",
+        Dashboard.log("FieldCal/Last Generated",
             new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
                 .format(new java.util.Date()));
     }
@@ -277,24 +277,24 @@ public class visionSubsystem extends SubsystemBase {
         PhotonPipelineResult result = camera.getLatestResult();
 
         if (!result.hasTargets()) {
-            SmartDashboard.putBoolean("Vision/" + name + "/Has Target", false);
+            Dashboard.log("Vision/" + name + "/Has Target", false);
             return robotPoseEstimate.invalid();
         }
 
-        SmartDashboard.putBoolean("Vision/" + name + "/Has Target", true);
+        Dashboard.log("Vision/" + name + "/Has Target", true);
 
         int    tagCount  = result.getTargets().size();
         double ambiguity = result.getBestTarget().getPoseAmbiguity();
-        SmartDashboard.putNumber("Vision/" + name + "/Ambiguity", ambiguity);
+        Dashboard.log("Vision/" + name + "/Ambiguity", ambiguity);
 
         if (tagCount < visionConstants.MIN_TAGS_FOR_ESTIMATE) {
-            SmartDashboard.putString("Vision/" + name + "/Rejected",
+            Dashboard.log("Vision/" + name + "/Rejected",
                 "Too few tags: " + tagCount);
             return robotPoseEstimate.invalid();
         }
 
         if (ambiguity > visionConstants.MAX_AMBIGUITY) {
-            SmartDashboard.putString("Vision/" + name + "/Rejected",
+            Dashboard.log("Vision/" + name + "/Rejected",
                 "High ambiguity: " + String.format("%.3f", ambiguity));
             return robotPoseEstimate.invalid();
         }
@@ -303,7 +303,7 @@ public class visionSubsystem extends SubsystemBase {
         var estimated = estimator.estimateCoprocMultiTagPose(result);
         if (estimated.isEmpty()) estimated = estimator.estimateLowestAmbiguityPose(result);
         if (estimated.isEmpty()) {
-            SmartDashboard.putString("Vision/" + name + "/Rejected", "Estimator empty");
+            Dashboard.log("Vision/" + name + "/Rejected", "Estimator empty");
             return robotPoseEstimate.invalid();
         }
 
@@ -314,13 +314,13 @@ public class visionSubsystem extends SubsystemBase {
             double jump = lastAccepted.getTranslation()
                 .getDistance(pose3d.getTranslation());
             if (jump > visionConstants.MAX_POSE_JUMP_M) {
-                SmartDashboard.putString("Vision/" + name + "/Rejected",
+                Dashboard.log("Vision/" + name + "/Rejected",
                     "Pose jump: " + String.format("%.2f", jump) + "m");
                 return robotPoseEstimate.invalid();
             }
         }
 
-        SmartDashboard.putString("Vision/" + name + "/Rejected", "none");
+        Dashboard.log("Vision/" + name + "/Rejected", "none");
         return new robotPoseEstimate(pose3d, timestamp, ambiguity, tagCount, name);
     }
 
@@ -427,9 +427,9 @@ public class visionSubsystem extends SubsystemBase {
                 java.nio.file.Path.of(visionConstants.OFFSETS_ROBORIO_PATH),
                 content
             );
-            SmartDashboard.putString("FieldCal/RoboRIO Save", "OK");
+            Dashboard.log("FieldCal/RoboRIO Save", "OK");
         } catch (Exception e) {
-            SmartDashboard.putString("FieldCal/RoboRIO Save", "FAILED: " + e.getMessage());
+            Dashboard.log("FieldCal/RoboRIO Save", "FAILED: " + e.getMessage());
         }
     }
 
@@ -443,18 +443,18 @@ public class visionSubsystem extends SubsystemBase {
         boolean healthy       = healthMonitor.isOverallHealthy();
         String  healthStatus  = healthMonitor.getOverallStatus().name();
 
-        SmartDashboard.putBoolean("Vision/Best/Valid",     hasValid);
-        SmartDashboard.putString( "Vision/Best/Source",    bestPose.cameraName);
-        SmartDashboard.putNumber( "Vision/Best/Tag Count", bestPose.tagCount);
+        Dashboard.log("Vision/Best/Valid",     hasValid);
+        Dashboard.log("Vision/Best/Source",    bestPose.cameraName);
+        Dashboard.log("Vision/Best/Tag Count", bestPose.tagCount);
 
         if (hasValid) {
             Pose3d p = bestPose.pose;
-            SmartDashboard.putNumber("Vision/Best/X (ft)",      units.m_feet(p.getX()));
-            SmartDashboard.putNumber("Vision/Best/Y (ft)",      units.m_feet(p.getY()));
-            SmartDashboard.putNumber("Vision/Best/Z (in)",      units.m_inches(p.getZ()));
-            SmartDashboard.putNumber("Vision/Best/Yaw (deg)",   units.rad_deg(p.getRotation().getZ()));
-            SmartDashboard.putNumber("Vision/Best/Pitch (deg)", units.rad_deg(p.getRotation().getY()));
-            SmartDashboard.putNumber("Vision/Best/Roll (deg)",  units.rad_deg(p.getRotation().getX()));
+            Dashboard.log("Vision/Best/X (ft)",      units.m_feet(p.getX()));
+            Dashboard.log("Vision/Best/Y (ft)",      units.m_feet(p.getY()));
+            Dashboard.log("Vision/Best/Z (in)",      units.m_inches(p.getZ()));
+            Dashboard.log("Vision/Best/Yaw (deg)",   units.rad_deg(p.getRotation().getZ()));
+            Dashboard.log("Vision/Best/Pitch (deg)", units.rad_deg(p.getRotation().getY()));
+            Dashboard.log("Vision/Best/Roll (deg)",  units.rad_deg(p.getRotation().getX()));
         }
 
         // ── DataLog ───────────────────────────────────────────────────────────
