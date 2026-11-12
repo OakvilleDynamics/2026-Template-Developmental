@@ -97,6 +97,6 @@ public final class pathplannerConstants {
      * Each inner List<Translation2d> defines one convex polygon exclusion zone.
      * TODO: populate with 2026 field zone polygon vertices once field geometry is published.
      */
-    public static final java.util.List<java.util.List<edu.wpi.first.math.geometry.Translation2d>>
+    public static final java.util.List<java.util.List<org.wpilib.math.geometry.Translation2d>>
         ALLIANCE_ZONE_EXCLUSIONS = java.util.Collections.emptyList();
 }

@@ -2,8 +2,8 @@ package frc.lib.mechanisms.shooter;
 
 import java.util.function.BooleanSupplier;
 
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import org.wpilib.driverstation.DriverStation;
+import org.wpilib.command2.SubsystemBase;
 
 import frc.lib.util.ConfigVerifiable;
 import frc.lib.util.ConfigVerifyResult;

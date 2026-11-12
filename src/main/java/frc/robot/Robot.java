@@ -2,10 +2,10 @@ package frc.robot;
 
 import com.ctre.phoenix6.SignalLogger;
 
-import edu.wpi.first.wpilibj.TimedRobot;
+import org.wpilib.framework.TimedRobot;
 import frc.lib.util.Dashboard;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import org.wpilib.command2.Command;
+import org.wpilib.command2.CommandScheduler;
 import frc.robot.subsystems.vision.visionHealthMonitor.HealthStatus;
 import frc.lib.util.RobotLogger;
 

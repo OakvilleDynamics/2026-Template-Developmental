@@ -1,6 +1,6 @@
 package frc.lib.mechanisms.shooter;
 
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import org.wpilib.command2.SubsystemBase;
 
 import frc.lib.swerve.driveOdometryState;
 import frc.lib.mechanisms.shooter.ShooterCalculator.ShooterOutput;
@@ -300,7 +300,7 @@ public class shooterAimController extends SubsystemBase {
         }
 
         // --- 1. Read drivetrain state ---
-        edu.wpi.first.math.geometry.Pose2d pose = drive.getPose();
+        org.wpilib.math.geometry.Pose2d pose = drive.getPose();
         driveOdometryState odo = drive.getOdometryState();
         driveOdometryState.bucket b = odo.blendedState;
 

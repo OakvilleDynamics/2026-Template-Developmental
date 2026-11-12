@@ -3,7 +3,7 @@ package frc.lib.util;
 import java.util.ArrayList;
 import java.util.List;
 
-import edu.wpi.first.wpilibj.DriverStation;
+import org.wpilib.driverstation.DriverStation;
 
 import frc.lib.util.ConfigVerifiable;
 import frc.lib.util.ConfigVerifyResult;

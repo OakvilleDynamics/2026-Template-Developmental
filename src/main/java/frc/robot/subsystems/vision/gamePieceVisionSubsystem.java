@@ -8,15 +8,15 @@ import org.photonvision.PhotonCamera;
 import org.photonvision.targeting.PhotonPipelineResult;
 import org.photonvision.targeting.PhotonTrackedTarget;
 
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.util.datalog.BooleanLogEntry;
-import edu.wpi.first.util.datalog.IntegerLogEntry;
-import edu.wpi.first.wpilibj.DataLogManager;
-import edu.wpi.first.wpilibj.Timer;
+import org.wpilib.math.geometry.Pose2d;
+import org.wpilib.math.geometry.Pose3d;
+import org.wpilib.math.geometry.Translation2d;
+import org.wpilib.datalog.BooleanLogEntry;
+import org.wpilib.datalog.IntegerLogEntry;
+import org.wpilib.system.DataLogManager;
+import org.wpilib.system.Timer;
 import frc.lib.util.Dashboard;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import org.wpilib.command2.SubsystemBase;
 
 import frc.robot.constants.gamePieceConstants;
 import frc.robot.subsystems.swerveDrive.swerveDrive;
@@ -143,7 +143,7 @@ public class gamePieceVisionSubsystem extends SubsystemBase {
                 robotPoseAtCapture.getX(),
                 robotPoseAtCapture.getY(),
                 0.0,
-                new edu.wpi.first.math.geometry.Rotation3d(
+                new org.wpilib.math.geometry.Rotation3d(
                     0.0, 0.0, robotPoseAtCapture.getRotation().getRadians())
             );
             Pose3d cameraPose = robotPose3d.transformBy(

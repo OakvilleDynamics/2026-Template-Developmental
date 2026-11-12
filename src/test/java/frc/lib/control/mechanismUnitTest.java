@@ -12,7 +12,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import edu.wpi.first.hal.HAL;
+import org.wpilib.hardware.hal.HAL;
 
 import frc.lib.hardware.motor.FakeMotorIO;
 import frc.lib.hardware.motor.MotorVendor;

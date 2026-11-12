@@ -1,7 +1,7 @@
 package frc.lib.util;
 
-import edu.wpi.first.util.datalog.*;
-import edu.wpi.first.wpilibj.DataLogManager;
+import org.wpilib.datalog.*;
+import org.wpilib.system.DataLogManager;
 
 /**
  * RobotLogger.java

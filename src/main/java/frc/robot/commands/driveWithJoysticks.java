@@ -1,9 +1,9 @@
 package frc.robot.commands;
 
-import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.wpilibj.Joystick;
-import edu.wpi.first.wpilibj2.command.Command;
+import org.wpilib.math.util.MathUtil;
+import org.wpilib.math.geometry.Translation2d;
+import org.wpilib.driverstation.Joystick;
+import org.wpilib.command2.Command;
 import frc.robot.constants.swerveConstants;
 import frc.lib.swerve.driveInput;
 import frc.robot.subsystems.swerveDrive.swerveDrive;

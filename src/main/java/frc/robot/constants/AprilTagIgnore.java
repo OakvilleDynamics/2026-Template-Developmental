@@ -1,7 +1,7 @@
 package frc.robot.constants;
 
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import org.wpilib.driverstation.DriverStation;
+import org.wpilib.driverstation.DriverStation.Alliance;
 
 import java.util.Collections;
 import java.util.HashMap;

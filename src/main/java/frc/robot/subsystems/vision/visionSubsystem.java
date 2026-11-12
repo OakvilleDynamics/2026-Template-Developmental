@@ -2,10 +2,10 @@ package frc.robot.subsystems.vision;
 
 import edu.wpi.first.apriltag.AprilTag;
 import edu.wpi.first.apriltag.AprilTagFields;
-import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.wpilibj.DriverStation;
+import org.wpilib.math.geometry.Pose3d;
+import org.wpilib.driverstation.DriverStation;
 import frc.lib.util.Dashboard;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import org.wpilib.command2.SubsystemBase;
 import frc.robot.constants.AprilTagIgnore;
 import frc.robot.constants.visionConstants;
 import frc.robot.util.AprilTagFieldCal;
@@ -227,7 +227,7 @@ public class visionSubsystem extends SubsystemBase {
     public void clearTagOffset(int tagId)  { fieldCal.clearTagOffset(tagId); }
     public void clearAllOffsets()           { fieldCal.clearAllOffsets(); }
 
-    public Map<Integer, edu.wpi.first.math.geometry.Transform3d> getTagOffsets() {
+    public Map<Integer, org.wpilib.math.geometry.Transform3d> getTagOffsets() {
         return fieldCal.getTagOffsets();
     }
 

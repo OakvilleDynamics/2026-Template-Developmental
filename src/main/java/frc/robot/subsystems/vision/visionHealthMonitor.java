@@ -1,8 +1,8 @@
 package frc.robot.subsystems.vision;
 
-import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.util.datalog.IntegerLogEntry;
-import edu.wpi.first.wpilibj.DataLogManager;
+import org.wpilib.math.geometry.Pose3d;
+import org.wpilib.datalog.IntegerLogEntry;
+import org.wpilib.system.DataLogManager;
 import frc.lib.util.Dashboard;
 import frc.lib.util.units;
 

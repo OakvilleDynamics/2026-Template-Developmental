@@ -1,6 +1,6 @@
 package frc.lib.hardware.encoder;
 
-import edu.wpi.first.wpilibj.AnalogInput;
+import org.wpilib.hardware.discrete.AnalogInput;
 
 /**
  * ThriftyAnalogEncoder.java

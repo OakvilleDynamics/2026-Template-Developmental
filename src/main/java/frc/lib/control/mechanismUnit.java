@@ -3,9 +3,9 @@ package frc.lib.control;
 import java.util.ArrayList;
 import java.util.List;
 
-import edu.wpi.first.util.datalog.*;
-import edu.wpi.first.wpilibj.DataLogManager;
-import edu.wpi.first.wpilibj.DriverStation;
+import org.wpilib.datalog.*;
+import org.wpilib.system.DataLogManager;
+import org.wpilib.driverstation.DriverStation;
 import frc.lib.util.Dashboard;
 
 import frc.lib.hardware.motor.MotorIO;

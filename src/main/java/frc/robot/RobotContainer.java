@@ -1,10 +1,10 @@
 package frc.robot;
 
 import edu.wpi.first.apriltag.AprilTagFields;
-import edu.wpi.first.wpilibj.Joystick;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.button.JoystickButton;
+import org.wpilib.driverstation.Joystick;
+import org.wpilib.command2.Command;
+import org.wpilib.command2.Commands;
+import org.wpilib.command2.button.JoystickButton;
 
 import frc.robot.constants.canIDs;
 import frc.robot.constants.portIDs;
