@@ -1,7 +1,7 @@
 package frc.robot.subsystems.vision;
 
-import edu.wpi.first.apriltag.AprilTag;
-import edu.wpi.first.apriltag.AprilTagFields;
+import org.wpilib.fields.FieldTag;
+import org.wpilib.fields.Fields;
 import org.wpilib.math.geometry.Pose3d;
 import org.wpilib.driverstation.DriverStation;
 import frc.lib.util.Dashboard;
@@ -30,7 +30,7 @@ import java.util.Optional;
  * read from this class only — nothing reaches into internal objects directly.
  *
  * ─── CONSTRUCTOR ─────────────────────────────────────────────────────────────
- * @param gameYearField  AprilTagFields enum — passed from RobotContainer.
+ * @param gameYearField  Fields enum — passed from RobotContainer.
  *                       One change in RobotContainer propagates everywhere.
  *
  * ─── INTERNAL OBJECTS ────────────────────────────────────────────────────────
@@ -95,10 +95,10 @@ public class visionSubsystem extends SubsystemBase {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @param gameYearField  AprilTagFields enum for current game year.
+     * @param gameYearField  Fields enum for current game year.
      *                       Set once in RobotContainer — propagates everywhere.
      */
-    public visionSubsystem(AprilTagFields gameYearField) {
+    public visionSubsystem(Fields gameYearField) {
         fieldCal      = new AprilTagFieldCal(gameYearField);
         healthMonitor = new visionHealthMonitor();
 
@@ -332,8 +332,8 @@ public class visionSubsystem extends SubsystemBase {
         PhotonPipelineResult frontResult = frontCamera.getLatestResult();
         PhotonPipelineResult rearResult  = rearCamera.getLatestResult();
 
-        for (AprilTag tag : fieldCal.getAllBaseTags()) {
-            int tagId = tag.ID;
+        for (FieldTag tag : fieldCal.getAllBaseTags()) {
+            int tagId = tag.getID();
             Optional<Pose3d> baseline = fieldCal.getBaselineTagPose(tagId);
             if (baseline.isEmpty()) continue;
 

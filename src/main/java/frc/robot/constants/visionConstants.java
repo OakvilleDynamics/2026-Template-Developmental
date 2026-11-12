@@ -1,6 +1,6 @@
 package frc.robot.constants;
 
-import edu.wpi.first.apriltag.AprilTagFields;
+import org.wpilib.fields.Fields;
 import org.wpilib.math.geometry.Rotation3d;
 import org.wpilib.math.geometry.Transform3d;
 import org.wpilib.math.geometry.Translation3d;
@@ -14,7 +14,7 @@ import frc.lib.util.units;
  *
  * ─── SEASON SETUP CHECKLIST ──────────────────────────────────────────────────
  * Each new season, update:
- *   1. GAME_YEAR_FIELD  — change the AprilTagFields enum value in RobotContainer
+ *   1. GAME_YEAR_FIELD  — change the Fields enum value in RobotContainer
  *                         (not here — visionConstants holds the default reference only)
  *   2. Camera transforms — remeasure if robot geometry changed
  *   3. Stream URLs       — verify port numbers in PhotonVision UI
@@ -67,12 +67,12 @@ public final class visionConstants {
     // The authoritative value lives in RobotContainer as GAME_YEAR_FIELD.
     // This constant is kept here for reference and as a fallback default.
     //
-    // 2026 REBUILT:   AprilTagFields.kDefaultField (update when published)
-    // 2025 Reefscape: AprilTagFields.k2025Reefscape
-    // 2024 Crescendo: AprilTagFields.k2024Crescendo
+    // 2026 REBUILT:   Fields.DEFAULT_FIELD (FRC_2026_REBUILT_WELDED or _ANDY_MARK)
+    // 2025 Reefscape: Fields.FRC_2025_REEFSCAPE_WELDED
+    // 2024 Crescendo: Fields.FRC_2024_CRESCENDO
     //==========================================================================
 
-    public static final AprilTagFields GAME_YEAR_FIELD = AprilTagFields.kDefaultField;
+    public static final Fields GAME_YEAR_FIELD = Fields.DEFAULT_FIELD;
 
     //==========================================================================
     // Camera names

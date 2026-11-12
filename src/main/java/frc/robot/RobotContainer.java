@@ -1,6 +1,6 @@
 package frc.robot;
 
-import edu.wpi.first.apriltag.AprilTagFields;
+import org.wpilib.fields.Fields;
 import org.wpilib.driverstation.Joystick;
 import org.wpilib.command2.Command;
 import org.wpilib.command2.Commands;
@@ -49,11 +49,11 @@ public class RobotContainer {
      * AprilTag field layout for the current game year.
      * Propagates everywhere through the constructor chain.
      *
-     * 2026 REBUILT:   AprilTagFields.kDefaultField (update when constant published)
-     * 2025 Reefscape: AprilTagFields.k2025Reefscape
-     * 2024 Crescendo: AprilTagFields.k2024Crescendo
+     * 2026 REBUILT:   Fields.DEFAULT_FIELD (FRC_2026_REBUILT_WELDED or _ANDY_MARK)
+     * 2025 Reefscape: Fields.FRC_2025_REEFSCAPE_WELDED
+     * 2024 Crescendo: Fields.FRC_2024_CRESCENDO
      */
-    private static final AprilTagFields GAME_YEAR_FIELD = AprilTagFields.kDefaultField;
+    private static final Fields GAME_YEAR_FIELD = Fields.DEFAULT_FIELD;
 
     //==========================================================================
     // Robot geometry — all in INCHES

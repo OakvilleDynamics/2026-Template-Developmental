@@ -1,8 +1,8 @@
 package frc.robot.util;
 
-import edu.wpi.first.apriltag.AprilTag;
-import edu.wpi.first.apriltag.AprilTagFieldLayout;
-import edu.wpi.first.apriltag.AprilTagFields;
+import org.wpilib.fields.Field;
+import org.wpilib.fields.FieldTag;
+import org.wpilib.fields.Fields;
 import org.wpilib.math.geometry.Pose3d;
 import org.wpilib.math.geometry.Rotation3d;
 import org.wpilib.math.geometry.Transform3d;
@@ -26,7 +26,7 @@ import java.util.Optional;
  * Wraps the WPILib AprilTagFieldLayout and applies per-tag corrections.
  *
  * ─── CONSTRUCTOR ─────────────────────────────────────────────────────────────
- * Receives an AprilTagFields enum value from RobotContainer via visionSubsystem.
+ * Receives a Fields enum value from RobotContainer via visionSubsystem.
  * This is the single point where game year is bound to the layout.
  *
  * ─── OFFSET SYSTEM ───────────────────────────────────────────────────────────
@@ -51,8 +51,8 @@ import java.util.Optional;
 public class AprilTagFieldCal {
 
     // ── Field layout ──────────────────────────────────────────────────────────
-    private final AprilTagFieldLayout baseLayout;
-    private AprilTagFieldLayout       calibratedLayout;
+    private final Field baseLayout;
+    private Field       calibratedLayout;
 
     // ── Per-tag offsets: tag ID → Transform3d correction ─────────────────────
     private final Map<Integer, Transform3d> tagOffsets = new HashMap<>();
@@ -62,13 +62,13 @@ public class AprilTagFieldCal {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @param gameYearField  AprilTagFields enum for the current game year.
+     * @param gameYearField  Fields enum for the current game year.
      *                       Passed from RobotContainer via visionSubsystem.
-     *                       Example: AprilTagFields.kDefaultField (2026)
-     *                                AprilTagFields.k2025Reefscape
+     *                       Example: Fields.DEFAULT_FIELD (2026)
+     *                                Fields.FRC_2025_REEFSCAPE_WELDED
      */
-    public AprilTagFieldCal(AprilTagFields gameYearField) {
-        baseLayout       = AprilTagFieldLayout.loadField(gameYearField);
+    public AprilTagFieldCal(Fields gameYearField) {
+        baseLayout       = Field.loadField(gameYearField);
         calibratedLayout = baseLayout;
 
         Dashboard.log("Field/Length (ft)", getFieldLengthFt());
@@ -148,10 +148,10 @@ public class AprilTagFieldCal {
             return;
         }
 
-        List<AprilTag> correctedTags = new ArrayList<>();
+        List<FieldTag> correctedTags = new ArrayList<>();
 
-        for (AprilTag tag : baseLayout.getTags()) {
-            int tagId = tag.ID;
+        for (FieldTag tag : baseLayout.getTags()) {
+            int tagId = tag.getID();
 
             if (AprilTagIgnore.shouldIgnore(tagId)) {
                 Dashboard.log("FieldCal/Tag " + tagId + " Status", "IGNORED");
@@ -159,17 +159,19 @@ public class AprilTagFieldCal {
             }
 
             if (tagOffsets.containsKey(tagId)) {
-                Pose3d corrected = tag.pose.transformBy(tagOffsets.get(tagId));
-                correctedTags.add(new AprilTag(tagId, corrected));
+                Pose3d corrected = tag.getPose().transformBy(tagOffsets.get(tagId));
+                correctedTags.add(new FieldTag(tagId, corrected));
             } else {
                 correctedTags.add(tag);
             }
         }
 
-        calibratedLayout = new AprilTagFieldLayout(
-            correctedTags,
+        calibratedLayout = new Field(
+            baseLayout.name, baseLayout.season, baseLayout.game, baseLayout.fieldImage,
             baseLayout.getFieldLength(),
-            baseLayout.getFieldWidth()
+            baseLayout.getFieldWidth(),
+            baseLayout.program,
+            correctedTags
         );
 
         Dashboard.log("FieldCal/Active Tags",     correctedTags.size());
@@ -185,7 +187,7 @@ public class AprilTagFieldCal {
      * Returns the calibrated layout with all offsets and ignore rules applied.
      * This is the layout PhotonPoseEstimator uses — same data the robot acts on.
      */
-    public AprilTagFieldLayout getCalibratedLayout() { return calibratedLayout; }
+    public Field getCalibratedLayout() { return calibratedLayout; }
 
     /**
      * Returns the raw WPILib baseline pose for a tag (no offsets applied).
@@ -199,7 +201,7 @@ public class AprilTagFieldCal {
      * Returns all tags from the base layout including ignored ones.
      * Used by AprilTagFieldCalTab to build the full table.
      */
-    public List<AprilTag> getAllBaseTags() {
+    public List<FieldTag> getAllBaseTags() {
         return Collections.unmodifiableList(baseLayout.getTags());
     }
 
