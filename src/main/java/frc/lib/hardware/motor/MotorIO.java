@@ -1,5 +1,7 @@
 package frc.lib.hardware.motor;
 
+import org.wpilib.framework.RobotBase;
+
 import frc.lib.util.ConfigVerifyResult;
 
 /**
@@ -19,7 +21,8 @@ import frc.lib.util.ConfigVerifyResult;
  * ─── IMPLEMENTATIONS ─────────────────────────────────────────────────────────
  *   CTREMotor — TalonFX (Phoenix 6)
  *   REVMotor  — SparkMax / SparkFlex (REVLib)
- *   NovaMotor — ThriftyBot Nova (ThriftyLib)
+ *   NovaMotor — ThriftyBot Nova (ThriftyLib) — no 2027 release yet; excluded
+ *               from the build, SimMotorIO stands in during simulation
  *   FakeMotorIO (src/test) — in-memory stand-in for unit tests, no HAL required
  *
  * ─── UNITS ───────────────────────────────────────────────────────────────────
@@ -41,7 +44,13 @@ public interface MotorIO {
             case CTRE_TALONFX:    return new CTREMotor(config);
             case REV_SPARKMAX:
             case REV_SPARKFLEX:   return new REVMotor(config);
-            case THRIFTYBOT_NOVA: return new NovaMotor(config);
+            case THRIFTYBOT_NOVA:
+                // ThriftyLib has no 2027 (SystemCore) release yet, so NovaMotor is
+                // excluded from the build (see build.gradle). Restore
+                // `return new NovaMotor(config);` once a 2027 vendordep exists.
+                if (RobotBase.isSimulation()) return new SimMotorIO(config);
+                throw new UnsupportedOperationException(
+                    "ThriftyBot Nova is not available: ThriftyLib has no 2027 (SystemCore) release yet");
             default:
                 throw new IllegalArgumentException("MotorIO: unknown vendor " + config.vendor);
         }
