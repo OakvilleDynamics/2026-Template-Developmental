@@ -5,7 +5,6 @@ import com.pathplanner.lib.path.PathConstraints;
 
 import org.wpilib.math.geometry.Pose2d;
 import org.wpilib.util.Alert;
-import org.wpilib.util.Alert.AlertType;
 import org.wpilib.system.Timer;
 import org.wpilib.command2.Command;
 import org.wpilib.command2.CommandScheduler;
@@ -61,9 +60,9 @@ public class pathfindCommand extends Command {
     private boolean unavailable = false;
 
     // Shown in the dashboard's alerts widget (Elastic: "Alerts" group).
-    // Static so several pathfindCommands share one alert instead of stacking duplicates.
+    // Static: alert ids must be unique, and there may be several pathfindCommands.
     private static final Alert visionAlert =
-        new Alert("Pathfinding: vision stale", AlertType.kWarning);
+        new Alert("pathfindVisionStale", "Pathfinding: vision stale", Alert.Level.MEDIUM);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Constructor

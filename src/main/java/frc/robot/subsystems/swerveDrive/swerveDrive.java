@@ -17,7 +17,6 @@ import org.wpilib.math.kinematics.*;
 import org.wpilib.math.system.DCMotor;
 import com.ctre.phoenix6.hardware.Pigeon2;
 import org.wpilib.util.Alert;
-import org.wpilib.util.Alert.AlertType;
 import org.wpilib.driverstation.Alliance;
 import org.wpilib.driverstation.DriverStationErrors;
 import org.wpilib.driverstation.MatchState;
@@ -125,7 +124,7 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
     // PathPlanner availability — see configureForAutoBuilder()
     private boolean pathPlannerAvailable = false;
     private final Alert pathPlannerAlert =
-        new Alert("PathPlanner unavailable", AlertType.kError);
+        new Alert("pathPlannerUnavailable", "PathPlanner unavailable", Alert.Level.HIGH);
 
     // Dashboard tunables (under Drive/...)
     private final Dashboard.TunableNumber headingKpTunable, headingKiTunable, headingKdTunable;
