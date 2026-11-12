@@ -6,7 +6,7 @@ import com.thethriftybot.devices.ThriftyNova.EncoderType;
 import java.util.ArrayList;
 import java.util.List;
 
-import frc.robot.util.motors.ConfigVerifyResult;
+import frc.lib.util.ConfigVerifyResult;
 
 /**
  * NovaDriveMotor.java

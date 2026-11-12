@@ -1,8 +1,8 @@
-package frc.robot.subsystems.swerveDrive.steer;
+package frc.lib.hardware.encoder;
 
 /**
  * SwerveAbsoluteEncoder.java
- * PATH: src/main/java/frc/robot/subsystems/swerveDrive/steer/SwerveAbsoluteEncoder.java
+ * PATH: src/main/java/frc/lib/hardware/encoder/SwerveAbsoluteEncoder.java
  *
  * Vendor-agnostic interface for a swerve module absolute steer encoder.
  *

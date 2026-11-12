@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import frc.robot.constants.swerveConstants;
-import frc.robot.util.motors.ConfigVerifyResult;
+import frc.lib.util.ConfigVerifyResult;
 
 /**
  * CTREDriveMotor.java

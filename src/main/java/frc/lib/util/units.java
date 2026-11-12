@@ -1,8 +1,8 @@
-package frc.robot.util;
+package frc.lib.util;
 
 /**
  * units.java
- * PATH: src/main/java/frc/robot/util/units.java
+ * PATH: src/main/java/frc/lib/util/units.java
  *
  * Single source of truth for all unit conversions in this codebase.
  * All methods are static — no instantiation needed.

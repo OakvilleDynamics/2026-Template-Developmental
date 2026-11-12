@@ -1,10 +1,10 @@
-package frc.robot.util.motors;
+package frc.lib.util;
 
 import java.util.List;
 
 /**
  * ConfigVerifyResult.java
- * PATH: src/main/java/frc/robot/util/motors/ConfigVerifyResult.java
+ * PATH: src/main/java/frc/lib/util/ConfigVerifyResult.java
  *
  * Immutable result of a single motor controller config verification pass.
  * One instance is produced per physical motor controller (leader or

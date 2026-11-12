@@ -1,10 +1,10 @@
-package frc.robot.subsystems.swerveDrive.steer;
+package frc.lib.hardware.encoder;
 
 import com.ctre.phoenix6.hardware.CANcoder;
 
 /**
  * CTRECANcoderEncoder.java
- * PATH: src/main/java/frc/robot/subsystems/swerveDrive/steer/CTRECANcoderEncoder.java
+ * PATH: src/main/java/frc/lib/hardware/encoder/CTRECANcoderEncoder.java
  *
  * SwerveAbsoluteEncoder for the CTRE CANcoder (Phoenix 6).
  * Operates on the standard roboRIO CAN bus — no CANivore required.

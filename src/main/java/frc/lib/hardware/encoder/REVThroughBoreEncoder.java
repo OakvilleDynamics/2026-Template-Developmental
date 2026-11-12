@@ -1,11 +1,11 @@
-package frc.robot.subsystems.swerveDrive.steer;
+package frc.lib.hardware.encoder;
 
 import com.revrobotics.spark.SparkBase;
 import com.revrobotics.spark.SparkAbsoluteEncoder;
 
 /**
  * REVThroughBoreEncoder.java
- * PATH: src/main/java/frc/robot/subsystems/swerveDrive/steer/REVThroughBoreEncoder.java
+ * PATH: src/main/java/frc/lib/hardware/encoder/REVThroughBoreEncoder.java
  *
  * SwerveAbsoluteEncoder for the REV Through Bore encoder wired to the data port
  * of a SparkMax, SparkFlex, or compatible Nova controller.

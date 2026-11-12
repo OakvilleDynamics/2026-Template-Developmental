@@ -1,8 +1,10 @@
-package frc.robot.util.motors;
+package frc.lib.control;
+
+import frc.lib.control.ff.ffProvider;
 
 /**
  * mechanismConfig.java
- * PATH: src/main/java/frc/robot/util/motors/mechanismConfig.java
+ * PATH: src/main/java/frc/lib/control/mechanismConfig.java
  *
  * Immutable configuration object for a mechanismUnit. Build one with the
  * inner Builder, then pass it to mechanismUnit.create().

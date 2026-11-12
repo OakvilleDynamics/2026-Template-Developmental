@@ -1,11 +1,11 @@
-package frc.robot.subsystems.swerveDrive.steer;
+package frc.lib.hardware.encoder;
 
 import edu.wpi.first.wpilibj.AnalogInput;
 import frc.robot.constants.swerveConstants;
 
 /**
  * ThriftyAnalogEncoder.java
- * PATH: src/main/java/frc/robot/subsystems/swerveDrive/steer/ThriftyAnalogEncoder.java
+ * PATH: src/main/java/frc/lib/hardware/encoder/ThriftyAnalogEncoder.java
  *
  * SwerveAbsoluteEncoder for the Thrifty absolute analog encoder (0–3.3 V output).
  * Wired to a roboRIO analog port.

@@ -1,8 +1,8 @@
-package frc.robot.subsystems.swerveDrive;
+package frc.lib.swerve;
 
 /**
  * driveOdometryState.java
- * PATH: src/main/java/frc/robot/subsystems/swerveDrive/driveOdometryState.java
+ * PATH: src/main/java/frc/lib/swerve/driveOdometryState.java
  *
  * Full snapshot of drivetrain motion state, updated every 20ms loop.
  * Read via swerveDrive.getOdometryState() from any command or subsystem.

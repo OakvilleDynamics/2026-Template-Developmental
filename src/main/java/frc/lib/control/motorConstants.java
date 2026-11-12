@@ -1,8 +1,8 @@
-package frc.robot.util.motors;
+package frc.lib.control;
 
 /**
  * motorConstants.java
- * PATH: src/main/java/frc/robot/util/motors/motorConstants.java
+ * PATH: src/main/java/frc/lib/control/motorConstants.java
  *
  * Enumerations and package-level constants shared across all mechanismUnit
  * implementations. No vendor-specific imports.

@@ -1,16 +1,17 @@
-package frc.robot.util;
+package frc.lib.mechanisms.shooter;
 
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import frc.robot.commands.driveWithJoysticks;
-import frc.robot.subsystems.swerveDrive.driveOdometryState;
+import frc.lib.swerve.driveOdometryState;
 import frc.robot.subsystems.swerveDrive.swerveDrive;
-import frc.robot.util.ShooterCalculator.ShooterOutput;
-import frc.robot.util.mechanisms.shooterMechanism;
+import frc.lib.mechanisms.shooter.ShooterCalculator.ShooterOutput;
+import frc.lib.mechanisms.shooter.shooterMechanism;
+import frc.lib.util.units;
 
 /**
  * shooterAimController.java
- * PATH: src/main/java/frc/robot/util/shooterAimController.java
+ * PATH: src/main/java/frc/lib/mechanisms/shooter/shooterAimController.java
  *
  * Orchestration middleware between the drivetrain, ShooterCalculator, and
  * shooterMechanism. Runs every loop as a SubsystemBase.

@@ -1,6 +1,6 @@
 package frc.robot.subsystems.swerveDrive.steer;
 
-import frc.robot.util.motors.ConfigVerifyResult;
+import frc.lib.util.ConfigVerifyResult;
 
 /**
  * SwerveSteerMotor.java

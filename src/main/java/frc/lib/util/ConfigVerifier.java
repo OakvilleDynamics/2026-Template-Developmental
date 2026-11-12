@@ -1,4 +1,4 @@
-package frc.robot.util;
+package frc.lib.util;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,12 +6,12 @@ import java.util.List;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
-import frc.robot.util.motors.ConfigVerifiable;
-import frc.robot.util.motors.ConfigVerifyResult;
+import frc.lib.util.ConfigVerifiable;
+import frc.lib.util.ConfigVerifyResult;
 
 /**
  * ConfigVerifier.java
- * PATH: src/main/java/frc/robot/util/ConfigVerifier.java
+ * PATH: src/main/java/frc/lib/util/ConfigVerifier.java
  *
  * Startup motor config verification registry.
  *

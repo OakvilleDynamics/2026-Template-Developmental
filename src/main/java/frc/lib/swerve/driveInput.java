@@ -1,11 +1,11 @@
-package frc.robot.subsystems.swerveDrive;
+package frc.lib.swerve;
 
 import edu.wpi.first.math.geometry.Translation2d;
-import frc.robot.util.units;
+import frc.lib.util.units;
 
 /**
  * driveInput.java
- * PATH: src/main/java/frc/robot/subsystems/swerveDrive/driveInput.java
+ * PATH: src/main/java/frc/lib/swerve/driveInput.java
  *
  * Immutable data object passed into swerveDrive.drive() each loop.
  * The only way to move the robot is to build one of these and hand it in.

@@ -1,4 +1,4 @@
-package frc.robot.util;
+package frc.lib.mechanisms.shooter;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -8,11 +8,11 @@ import java.util.Set;
 
 import frc.robot.constants.shooterConstants;
 import frc.robot.constants.shooterConstants.LookupEntry;
-import frc.robot.util.motors.mechanismConfig;
+import frc.lib.control.mechanismConfig;
 
 /**
  * ShooterCalculator.java
- * PATH: src/main/java/frc/robot/util/ShooterCalculator.java
+ * PATH: src/main/java/frc/lib/mechanisms/shooter/ShooterCalculator.java
  *
  * Pure-math shooting calculator — no hardware, no WPILib dependencies.
  * Testable in isolation from a standard Java main().

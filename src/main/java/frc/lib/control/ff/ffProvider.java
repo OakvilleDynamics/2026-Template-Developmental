@@ -1,8 +1,8 @@
-package frc.robot.util.motors;
+package frc.lib.control.ff;
 
 /**
  * ffProvider.java
- * PATH: src/main/java/frc/robot/util/motors/ffProvider.java
+ * PATH: src/main/java/frc/lib/control/ff/ffProvider.java
  *
  * Functional interface for feed-forward voltage computations in mechanismUnit.
  * Used for both tier-2 (self-contained gravity/spring physics) and tier-3

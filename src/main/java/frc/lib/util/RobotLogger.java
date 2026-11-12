@@ -1,4 +1,4 @@
-package frc.robot.util;
+package frc.lib.util;
 
 import edu.wpi.first.util.datalog.*;
 import edu.wpi.first.wpilibj.DataLogManager;
@@ -6,7 +6,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
  * RobotLogger.java
- * PATH: src/main/java/frc/robot/util/RobotLogger.java
+ * PATH: src/main/java/frc/lib/util/RobotLogger.java
  *
  * Static singleton that owns the WPILib DataLog instance and all log entry handles.
  * Call RobotLogger.init() once in Robot.robotInit() before any subsystem uses it.

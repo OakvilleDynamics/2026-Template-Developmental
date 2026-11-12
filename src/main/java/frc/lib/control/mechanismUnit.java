@@ -1,4 +1,4 @@
-package frc.robot.util.motors;
+package frc.lib.control;
 
 import java.util.function.Supplier;
 
@@ -7,14 +7,21 @@ import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
-import frc.robot.subsystems.swerveDrive.driveOdometryState;
-import frc.robot.util.units;
+import frc.lib.swerve.driveOdometryState;
+import frc.lib.util.units;
 
 import java.util.List;
+import frc.lib.util.ConfigVerifiable;
+import frc.lib.util.ConfigVerifyResult;
+import frc.lib.hardware.motor.motorModels;
+import frc.lib.control.ff.ffProvider;
+import frc.robot.util.motors.CTREMechanismUnit;
+import frc.robot.util.motors.REVMechanismUnit;
+import frc.robot.util.motors.NovaMechanismUnit;
 
 /**
  * mechanismUnit.java
- * PATH: src/main/java/frc/robot/util/motors/mechanismUnit.java
+ * PATH: src/main/java/frc/lib/control/mechanismUnit.java
  *
  * Abstract base class for all motor controller abstractions.
  *

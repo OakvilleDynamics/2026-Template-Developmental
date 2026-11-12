@@ -1,8 +1,8 @@
-package frc.robot.util.motors;
+package frc.lib.hardware.motor;
 
 /**
  * motorModels.java
- * PATH: src/main/java/frc/robot/util/motors/motorModels.java
+ * PATH: src/main/java/frc/lib/hardware/motor/motorModels.java
  *
  * Catalog of approved FRC motors with vendor-datasheet specifications.
  * Used by mechanismUnit.FF to derive feed-forward voltages from first principles

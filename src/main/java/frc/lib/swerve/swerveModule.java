@@ -1,4 +1,4 @@
-package frc.robot.subsystems.swerveDrive;
+package frc.lib.swerve;
 
 import com.revrobotics.spark.SparkBase;
 import com.revrobotics.spark.SparkFlex;
@@ -14,26 +14,26 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 import frc.robot.constants.swerveConstants;
-import frc.robot.util.RobotLogger;
-import frc.robot.util.motors.ConfigVerifiable;
-import frc.robot.util.motors.ConfigVerifyResult;
+import frc.lib.util.RobotLogger;
+import frc.lib.util.ConfigVerifiable;
+import frc.lib.util.ConfigVerifyResult;
 
 import frc.robot.subsystems.swerveDrive.drive.SwerveDriveMotor;
 import frc.robot.subsystems.swerveDrive.drive.CTREDriveMotor;
 import frc.robot.subsystems.swerveDrive.drive.REVDriveMotor;
 import frc.robot.subsystems.swerveDrive.drive.NovaDriveMotor;
 import frc.robot.subsystems.swerveDrive.steer.SwerveSteerMotor;
-import frc.robot.subsystems.swerveDrive.steer.SwerveAbsoluteEncoder;
+import frc.lib.hardware.encoder.SwerveAbsoluteEncoder;
 import frc.robot.subsystems.swerveDrive.steer.CTRESteerMotor;
 import frc.robot.subsystems.swerveDrive.steer.NovaSteerMotor;
 import frc.robot.subsystems.swerveDrive.steer.REVSteerMotor;
-import frc.robot.subsystems.swerveDrive.steer.ThriftyAnalogEncoder;
-import frc.robot.subsystems.swerveDrive.steer.CTRECANcoderEncoder;
-import frc.robot.subsystems.swerveDrive.steer.REVThroughBoreEncoder;
+import frc.lib.hardware.encoder.ThriftyAnalogEncoder;
+import frc.lib.hardware.encoder.CTRECANcoderEncoder;
+import frc.lib.hardware.encoder.REVThroughBoreEncoder;
 
 /**
  * swerveModule.java
- * PATH: src/main/java/frc/robot/subsystems/swerveDrive/swerveModule.java
+ * PATH: src/main/java/frc/lib/swerve/swerveModule.java
  *
  * One Thrifty Narrow swerve module — vendor-agnostic.
  *

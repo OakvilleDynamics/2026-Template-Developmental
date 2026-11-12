@@ -1,10 +1,10 @@
-package frc.robot.util.motors;
+package frc.lib.util;
 
 import java.util.List;
 
 /**
  * ConfigVerifiable.java
- * PATH: src/main/java/frc/robot/util/motors/ConfigVerifiable.java
+ * PATH: src/main/java/frc/lib/util/ConfigVerifiable.java
  *
  * Marker interface for any object that can verify its motor controller
  * configurations were applied correctly. Implemented by mechanismUnit

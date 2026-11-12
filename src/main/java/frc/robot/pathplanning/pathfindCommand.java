@@ -13,7 +13,7 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.constants.pathplannerConstants;
 import frc.robot.subsystems.swerveDrive.swerveDrive;
 import frc.robot.subsystems.vision.visionSubsystem;
-import frc.robot.util.RobotLogger;
+import frc.lib.util.RobotLogger;
 
 import java.util.function.Supplier;
 

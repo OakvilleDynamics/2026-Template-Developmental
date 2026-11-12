@@ -1,23 +1,23 @@
-package frc.robot.util.mechanisms;
+package frc.lib.mechanisms.elevator;
 
 import java.util.function.Supplier;
 
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
-import frc.robot.subsystems.swerveDrive.driveOdometryState;
-import frc.robot.util.motors.ConfigVerifiable;
-import frc.robot.util.motors.ConfigVerifyResult;
-import frc.robot.util.motors.ffProvider;
-import frc.robot.util.motors.mechanismConfig;
-import frc.robot.util.motors.mechanismUnit;
-import frc.robot.util.motors.motorConstants;
-import frc.robot.util.motors.motorModels;
-import frc.robot.util.units;
+import frc.lib.swerve.driveOdometryState;
+import frc.lib.util.ConfigVerifiable;
+import frc.lib.util.ConfigVerifyResult;
+import frc.lib.control.ff.ffProvider;
+import frc.lib.control.mechanismConfig;
+import frc.lib.control.mechanismUnit;
+import frc.lib.control.motorConstants;
+import frc.lib.hardware.motor.motorModels;
+import frc.lib.util.units;
 
 /**
  * elevatorMechanism.java
- * PATH: src/main/java/frc/robot/util/mechanisms/elevatorMechanism.java
+ * PATH: src/main/java/frc/lib/mechanisms/elevator/elevatorMechanism.java
  *
  * Pre-packaged elevator mechanism supporting:
  *   - Elevator  (required) — linear lift driven by a fixed-radius timing belt pulley.
