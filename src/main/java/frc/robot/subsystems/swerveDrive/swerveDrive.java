@@ -113,7 +113,7 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
     private double prevAngVel    = 0, prevImuAngVel = 0;
     private double prevCorX = 0, prevCorY = 0;
     private double prevCorVelX = 0, prevCorVelY = 0;
-    private double prevTimestamp = Timer.getFPGATimestamp();
+    private double prevTimestamp = Timer.getTimestamp();
     private Translation2d commandedCoR = new Translation2d();
 
     // Blend weight (encoder vs IMU)
@@ -207,7 +207,7 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
         poseEstimator.update(getYaw(), getModulePositions());
 
         // Write latest estimated pose into the ring buffer for getPoseAtTime()
-        double now = Timer.getFPGATimestamp();
+        double now = Timer.getTimestamp();
         poseHistory[poseHistoryHead]           = poseEstimator.getEstimatedPosition();
         poseHistoryTimestamps[poseHistoryHead] = now;
         poseHistoryHead = (poseHistoryHead + 1) % POSE_HISTORY_SIZE;
@@ -668,7 +668,7 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
         prevAngVel    = encAngVel;    prevImuAngVel = imuAngVelRad;
         prevCorX = corX; prevCorY = corY; prevCorVelX = corVx; prevCorVelY = corVy;
 
-        return new driveOdometryState(encBucket, imuBucket, blended, Timer.getFPGATimestamp());
+        return new driveOdometryState(encBucket, imuBucket, blended, Timer.getTimestamp());
     }
 
     private double blendAngle(double a1, double a2, double alpha) {

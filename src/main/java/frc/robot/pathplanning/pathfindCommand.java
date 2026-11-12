@@ -135,7 +135,7 @@ public class pathfindCommand extends Command {
             tab.add("Vision Warning", "No valid pose — running on odometry only");
             return true;
         }
-        double age = Timer.getFPGATimestamp() - vision.getBestPose().timestampSecs;
+        double age = Timer.getTimestamp() - vision.getBestPose().timestampSecs;
         if (age > pathplannerConstants.VISION_STALENESS_THRESHOLD_S) {
             tab.add("Vision Warning",
                 String.format("Stale pose: %.2fs old (threshold %.2fs) — odometry only",

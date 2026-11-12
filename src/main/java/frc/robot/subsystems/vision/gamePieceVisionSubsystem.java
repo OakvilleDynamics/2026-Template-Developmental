@@ -192,7 +192,7 @@ public class gamePieceVisionSubsystem extends SubsystemBase {
         }
 
         // Expire stale entries
-        double now = Timer.getFPGATimestamp();
+        double now = Timer.getTimestamp();
         trackedPieces.removeIf(p -> now - p.timestampSecs > gamePieceConstants.PIECE_STALE_SECS);
 
         // DataLog

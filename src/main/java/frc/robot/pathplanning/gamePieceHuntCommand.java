@@ -152,7 +152,7 @@ public class gamePieceHuntCommand extends Command {
         currentTarget  = null;
         consumedTargets.clear();
         pathfinder     = null;
-        stateEnteredTimestamp = Timer.getFPGATimestamp();
+        stateEnteredTimestamp = Timer.getTimestamp();
     }
 
     @Override
@@ -185,7 +185,7 @@ public class gamePieceHuntCommand extends Command {
 
     private void executeFinding() {
         // Timeout — give up if no piece found within the configured window
-        if (Timer.getFPGATimestamp() - stateEnteredTimestamp
+        if (Timer.getTimestamp() - stateEnteredTimestamp
                 > gamePieceConstants.HUNT_NO_PIECE_TIMEOUT_SECS) {
             transitionTo(State.DONE);
             return;
@@ -225,7 +225,7 @@ public class gamePieceHuntCommand extends Command {
 
     private void executeIntaking() {
         boolean complete = intakeComplete.getAsBoolean();
-        boolean timedOut = Timer.getFPGATimestamp() - stateEnteredTimestamp
+        boolean timedOut = Timer.getTimestamp() - stateEnteredTimestamp
                            > gamePieceConstants.INTAKE_TIMEOUT_SECS;
 
         if (!complete && !timedOut) return;
@@ -289,7 +289,7 @@ public class gamePieceHuntCommand extends Command {
 
     private void transitionTo(State next) {
         state = next;
-        stateEnteredTimestamp = Timer.getFPGATimestamp();
+        stateEnteredTimestamp = Timer.getTimestamp();
     }
 
     private static Translation2d centroid(List<Translation2d> cluster) {
