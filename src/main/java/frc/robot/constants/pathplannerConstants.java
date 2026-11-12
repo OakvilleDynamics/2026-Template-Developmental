@@ -86,7 +86,7 @@ public final class pathplannerConstants {
 
     /**
      * If the most recent accepted vision pose is older than this threshold (seconds),
-     * pathfindCommand logs a Shuffleboard warning but still runs on odometry alone.
+     * pathfindCommand raises a dashboard Alert but still runs on odometry alone.
      */
     public static final double VISION_STALENESS_THRESHOLD_S = 0.5;
 

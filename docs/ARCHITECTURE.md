@@ -88,7 +88,7 @@ src/main/java/frc/robot/
 │       ├── gamePieceVisionSubsystem ← Game piece detection, field position tracking
 │       ├── robotPoseEstimate        ← One camera's pose estimate (AprilTag)
 │       ├── visionHealthMonitor      ← Pre-match checks, ongoing health + DataLog
-│       └── AprilTagFieldCalTab      ← Shuffleboard calibration interface
+│       └── AprilTagFieldCalTab      ← Field Calibration dashboard data (Elastic)
 │
 └── util/
     └── AprilTagFieldCal    ← Field layout, per-tag offsets, geometry
@@ -265,7 +265,7 @@ The command is decoupled from any specific intake subsystem. It takes a `Runnabl
 
 ### Health monitoring
 
-During disabled mode, `gamePieceVisionSubsystem.publishHealthStatus()` posts to SmartDashboard alongside the AprilTag camera health. Pre-match driver check: place a game piece ~1–2 m in front of the intake and confirm "Piece Detected = true" on the "Vision Health" Shuffleboard tab.
+During disabled mode, `gamePieceVisionSubsystem.publishHealthStatus()` posts to SmartDashboard alongside the AprilTag camera health. Pre-match driver check: place a game piece ~1–2 m in front of the intake and confirm "Piece Detected = true" on the Elastic "Vision Health" tab.
 
 Every loop during a match, four DataLog entries are written: `CameraConnected`, `PieceDetected`, `TrackedPieceCount`, `Debug/MissFrames` — all under `/GamePieceVision/`. These are post-match reviewable in Advantage Scope.
 
@@ -479,7 +479,7 @@ The field calibration system lets the team measure and correct per-tag position 
 3. Output is saved three ways: Python script capture to a laptop file, backup copy to the roboRIO, and clipboard copy
 4. Corrections are applied to subsequent pose estimates
 
-This is accessible from the "Field Calibration" tab in Shuffleboard. Run this procedure at each competition event after setup.
+This is accessible from the "Field Calibration" tab in Elastic. Run this procedure at each competition event after setup.
 
 ---
 
@@ -508,7 +508,7 @@ All conversion functions live in `lib/util/units.java`. Never convert inline —
 `Robot.robotPeriodic()` runs in this order:
 1. **CommandScheduler** — runs subsystem `periodic()` methods + all active commands
 2. **updatePoseEstimator()** — injects latest valid vision pose into Kalman filter
-3. **updateCalibrationTab()** — refreshes field calibration Shuffleboard tab
+3. **updateCalibrationTab()** — refreshes field calibration Elastic tab
 
 Mode-specific behavior:
 - **Disabled** — vision health status posted to dashboard

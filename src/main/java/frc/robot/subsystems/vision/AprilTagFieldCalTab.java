@@ -1,33 +1,32 @@
 package frc.robot.subsystems.vision;
 
-import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.wpilibj.shuffleboard.BuiltInLayouts;
-import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
-import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
-import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardLayout;
-import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.constants.AprilTagIgnore;
 import frc.robot.constants.visionConstants;
 import frc.lib.util.units;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * AprilTagFieldCalTab.java
  * PATH: src/main/java/frc/robot/subsystems/vision/AprilTagFieldCalTab.java
  *
- * Builds and updates the "Field Calibration" Shuffleboard tab.
+ * Publishes the data behind the "Field Calibration" Elastic tab.
  * Only talks to visionSubsystem — no direct access to internal vision objects.
  *
- * ─── TAB LAYOUT ──────────────────────────────────────────────────────────────
+ * Widget placement, sizes and types are defined in the Elastic layout file, not
+ * in code. Values and operator inputs are published under
+ * /SmartDashboard/Field Calibration/.
+ *
+ * ─── TAB LAYOUT (build in Elastic) ───────────────────────────────────────────
  *
  * TOP HALF — Camera feeds
  *   Left:  Front camera MJPEG stream (PhotonVision native annotation)
  *   Right: Rear camera MJPEG stream  (PhotonVision native annotation)
+ *   Add as Camera Stream widgets from the /CameraPublisher topics.
  *
  * MIDDLE — Tag calibration table (published to NetworkTables for Glass)
  *   Three rows per tag: Cam1, Cam2, Blend
@@ -55,22 +54,18 @@ public class AprilTagFieldCalTab {
     // ── Single reference to all vision data ───────────────────────────────────
     private final visionSubsystem vision;
 
-    // ── Shuffleboard tab ──────────────────────────────────────────────────────
-    private final ShuffleboardTab tab;
+    // ── Dashboard keys (/SmartDashboard/Field Calibration/...) ───────────────
+    private static final String DASH_PREFIX    = "Field Calibration/";
+    private static final String TOLERANCE_KEY  = DASH_PREFIX + "Cal Tolerance (in)";
+    private static final String GENERATE_KEY   = DASH_PREFIX + "Offsets File/Generate File";
 
     // ── Threshold input ───────────────────────────────────────────────────────
-    private GenericEntry toleranceEntry;
-    private double       toleranceInches = visionConstants.CALIBRATION_TOLERANCE_INCHES;
+    private double toleranceInches = visionConstants.CALIBRATION_TOLERANCE_INCHES;
 
-    // ── Bottom strip entries ──────────────────────────────────────────────────
-    private GenericEntry blendPoseX, blendPoseY, blendPoseTheta;
-    private GenericEntry frontPoseX, frontPoseY, frontPoseTheta;
-    private GenericEntry rearPoseX,  rearPoseY,  rearPoseTheta;
-    private GenericEntry farCornerX, farCornerY;
-    private GenericEntry generateButton;
-
-    // ── Per-tag offset input entries ──────────────────────────────────────────
-    private final Map<Integer, GenericEntry[]> offsetInputEntries = new HashMap<>();
+    // ── Per-tag offset inputs: X (in), Y (in), Z (in), Yaw (deg) ──────────────
+    private static final String[] OFFSET_INPUT_NAMES =
+        { "X offset (in)", "Y offset (in)", "Z offset (in)", "Yaw offset (deg)" };
+    private final Set<Integer> offsetInputsPublished = new HashSet<>();
 
     // ── NetworkTables for Glass tag table ─────────────────────────────────────
     private final NetworkTable tagTable;
@@ -81,13 +76,16 @@ public class AprilTagFieldCalTab {
 
     public AprilTagFieldCalTab(visionSubsystem vision) {
         this.vision   = vision;
-        this.tab      = Shuffleboard.getTab("Field Calibration");
         this.tagTable = NetworkTableInstance.getDefault()
             .getTable("FieldCalibration").getSubTable("Tags");
 
-        buildTopSection();
-        buildBottomStrip();
-        buildToleranceInput();
+        SmartDashboard.putNumber(TOLERANCE_KEY, visionConstants.CALIBRATION_TOLERANCE_INCHES);
+        SmartDashboard.putBoolean(GENERATE_KEY, false);
+        SmartDashboard.putString(DASH_PREFIX + "Offsets File/Last saved", "never");
+
+        double[] farCorner = vision.getFarCornerFt();
+        SmartDashboard.putNumber(DASH_PREFIX + "Field Far Corner/X (ft)", farCorner[0]);
+        SmartDashboard.putNumber(DASH_PREFIX + "Field Far Corner/Y (ft)", farCorner[1]);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -95,85 +93,11 @@ public class AprilTagFieldCalTab {
     // ─────────────────────────────────────────────────────────────────────────
 
     public void update() {
-        toleranceInches = toleranceEntry.getDouble(visionConstants.CALIBRATION_TOLERANCE_INCHES);
+        toleranceInches = SmartDashboard.getNumber(
+            TOLERANCE_KEY, visionConstants.CALIBRATION_TOLERANCE_INCHES);
         updateBottomStrip();
         updateTagTable();
         checkGenerateButton();
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Top section — camera feeds
-    // ─────────────────────────────────────────────────────────────────────────
-
-    private void buildTopSection() {
-        tab.addCamera("Front Camera",
-                visionConstants.FRONT_CAMERA_NAME,
-                visionConstants.FRONT_CAMERA_STREAM_URL)
-            .withWidget(BuiltInWidgets.kCameraStream)
-            .withSize(4, 3)
-            .withPosition(0, 0)
-            .withProperties(Map.of("showCrosshair", true, "showControls", false));
-
-        tab.addCamera("Rear Camera",
-                visionConstants.REAR_CAMERA_NAME,
-                visionConstants.REAR_CAMERA_STREAM_URL)
-            .withWidget(BuiltInWidgets.kCameraStream)
-            .withSize(4, 3)
-            .withPosition(4, 0)
-            .withProperties(Map.of("showCrosshair", true, "showControls", false));
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Bottom strip
-    // ─────────────────────────────────────────────────────────────────────────
-
-    private void buildBottomStrip() {
-        ShuffleboardLayout blendLayout = tab
-            .getLayout("Blended POSE", BuiltInLayouts.kList)
-            .withSize(2, 3).withPosition(0, 6);
-        blendPoseX     = blendLayout.add("X (ft)", 0.0).getEntry();
-        blendPoseY     = blendLayout.add("Y (ft)", 0.0).getEntry();
-        blendPoseTheta = blendLayout.add("Theta (deg)", 0.0).getEntry();
-
-        ShuffleboardLayout frontLayout = tab
-            .getLayout("Front Cam POSE", BuiltInLayouts.kList)
-            .withSize(2, 3).withPosition(2, 6);
-        frontPoseX     = frontLayout.add("X (ft)", 0.0).getEntry();
-        frontPoseY     = frontLayout.add("Y (ft)", 0.0).getEntry();
-        frontPoseTheta = frontLayout.add("Theta (deg)", 0.0).getEntry();
-
-        ShuffleboardLayout rearLayout = tab
-            .getLayout("Rear Cam POSE", BuiltInLayouts.kList)
-            .withSize(2, 3).withPosition(4, 6);
-        rearPoseX     = rearLayout.add("X (ft)", 0.0).getEntry();
-        rearPoseY     = rearLayout.add("Y (ft)", 0.0).getEntry();
-        rearPoseTheta = rearLayout.add("Theta (deg)", 0.0).getEntry();
-
-        ShuffleboardLayout cornerLayout = tab
-            .getLayout("Field Far Corner", BuiltInLayouts.kList)
-            .withSize(2, 3).withPosition(6, 6);
-        farCornerX = cornerLayout.add("X (ft)", 0.0).getEntry();
-        farCornerY = cornerLayout.add("Y (ft)", 0.0).getEntry();
-
-        double[] farCorner = vision.getFarCornerFt();
-        farCornerX.setDouble(farCorner[0]);
-        farCornerY.setDouble(farCorner[1]);
-
-        ShuffleboardLayout genLayout = tab
-            .getLayout("Offsets File", BuiltInLayouts.kList)
-            .withSize(2, 3).withPosition(8, 6);
-        generateButton = genLayout.add("Generate File", false)
-            .withWidget(BuiltInWidgets.kToggleButton).getEntry();
-        genLayout.add("Last saved", "never").withWidget(BuiltInWidgets.kTextView);
-    }
-
-    private void buildToleranceInput() {
-        toleranceEntry = tab
-            .add("Cal Tolerance (in)", visionConstants.CALIBRATION_TOLERANCE_INCHES)
-            .withWidget(BuiltInWidgets.kNumberSlider)
-            .withSize(2, 1).withPosition(8, 5)
-            .withProperties(Map.of("min", 0.1, "max", 3.0))
-            .getEntry();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -181,31 +105,21 @@ public class AprilTagFieldCalTab {
     // ─────────────────────────────────────────────────────────────────────────
 
     private void updateBottomStrip() {
-        robotPoseEstimate best = vision.getBestPose();
-        if (best.isValid) {
-            blendPoseX.setDouble(units.m_feet(best.pose.getX()));
-            blendPoseY.setDouble(units.m_feet(best.pose.getY()));
-            blendPoseTheta.setDouble(units.rad_deg(best.pose.getRotation().getZ()));
-        } else {
-            blendPoseX.setDouble(0); blendPoseY.setDouble(0); blendPoseTheta.setDouble(0);
-        }
+        publishPose("Blended POSE/",   vision.getBestPose());
+        publishPose("Front Cam POSE/", vision.getFrontPose());
+        publishPose("Rear Cam POSE/",  vision.getRearPose());
+    }
 
-        robotPoseEstimate front = vision.getFrontPose();
-        if (front.isValid) {
-            frontPoseX.setDouble(units.m_feet(front.pose.getX()));
-            frontPoseY.setDouble(units.m_feet(front.pose.getY()));
-            frontPoseTheta.setDouble(units.rad_deg(front.pose.getRotation().getZ()));
+    private void publishPose(String group, robotPoseEstimate estimate) {
+        String prefix = DASH_PREFIX + group;
+        if (estimate.isValid) {
+            SmartDashboard.putNumber(prefix + "X (ft)",      units.m_feet(estimate.pose.getX()));
+            SmartDashboard.putNumber(prefix + "Y (ft)",      units.m_feet(estimate.pose.getY()));
+            SmartDashboard.putNumber(prefix + "Theta (deg)", units.rad_deg(estimate.pose.getRotation().getZ()));
         } else {
-            frontPoseX.setDouble(0); frontPoseY.setDouble(0); frontPoseTheta.setDouble(0);
-        }
-
-        robotPoseEstimate rear = vision.getRearPose();
-        if (rear.isValid) {
-            rearPoseX.setDouble(units.m_feet(rear.pose.getX()));
-            rearPoseY.setDouble(units.m_feet(rear.pose.getY()));
-            rearPoseTheta.setDouble(units.rad_deg(rear.pose.getRotation().getZ()));
-        } else {
-            rearPoseX.setDouble(0); rearPoseY.setDouble(0); rearPoseTheta.setDouble(0);
+            SmartDashboard.putNumber(prefix + "X (ft)",      0.0);
+            SmartDashboard.putNumber(prefix + "Y (ft)",      0.0);
+            SmartDashboard.putNumber(prefix + "Theta (deg)", 0.0);
         }
     }
 
@@ -372,21 +286,12 @@ public class AprilTagFieldCalTab {
                                      visionSubsystem.tagReading rear) {
         if (!recommendation.contains("offset")) return;
 
-        if (!offsetInputEntries.containsKey(tagId)) {
-            ShuffleboardLayout offsetLayout = tab
-                .getLayout("Tag " + tagId + " Offset Input", BuiltInLayouts.kList)
-                .withSize(2, 3)
-                .withPosition(10, tagId % 3);
-
-            GenericEntry[] entries = new GenericEntry[4];
-            entries[0] = offsetLayout.add("X offset (in)", 0.0).getEntry();
-            entries[1] = offsetLayout.add("Y offset (in)", 0.0).getEntry();
-            entries[2] = offsetLayout.add("Z offset (in)", 0.0).getEntry();
-            entries[3] = offsetLayout.add("Yaw offset (deg)", 0.0).getEntry();
-            offsetInputEntries.put(tagId, entries);
+        String prefix = DASH_PREFIX + "Tag " + tagId + " Offset Input/";
+        String[] keys = new String[OFFSET_INPUT_NAMES.length];
+        for (int i = 0; i < keys.length; i++) keys[i] = prefix + OFFSET_INPUT_NAMES[i];
+        if (offsetInputsPublished.add(tagId)) {
+            for (String key : keys) SmartDashboard.putNumber(key, 0.0);
         }
-
-        GenericEntry[] entries = offsetInputEntries.get(tagId);
 
         // Pre-populate with negated average delta as suggested correction
         double suggestX = 0, suggestY = 0;
@@ -401,14 +306,14 @@ public class AprilTagFieldCalTab {
             suggestY = -rear.deltaYInches();
         }
 
-        entries[0].setDouble(suggestX);
-        entries[1].setDouble(suggestY);
+        SmartDashboard.putNumber(keys[0], suggestX);
+        SmartDashboard.putNumber(keys[1], suggestY);
 
         // Apply if user has entered non-zero values
-        double xIn  = entries[0].getDouble(0);
-        double yIn  = entries[1].getDouble(0);
-        double zIn  = entries[2].getDouble(0);
-        double yDeg = entries[3].getDouble(0);
+        double xIn  = SmartDashboard.getNumber(keys[0], 0);
+        double yIn  = SmartDashboard.getNumber(keys[1], 0);
+        double zIn  = SmartDashboard.getNumber(keys[2], 0);
+        double yDeg = SmartDashboard.getNumber(keys[3], 0);
 
         if (Math.abs(xIn) > 0.01 || Math.abs(yIn) > 0.01 ||
             Math.abs(zIn) > 0.01 || Math.abs(yDeg) > 0.01) {
@@ -421,9 +326,9 @@ public class AprilTagFieldCalTab {
     // ─────────────────────────────────────────────────────────────────────────
 
     private void checkGenerateButton() {
-        if (generateButton.getBoolean(false)) {
+        if (SmartDashboard.getBoolean(GENERATE_KEY, false)) {
             vision.generateOffsetsOutput();
-            generateButton.setBoolean(false);
+            SmartDashboard.putBoolean(GENERATE_KEY, false);
             SmartDashboard.putString("FieldCal/Tab/GenerateStatus",
                 "Generated — check Documents/FieldCalibration/");
         }

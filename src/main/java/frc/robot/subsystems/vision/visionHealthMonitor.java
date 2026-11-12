@@ -1,18 +1,10 @@
 package frc.robot.subsystems.vision;
 
 import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.util.datalog.IntegerLogEntry;
 import edu.wpi.first.wpilibj.DataLogManager;
-import edu.wpi.first.wpilibj.shuffleboard.BuiltInLayouts;
-import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
-import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
-import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardLayout;
-import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.lib.util.units;
-
-import java.util.Map;
 
 /**
  * visionHealthMonitor.java
@@ -27,8 +19,10 @@ import java.util.Map;
  * WARNING  — degraded but usable (intermittent tag loss, elevated ambiguity)
  * FAULT    — camera lost or pose implausible (action required)
  *
- * ─── SHUFFLEBOARD ────────────────────────────────────────────────────────────
- * Builds a "Vision Health" tab with status indicators.
+ * ─── DASHBOARD ───────────────────────────────────────────────────────────────
+ * Publishes status indicators under /SmartDashboard/Vision Health/ for the
+ * Elastic "Vision Health" tab. Widget type, colors and placement live in the
+ * Elastic layout file, not in code.
  * Drive team should check this tab before every match.
  * Green = good, Yellow = warning, Red = fault.
  *
@@ -84,20 +78,12 @@ public class visionHealthMonitor {
     private final IntegerLogEntry logRearHighAmbFrames;
     private final IntegerLogEntry logInterCameraDisagree;
 
-    // ── Shuffleboard entries ──────────────────────────────────────────────────
-    private GenericEntry sbFrontConnected;
-    private GenericEntry sbRearConnected;
-    private GenericEntry sbFrontTagsSeen;
-    private GenericEntry sbRearTagsSeen;
-    private GenericEntry sbFrontAmbiguity;
-    private GenericEntry sbRearAmbiguity;
-    private GenericEntry sbCamerasAgree;
-    private GenericEntry sbPosePlausible;
-    private GenericEntry sbOverallStatus;
-    private GenericEntry sbFrontPoseX;
-    private GenericEntry sbFrontPoseY;
-    private GenericEntry sbRearPoseX;
-    private GenericEntry sbRearPoseY;
+    // ── Dashboard key prefixes (/SmartDashboard/Vision Health/...) ────────────
+    private static final String DASH_PREFIX   = "Vision Health/";
+    private static final String STATUS_PREFIX = DASH_PREFIX + "Camera Status/";
+    private static final String AMB_PREFIX    = DASH_PREFIX + "Ambiguity/";
+    private static final String CHECK_PREFIX  = DASH_PREFIX + "Checks/";
+    private static final String POSE_PREFIX   = DASH_PREFIX + "Current Pose (ft)/";
 
     // ─────────────────────────────────────────────────────────────────────────
     // Constructor
@@ -110,7 +96,6 @@ public class visionHealthMonitor {
         logFrontHighAmbFrames  = new IntegerLogEntry(log, "/Vision/Debug/FrontHighAmbFrames");
         logRearHighAmbFrames   = new IntegerLogEntry(log, "/Vision/Debug/RearHighAmbFrames");
         logInterCameraDisagree = new IntegerLogEntry(log, "/Vision/Debug/InterCameraDisagree");
-        buildShuffleboardTab();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -125,7 +110,7 @@ public class visionHealthMonitor {
         updateCameraHealth(frontEstimate, rearEstimate);
         updateInterCameraAgreement(frontEstimate, rearEstimate);
         updateOverallStatus();
-        publishToShuffleboard(frontEstimate, rearEstimate);
+        publishToDashboard(frontEstimate, rearEstimate);
         logDiagnosticCounters();
     }
 
@@ -241,98 +226,19 @@ public class visionHealthMonitor {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Shuffleboard tab construction
+    // Dashboard updates
     // ─────────────────────────────────────────────────────────────────────────
 
-    private void buildShuffleboardTab() {
-        ShuffleboardTab tab = Shuffleboard.getTab("Vision Health");
+    private void publishToDashboard(robotPoseEstimate front, robotPoseEstimate rear) {
+        SmartDashboard.putBoolean(STATUS_PREFIX + "Front connected", frontConnected);
+        SmartDashboard.putBoolean(STATUS_PREFIX + "Rear connected", rearConnected);
+        SmartDashboard.putBoolean(STATUS_PREFIX + "Front sees tags", front.isValid);
+        SmartDashboard.putBoolean(STATUS_PREFIX + "Rear sees tags", rear.isValid);
 
-        // Camera connection and tag visibility
-        ShuffleboardLayout connLayout = tab
-            .getLayout("Camera Status", BuiltInLayouts.kList)
-            .withSize(2, 4).withPosition(0, 0);
+        SmartDashboard.putNumber(AMB_PREFIX + "Front ambiguity", front.isValid ? front.ambiguity : 1.0);
+        SmartDashboard.putNumber(AMB_PREFIX + "Rear ambiguity", rear.isValid   ? rear.ambiguity  : 1.0);
 
-        sbFrontConnected = connLayout.add("Front connected", false)
-            .withWidget(BuiltInWidgets.kBooleanBox)
-            .withProperties(Map.of("colorWhenTrue", "green", "colorWhenFalse", "red"))
-            .getEntry();
-
-        sbRearConnected = connLayout.add("Rear connected", false)
-            .withWidget(BuiltInWidgets.kBooleanBox)
-            .withProperties(Map.of("colorWhenTrue", "green", "colorWhenFalse", "red"))
-            .getEntry();
-
-        sbFrontTagsSeen = connLayout.add("Front sees tags", false)
-            .withWidget(BuiltInWidgets.kBooleanBox)
-            .withProperties(Map.of("colorWhenTrue", "green", "colorWhenFalse", "yellow"))
-            .getEntry();
-
-        sbRearTagsSeen = connLayout.add("Rear sees tags", false)
-            .withWidget(BuiltInWidgets.kBooleanBox)
-            .withProperties(Map.of("colorWhenTrue", "green", "colorWhenFalse", "yellow"))
-            .getEntry();
-
-        // Ambiguity bars
-        ShuffleboardLayout ambLayout = tab
-            .getLayout("Ambiguity", BuiltInLayouts.kList)
-            .withSize(2, 4).withPosition(2, 0);
-
-        sbFrontAmbiguity = ambLayout.add("Front ambiguity", 1.0)
-            .withWidget(BuiltInWidgets.kNumberBar)
-            .withProperties(Map.of("min", 0.0, "max", 1.0))
-            .getEntry();
-
-        sbRearAmbiguity = ambLayout.add("Rear ambiguity", 1.0)
-            .withWidget(BuiltInWidgets.kNumberBar)
-            .withProperties(Map.of("min", 0.0, "max", 1.0))
-            .getEntry();
-
-        // Agreement and plausibility checks
-        ShuffleboardLayout checkLayout = tab
-            .getLayout("Checks", BuiltInLayouts.kList)
-            .withSize(2, 4).withPosition(4, 0);
-
-        sbCamerasAgree = checkLayout.add("Cameras agree", false)
-            .withWidget(BuiltInWidgets.kBooleanBox)
-            .withProperties(Map.of("colorWhenTrue", "green", "colorWhenFalse", "red"))
-            .getEntry();
-
-        sbPosePlausible = checkLayout.add("Pose plausible", false)
-            .withWidget(BuiltInWidgets.kBooleanBox)
-            .withProperties(Map.of("colorWhenTrue", "green", "colorWhenFalse", "yellow"))
-            .getEntry();
-
-        // Overall status — large text indicator
-        sbOverallStatus = tab.add("Overall Status", "UNKNOWN")
-            .withWidget(BuiltInWidgets.kTextView)
-            .withSize(2, 2).withPosition(6, 0)
-            .getEntry();
-
-        // Current pose readout (feet for readability)
-        ShuffleboardLayout poseLayout = tab
-            .getLayout("Current Pose (ft)", BuiltInLayouts.kList)
-            .withSize(2, 4).withPosition(6, 2);
-
-        sbFrontPoseX = poseLayout.add("Front X (ft)", 0.0).getEntry();
-        sbFrontPoseY = poseLayout.add("Front Y (ft)", 0.0).getEntry();
-        sbRearPoseX  = poseLayout.add("Rear X (ft)",  0.0).getEntry();
-        sbRearPoseY  = poseLayout.add("Rear Y (ft)",  0.0).getEntry();
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Shuffleboard updates
-    // ─────────────────────────────────────────────────────────────────────────
-
-    private void publishToShuffleboard(robotPoseEstimate front, robotPoseEstimate rear) {
-        sbFrontConnected.setBoolean(frontConnected);
-        sbRearConnected.setBoolean(rearConnected);
-        sbFrontTagsSeen.setBoolean(front.isValid);
-        sbRearTagsSeen.setBoolean(rear.isValid);
-
-        sbFrontAmbiguity.setDouble(front.isValid ? front.ambiguity : 1.0);
-        sbRearAmbiguity.setDouble(rear.isValid   ? rear.ambiguity  : 1.0);
-
-        sbCamerasAgree.setBoolean(interCameraDisagree < 10);
+        SmartDashboard.putBoolean(CHECK_PREFIX + "Cameras agree", interCameraDisagree < 10);
 
         // Plausibility check — only meaningful when expected pose is set
         boolean plausible = true;
@@ -346,17 +252,17 @@ public class visionHealthMonitor {
                     units.m_feet(dist));
             }
         }
-        sbPosePlausible.setBoolean(plausible);
+        SmartDashboard.putBoolean(CHECK_PREFIX + "Pose plausible", plausible);
 
-        sbOverallStatus.setString(overallStatus.name());
+        SmartDashboard.putString(DASH_PREFIX + "Overall Status", overallStatus.name());
 
         if (front.isValid) {
-            sbFrontPoseX.setDouble(units.m_feet(front.pose.getX()));
-            sbFrontPoseY.setDouble(units.m_feet(front.pose.getY()));
+            SmartDashboard.putNumber(POSE_PREFIX + "Front X (ft)", units.m_feet(front.pose.getX()));
+            SmartDashboard.putNumber(POSE_PREFIX + "Front Y (ft)", units.m_feet(front.pose.getY()));
         }
         if (rear.isValid) {
-            sbRearPoseX.setDouble(units.m_feet(rear.pose.getX()));
-            sbRearPoseY.setDouble(units.m_feet(rear.pose.getY()));
+            SmartDashboard.putNumber(POSE_PREFIX + "Rear X (ft)", units.m_feet(rear.pose.getX()));
+            SmartDashboard.putNumber(POSE_PREFIX + "Rear Y (ft)", units.m_feet(rear.pose.getY()));
         }
     }
 }

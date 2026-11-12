@@ -24,7 +24,7 @@ import frc.lib.util.units;
  * At each competition event:
  *   1. Verify stream URLs are reachable from driver station laptop
  *   2. Confirm camera names match exactly what is set in PhotonVision UI
- *   3. Run field calibration procedure via "Field Calibration" Shuffleboard tab
+ *   3. Run field calibration procedure via "Field Calibration" Elastic tab
  *   4. Apply any needed tag offsets and generate the offsets file
  *
  * ─── CAMERA TRANSFORM COORDINATE FRAME ───────────────────────────────────────
@@ -84,7 +84,7 @@ public final class visionConstants {
     public static final String REAR_CAMERA_NAME  = "rear_cam";
 
     //==========================================================================
-    // Camera MJPEG stream URLs for Shuffleboard display
+    // Camera MJPEG stream URLs for Elastic display
     // Displayed on the "Field Calibration" tab via AprilTagFieldCalTab
     // Verify port numbers in PhotonVision UI → camera settings
     //==========================================================================
@@ -164,7 +164,7 @@ public final class visionConstants {
     //==========================================================================
     // Field calibration thresholds
     // These are DEFAULT values. All are overridable live from the
-    // "Field Calibration" Shuffleboard tab without redeploying.
+    // "Field Calibration" Elastic tab without redeploying.
     //==========================================================================
 
     /**
@@ -176,7 +176,7 @@ public final class visionConstants {
      *   Cameras disagree with each other → check camera transform
      *
      * Default: 1.0 inch. Adjustable live from "Cal Tolerance (in)" slider
-     * on the Field Calibration Shuffleboard tab.
+     * on the Field Calibration Elastic tab.
      */
     public static final double CALIBRATION_TOLERANCE_INCHES = 1.0;
 

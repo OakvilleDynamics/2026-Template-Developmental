@@ -36,7 +36,7 @@ import frc.lib.util.units;
  *   1. Verify GAME_PIECE_CAMERA_NAME matches exactly what is set in PhotonVision UI
  *   2. Confirm stream URL is reachable from driver station
  *   3. Pre-match check: place a game piece ~1–2 m in front of intake, confirm
- *      "Piece Detected" reads true on Shuffleboard "Vision Health" tab
+ *      "Piece Detected" reads true on Elastic "Vision Health" tab
  *
  * ─── CAMERA TRANSFORM CONVENTION ─────────────────────────────────────────────
  * Transform3d encodes camera position and orientation relative to robot center:

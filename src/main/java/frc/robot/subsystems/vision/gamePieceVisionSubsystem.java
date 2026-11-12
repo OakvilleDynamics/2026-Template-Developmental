@@ -2,7 +2,6 @@ package frc.robot.subsystems.vision;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import org.photonvision.PhotonCamera;
@@ -16,11 +15,7 @@ import edu.wpi.first.util.datalog.BooleanLogEntry;
 import edu.wpi.first.util.datalog.IntegerLogEntry;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.shuffleboard.BuiltInLayouts;
-import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
-import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
-import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardLayout;
-import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import frc.robot.constants.gamePieceConstants;
@@ -56,7 +51,7 @@ import frc.robot.subsystems.swerveDrive.swerveDrive;
  * publishHealthStatus() — called from Robot.disabledPeriodic() for pre-match UI.
  *
  * Pre-match driver check: place a game piece 1–2 m in front of the intake and
- * confirm "Piece Detected" shows true on the Shuffleboard "Vision Health" tab.
+ * confirm "Piece Detected" shows true on the Elastic "Vision Health" tab.
  *
  * ─── CLUSTERING ──────────────────────────────────────────────────────────────
  * getClusters() groups tracked pieces by proximity (CLUSTER_RADIUS_M).
@@ -100,10 +95,8 @@ public class gamePieceVisionSubsystem extends SubsystemBase {
     private final IntegerLogEntry logTrackedPieceCount;
     private final IntegerLogEntry logMissFrames;
 
-    // ── Shuffleboard ──────────────────────────────────────────────────────────
-    private edu.wpi.first.networktables.GenericEntry sbCameraConnected;
-    private edu.wpi.first.networktables.GenericEntry sbPieceDetected;
-    private edu.wpi.first.networktables.GenericEntry sbTrackedCount;
+    // ── Dashboard key prefix (/SmartDashboard/Vision Health/Game Piece Camera/) ─
+    private static final String DASH_PREFIX = "Vision Health/Game Piece Camera/";
 
     // ─────────────────────────────────────────────────────────────────────────
     // Constructor
@@ -123,7 +116,6 @@ public class gamePieceVisionSubsystem extends SubsystemBase {
         logTrackedPieceCount = new IntegerLogEntry(log, "/GamePieceVision/TrackedPieceCount");
         logMissFrames        = new IntegerLogEntry(log, "/GamePieceVision/Debug/MissFrames");
 
-        buildShuffleboardWidgets();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -202,10 +194,10 @@ public class gamePieceVisionSubsystem extends SubsystemBase {
         logTrackedPieceCount.append(trackedPieces.size());
         logMissFrames       .append(missFrameCount);
 
-        // Shuffleboard (live during match)
-        if (sbCameraConnected != null) sbCameraConnected.setBoolean(cameraConnected);
-        if (sbPieceDetected   != null) sbPieceDetected  .setBoolean(pieceDetected);
-        if (sbTrackedCount    != null) sbTrackedCount   .setDouble(trackedPieces.size());
+        // Dashboard (live during match) — shown on the Elastic "Vision Health" tab
+        SmartDashboard.putBoolean(DASH_PREFIX + "Intake cam connected", cameraConnected);
+        SmartDashboard.putBoolean(DASH_PREFIX + "Piece detected",       pieceDetected);
+        SmartDashboard.putNumber(DASH_PREFIX + "Tracked pieces",        trackedPieces.size());
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -306,12 +298,12 @@ public class gamePieceVisionSubsystem extends SubsystemBase {
     /**
      * True if at least one game piece is currently tracked.
      * Driver pre-match check: place a piece in front of the intake and confirm
-     * this returns true on Shuffleboard before the match starts.
+     * this returns true on Elastic before the match starts.
      */
     public boolean hasPieceDetection() { return !trackedPieces.isEmpty(); }
 
     /**
-     * Human-readable health summary for Shuffleboard / driver station.
+     * Human-readable health summary for Elastic / driver station.
      * Called from Robot.disabledPeriodic() pre-match.
      */
     public String getHealthStatus() {
@@ -322,12 +314,11 @@ public class gamePieceVisionSubsystem extends SubsystemBase {
     }
 
     /**
-     * Publishes health status string to Shuffleboard.
+     * Publishes health status string to the dashboard.
      * Call from Robot.disabledPeriodic() so the drive team sees it pre-match.
      */
     public void publishHealthStatus() {
-        edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putString(
-            "GamePieceVision/HealthStatus", getHealthStatus());
+        SmartDashboard.putString("GamePieceVision/HealthStatus", getHealthStatus());
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -361,32 +352,5 @@ public class gamePieceVisionSubsystem extends SubsystemBase {
         double x = 0, y = 0;
         for (Translation2d p : cluster) { x += p.getX(); y += p.getY(); }
         return new Translation2d(x / cluster.size(), y / cluster.size());
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Shuffleboard
-    // ─────────────────────────────────────────────────────────────────────────
-
-    private void buildShuffleboardWidgets() {
-        ShuffleboardTab tab = Shuffleboard.getTab("Vision Health");
-
-        ShuffleboardLayout layout = tab
-            .getLayout("Game Piece Camera", BuiltInLayouts.kList)
-            .withSize(2, 3)
-            .withPosition(8, 0);
-
-        sbCameraConnected = layout.add("Intake cam connected", false)
-            .withWidget(BuiltInWidgets.kBooleanBox)
-            .withProperties(Map.of("colorWhenTrue", "green", "colorWhenFalse", "red"))
-            .getEntry();
-
-        sbPieceDetected = layout.add("Piece detected", false)
-            .withWidget(BuiltInWidgets.kBooleanBox)
-            .withProperties(Map.of("colorWhenTrue", "green", "colorWhenFalse", "yellow"))
-            .getEntry();
-
-        sbTrackedCount = layout.add("Tracked pieces", 0.0)
-            .withWidget(BuiltInWidgets.kTextView)
-            .getEntry();
     }
 }

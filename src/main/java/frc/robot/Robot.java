@@ -18,7 +18,7 @@ import frc.lib.util.RobotLogger;
  * ─── PERIODIC CALL ORDER (robotPeriodic, every 20ms) ─────────────────────────
  * 1. CommandScheduler.run()      — runs subsystem periodic() + all active commands
  * 2. updatePoseEstimator()       — fuses latest vision pose into Kalman filter
- * 3. updateCalibrationTab()      — updates field calibration Shuffleboard tab
+ * 3. updateCalibrationTab()      — updates field calibration Elastic tab
  */
 public class Robot extends TimedRobot {
 

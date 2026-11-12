@@ -308,7 +308,7 @@ Diagnostic counters (`frontMissFrames`, `rearMissFrames`, `frontHighAmbFrames`, 
 
 ### `AprilTagFieldCal` / `AprilTagFieldCalTab`
 
-Field calibration system. Measures per-tag position offsets vs. WPILib baseline. Outputs correction offsets three ways: Python script capture to laptop, backup to roboRIO, clipboard copy. Tab is live on Shuffleboard "Field Calibration" tab.
+Field calibration system. Measures per-tag position offsets vs. WPILib baseline. Outputs correction offsets three ways: Python script capture to laptop, backup to roboRIO, clipboard copy. Values are published under SmartDashboard "Field Calibration/" for the Elastic "Field Calibration" tab.
 
 ### `gamePieceVisionSubsystem`
 
@@ -334,11 +334,11 @@ Guard: `tan(verticalAngle) ≤ 0` → skip (piece above camera horizon).
 | `getClusters(robotPose)` | Greedy distance clusters sorted by centroid proximity |
 | `isCameraConnected()` | NT connectivity check |
 | `hasPieceDetection()` | True if a piece was detected within `PIECE_STALE_SECS` |
-| `publishHealthStatus()` | Called from `Robot.disabledPeriodic()` — posts to Shuffleboard "Vision Health" |
+| `publishHealthStatus()` | Called from `Robot.disabledPeriodic()` — posts to SmartDashboard for the Elastic "Vision Health" tab |
 
 **DataLog paths:** `/GamePieceVision/CameraConnected`, `/GamePieceVision/PieceDetected`, `/GamePieceVision/TrackedPieceCount`, `/GamePieceVision/Debug/MissFrames`.
 
-**Health check:** No field calibration needed (pieces have no fixed reference positions). Pre-match check: place a game piece ~1–2m in front of intake, confirm `PieceDetected = true` on Shuffleboard.
+**Health check:** No field calibration needed (pieces have no fixed reference positions). Pre-match check: place a game piece ~1–2m in front of intake, confirm `Piece detected = true` on the Elastic "Vision Health" tab.
 
 ---
 
@@ -424,7 +424,7 @@ Robot mass (lbs → kg), MOI (lb·in² → kg·m²), wheel COF, path velocity/ac
 Every 20ms, in `Robot.robotPeriodic()`:
 1. `CommandScheduler.getInstance().run()` — runs subsystem `periodic()` + all active commands
 2. `robotContainer.updatePoseEstimator()` — fuses latest valid vision pose into Kalman filter
-3. `robotContainer.updateCalibrationTab()` — updates field calibration Shuffleboard tab
+3. `robotContainer.updateCalibrationTab()` — updates field calibration Elastic tab
 
 ---
 
