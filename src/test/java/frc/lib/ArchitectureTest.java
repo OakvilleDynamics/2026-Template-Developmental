@@ -24,6 +24,9 @@ import org.junit.jupiter.api.Test;
  *   2. Vendor motor/sensor libraries (CTRE, REV, ThriftyBot) are imported only
  *      under frc.lib.hardware — everything above talks to MotorIO /
  *      AbsoluteEncoderIO, which is what makes a vendor swap a one-value change.
+ *   3. Only frc.lib.util.Dashboard uses the WPILib dashboard API (SmartDashboard
+ *      in 2026, Telemetry / Tunables in 2027) — everything else calls Dashboard,
+ *      which is what makes a WPILib-year switch a one-file change.
  *
  * Pure file scan — no HAL, runs in milliseconds.
  */
@@ -37,6 +40,11 @@ class ArchitectureTest {
         Pattern.compile("^\\s*import\\s+(static\\s+)?frc\\.robot\\.");
     private static final Pattern VENDOR_IMPORT =
         Pattern.compile("^\\s*import\\s+(static\\s+)?com\\.(ctre|revrobotics|thethriftybot)\\.");
+    private static final Pattern DASHBOARD_API =
+        Pattern.compile("\\b(SmartDashboard\\.|Telemetry\\.log\\(|Tunables\\.)"
+                        + "|\\bimport\\s+(edu\\.wpi\\.first\\.wpilibj\\.smartdashboard\\.SmartDashboard"
+                        + "|org\\.wpilib\\.telemetry\\.|org\\.wpilib\\.tunable\\.)");
+    private static final Path DASHBOARD_FILE = LIB_ROOT.resolve("util/Dashboard.java");
     private static final Pattern VENDOR_FQN    =
         Pattern.compile("\\bcom\\.(ctre|revrobotics|thethriftybot)\\.");
 
@@ -69,6 +77,13 @@ class ArchitectureTest {
     }
 
     private interface PathFilter { boolean include(Path path); }
+
+    @Test
+    void dashboardApiOnlyInDashboardClass() throws IOException {
+        List<String> violations = scan(MAIN_ROOT, DASHBOARD_API, path -> !path.equals(DASHBOARD_FILE));
+        assertTrue(violations.isEmpty(),
+            "Use frc.lib.util.Dashboard instead of the WPILib dashboard API:\n  " + String.join("\n  ", violations));
+    }
 
     private static List<String> scan(Path root, Pattern pattern, PathFilter filter) throws IOException {
         List<String> violations = new ArrayList<>();
