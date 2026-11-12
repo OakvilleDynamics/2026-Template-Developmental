@@ -6,7 +6,6 @@ import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 
-import org.wpilib.math.util.MathUtil;
 import org.wpilib.math.linalg.MatBuilder;
 import org.wpilib.math.util.Nat;
 import org.wpilib.math.controller.PIDController;
@@ -133,7 +132,7 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
     private final Dashboard.TunableNumber blendAlphaTunable;
 
     // Last commanded speeds — captured in commandModules() for logging
-    private ChassisSpeeds lastCommandedSpeeds = new ChassisSpeeds();
+    private ChassisVelocities lastCommandedSpeeds = new ChassisVelocities();
 
     // ─────────────────────────────────────────────────────────────────────────
     // Pose history ring buffer — for game piece vision latency compensation
@@ -257,9 +256,8 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
     public void drive(driveInput input) {
         headingLockActive = false;
         commandedCoR = input.getCenterOfRotation();
-        ChassisSpeeds fieldRelative = ChassisSpeeds.fromFieldRelativeSpeeds(
-            input.getVxMps(), input.getVyMps(), input.getOmegaRadps(), getYaw()
-        );
+        ChassisVelocities fieldRelative = new ChassisVelocities(
+            input.getVxMps(), input.getVyMps(), input.getOmegaRadps()).toRobotRelative(getYaw());
         commandModules(fieldRelative, input.getCenterOfRotation());
     }
 
@@ -300,13 +298,12 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
         double desiredHeadingRad = Math.atan2(dy, dx) + units.deg_rad(offsetDegrees);
 
         double omegaCorrection = headingPID.calculate(getYaw().getRadians(), desiredHeadingRad);
-        omegaCorrection = MathUtil.clamp(omegaCorrection,
+        omegaCorrection = Math.clamp(omegaCorrection,
             -swerveConstants.HEADING_PID_MAX_OMEGA,
              swerveConstants.HEADING_PID_MAX_OMEGA);
 
-        ChassisSpeeds fieldRelative = ChassisSpeeds.fromFieldRelativeSpeeds(
-            input.getVxMps(), input.getVyMps(), omegaCorrection, getYaw()
-        );
+        ChassisVelocities fieldRelative = new ChassisVelocities(
+            input.getVxMps(), input.getVyMps(), omegaCorrection).toRobotRelative(getYaw());
         commandModules(fieldRelative, input.getCenterOfRotation());
 
         Dashboard.log("Drive/PointAt/Target X (ft)",     targetFeetX);
@@ -353,12 +350,12 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
             double desiredRad = units.deg_rad(clampedDeg);
 
             double omegaCorrection = headingPID.calculate(getYaw().getRadians(), desiredRad);
-            omegaCorrection = MathUtil.clamp(omegaCorrection,
+            omegaCorrection = Math.clamp(omegaCorrection,
                     -swerveConstants.HEADING_PID_MAX_OMEGA,
                      swerveConstants.HEADING_PID_MAX_OMEGA);
 
-            ChassisSpeeds fieldRelative = ChassisSpeeds.fromFieldRelativeSpeeds(
-                    input.getVxMps(), input.getVyMps(), omegaCorrection, getYaw());
+            ChassisVelocities fieldRelative = new ChassisVelocities(
+                    input.getVxMps(), input.getVyMps(), omegaCorrection).toRobotRelative(getYaw());
             commandModules(fieldRelative, input.getCenterOfRotation());
 
             Dashboard.log("Drive/HeadingBound/InBounds", false);
@@ -388,10 +385,10 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
      *   BL: -45°    BR:  45°
      */
     public void lockWheelsX() {
-        modules[0].setDesiredState(new SwerveModuleState(0.0, Rotation2d.fromDegrees( 45.0))); // FL
-        modules[1].setDesiredState(new SwerveModuleState(0.0, Rotation2d.fromDegrees(-45.0))); // FR
-        modules[2].setDesiredState(new SwerveModuleState(0.0, Rotation2d.fromDegrees(-45.0))); // BL
-        modules[3].setDesiredState(new SwerveModuleState(0.0, Rotation2d.fromDegrees( 45.0))); // BR
+        modules[0].setDesiredState(new SwerveModuleVelocity(0.0, Rotation2d.fromDegrees( 45.0))); // FL
+        modules[1].setDesiredState(new SwerveModuleVelocity(0.0, Rotation2d.fromDegrees(-45.0))); // FR
+        modules[2].setDesiredState(new SwerveModuleVelocity(0.0, Rotation2d.fromDegrees(-45.0))); // BL
+        modules[3].setDesiredState(new SwerveModuleVelocity(0.0, Rotation2d.fromDegrees( 45.0))); // BR
     }
 
     /** Stops all modules — holds current steer angle, sets drive speed to zero */
@@ -400,7 +397,7 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
     }
 
     /**
-     * Commands the drivetrain using robot-relative ChassisSpeeds.
+     * Commands the drivetrain using robot-relative ChassisVelocities.
      * Called exclusively by PathPlanner via the AutoBuilder lambda — not by driver commands.
      * Unlike drive(), no field-relative yaw rotation is applied; speeds go straight to modules.
      *
@@ -408,20 +405,20 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
      * PathPlanner outputs robot-relative speeds directly; routing through driveInput would
      * require a coordinate-frame roundtrip for no benefit. See CLAUDE.md.
      *
-     * @param speeds Robot-relative ChassisSpeeds from PathPlanner
+     * @param speeds Robot-relative ChassisVelocities from PathPlanner
      */
-    public void driveRobotRelative(ChassisSpeeds speeds) {
+    public void driveRobotRelative(ChassisVelocities speeds) {
         commandModules(speeds, new Translation2d());
     }
 
     /**
-     * Returns current robot-relative ChassisSpeeds derived from wheel encoder velocities.
+     * Returns current robot-relative ChassisVelocities derived from wheel encoder velocities.
      * Called exclusively by PathPlanner via the AutoBuilder lambda for its feedback loop.
      *
      * @return Robot-relative vx (m/s), vy (m/s), omega (rad/s)
      */
-    public ChassisSpeeds getRobotRelativeSpeeds() {
-        return kinematics.toChassisSpeeds(getModuleStates());
+    public ChassisVelocities getRobotRelativeSpeeds() {
+        return kinematics.toChassisVelocities(getModuleStates());
     }
 
     /**
@@ -613,12 +610,12 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
     // Internal helpers
     // ─────────────────────────────────────────────────────────────────────────
 
-    private void commandModules(ChassisSpeeds speeds, Translation2d cor) {
+    private void commandModules(ChassisVelocities speeds, Translation2d cor) {
         lastCommandedSpeeds = speeds;
-        SwerveModuleState[] desired = kinematics.toSwerveModuleStates(speeds, cor);
-        SwerveDriveKinematics.desaturateWheelSpeeds(desired, swerveConstants.MAX_DRIVE_SPEED_MPS);
+        SwerveModuleVelocity[] desired = kinematics.toSwerveModuleVelocities(speeds, cor);
+        desired = SwerveDriveKinematics.desaturateWheelVelocities(desired, swerveConstants.MAX_DRIVE_SPEED_MPS);
         for (int i = 0; i < modules.length; i++) {
-            desired[i].optimize(modules[i].getState().angle);
+            desired[i] = desired[i].optimize(modules[i].getState().angle);
             modules[i].setDesiredState(desired[i]);
         }
     }
@@ -629,8 +626,8 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
         return p;
     }
 
-    private SwerveModuleState[] getModuleStates() {
-        SwerveModuleState[] s = new SwerveModuleState[modules.length];
+    private SwerveModuleVelocity[] getModuleStates() {
+        SwerveModuleVelocity[] s = new SwerveModuleVelocity[modules.length];
         for (int i = 0; i < modules.length; i++) s[i] = modules[i].getState();
         return s;
     }
@@ -640,16 +637,16 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
     // ─────────────────────────────────────────────────────────────────────────
 
     private driveOdometryState computeOdometryState(double dt) {
-        ChassisSpeeds enc    = kinematics.toChassisSpeeds(getModuleStates());
-        double encVx         = enc.vxMetersPerSecond;
-        double encVy         = enc.vyMetersPerSecond;
+        ChassisVelocities enc    = kinematics.toChassisVelocities(getModuleStates());
+        double encVx         = enc.vx;
+        double encVy         = enc.vy;
         double encLinVelMag  = Math.hypot(encVx, encVy);
         double encLinVelHdg  = Math.atan2(encVy, encVx);
         double encAccelVx    = (encVx - prevLinVelX) / dt;
         double encAccelVy    = (encVy - prevLinVelY) / dt;
         double encLinAccel   = (encLinVelMag - prevLinVelMag) / dt;
         double encLinAccelHdg = Math.atan2(encAccelVy, encAccelVx);
-        double encAngVel     = enc.omegaRadiansPerSecond;
+        double encAngVel     = enc.omega;
         double encAngAccel   = (encAngVel - prevAngVel) / dt;
 
         double corX   = commandedCoR.getX();
@@ -747,14 +744,14 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
         RobotLogger.drivePoseY.append(pose.getY());
         RobotLogger.drivePoseHeadingDeg.append(getYaw().getDegrees());
 
-        RobotLogger.driveCommandedVx.append(lastCommandedSpeeds.vxMetersPerSecond);
-        RobotLogger.driveCommandedVy.append(lastCommandedSpeeds.vyMetersPerSecond);
-        RobotLogger.driveCommandedOmega.append(lastCommandedSpeeds.omegaRadiansPerSecond);
+        RobotLogger.driveCommandedVx.append(lastCommandedSpeeds.vx);
+        RobotLogger.driveCommandedVy.append(lastCommandedSpeeds.vy);
+        RobotLogger.driveCommandedOmega.append(lastCommandedSpeeds.omega);
 
-        ChassisSpeeds actual = getRobotRelativeSpeeds();
-        RobotLogger.driveActualVx.append(actual.vxMetersPerSecond);
-        RobotLogger.driveActualVy.append(actual.vyMetersPerSecond);
-        RobotLogger.driveActualOmega.append(actual.omegaRadiansPerSecond);
+        ChassisVelocities actual = getRobotRelativeSpeeds();
+        RobotLogger.driveActualVx.append(actual.vx);
+        RobotLogger.driveActualVy.append(actual.vy);
+        RobotLogger.driveActualOmega.append(actual.omega);
 
         RobotLogger.driveEncLinVel.append(s.encoderState.linearVelocityMagnitude);
         RobotLogger.driveEncAngVel.append(s.encoderState.angularVelocity);

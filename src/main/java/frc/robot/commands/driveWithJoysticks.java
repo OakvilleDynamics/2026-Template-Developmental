@@ -205,8 +205,8 @@ public class driveWithJoysticks extends Command implements AimDriveModes {
         double rY = applyDeadband(rightStick.getRawAxis(AXIS_Y));
         double rX = applyDeadband(rightStick.getRawAxis(AXIS_X));
 
-        double corXm = MathUtil.clamp(-rY * corMaxX, -corMaxX, corMaxX);
-        double corYm = MathUtil.clamp(-rX * corMaxY, -corMaxY, corMaxY);
+        double corXm = Math.clamp(-rY * corMaxX, -corMaxX, corMaxX);
+        double corYm = Math.clamp(-rX * corMaxY, -corMaxY, corMaxY);
 
         Translation2d centerOfRotation = new Translation2d(corXm, corYm);
 

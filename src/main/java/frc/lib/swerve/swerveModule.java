@@ -5,7 +5,7 @@ import java.util.List;
 
 import org.wpilib.math.geometry.Rotation2d;
 import org.wpilib.math.kinematics.SwerveModulePosition;
-import edu.wpi.first.math.kinematics.SwerveModuleState;
+import org.wpilib.math.kinematics.SwerveModuleVelocity;
 import frc.lib.util.Dashboard;
 
 import frc.lib.hardware.encoder.AbsoluteEncoderIO;
@@ -105,19 +105,19 @@ public class swerveModule implements ConfigVerifiable {
     // Public API
     // ─────────────────────────────────────────────────────────────────────────
 
-    public void setDesiredState(SwerveModuleState desiredState) {
+    public void setDesiredState(SwerveModuleVelocity desiredState) {
         applyDashboardPIDUpdates();
 
         // Drive: convert m/s → wheel rot/s; gear ratio handled inside driveMotor
-        driveMotor.setVelocity(desiredState.speedMetersPerSecond / wheelCircumferenceM, 0.0);
+        driveMotor.setVelocity(desiredState.velocity / wheelCircumferenceM, 0.0);
 
         // Steer: getRotations() returns [-0.5, 0.5]; wrap handled inside steerMotor
         steerMotor.setPosition(desiredState.angle.getRotations(), 0.0);
     }
 
-    public SwerveModuleState getState() {
+    public SwerveModuleVelocity getState() {
         double speedMPS = driveMotor.getVelocityRps() * wheelCircumferenceM;
-        return new SwerveModuleState(speedMPS, getSteerAngle());
+        return new SwerveModuleVelocity(speedMPS, getSteerAngle());
     }
 
     public SwerveModulePosition getPosition() {
@@ -127,7 +127,7 @@ public class swerveModule implements ConfigVerifiable {
 
     public void publishTelemetry() {
         Dashboard.log("Swerve/" + name + "/Angle Deg",   getSteerAngle().getDegrees());
-        Dashboard.log("Swerve/" + name + "/Speed MPS",   getState().speedMetersPerSecond);
+        Dashboard.log("Swerve/" + name + "/Speed MPS",   getState().velocity);
         Dashboard.log("Swerve/" + name + "/Drive Amps",  driveMotor.getSupplyCurrentAmps());
         Dashboard.log("Swerve/" + name + "/Steer Amps",  steerMotor.getSupplyCurrentAmps());
 
