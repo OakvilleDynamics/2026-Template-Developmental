@@ -4,9 +4,9 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.path.PathConstraints;
 
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.wpilibj.Alert;
+import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
-import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
@@ -36,7 +36,7 @@ import java.util.function.Supplier;
  *
  * ─── VISION STALENESS ────────────────────────────────────────────────────────
  * At initialize(), checks whether the most recent accepted vision pose is fresh.
- * If stale (older than VISION_STALENESS_THRESHOLD_S), logs a Shuffleboard warning.
+ * If stale (older than VISION_STALENESS_THRESHOLD_S), raises a dashboard Alert.
  * The command still runs — odometry-only navigation is acceptable, just flagged.
  *
  * ─── ALLIANCE ZONE EXCLUSIONS ────────────────────────────────────────────────
@@ -59,7 +59,10 @@ public class pathfindCommand extends Command {
 
     private Command pathfinder = null;
 
-    private final ShuffleboardTab tab = Shuffleboard.getTab("Pathfinding");
+    // Shown in the dashboard's alerts widget (Elastic: "Alerts" group).
+    // Static so several pathfindCommands share one alert instead of stacking duplicates.
+    private static final Alert visionAlert =
+        new Alert("Pathfinding: vision stale", AlertType.kWarning);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Constructor
@@ -132,16 +135,19 @@ public class pathfindCommand extends Command {
     /** Returns true if vision is stale or unavailable. */
     private boolean checkVisionStaleness() {
         if (!vision.hasValidPose()) {
-            tab.add("Vision Warning", "No valid pose — running on odometry only");
+            visionAlert.setText("Pathfinding: no valid vision pose — running on odometry only");
+            visionAlert.set(true);
             return true;
         }
         double age = Timer.getTimestamp() - vision.getBestPose().timestampSecs;
         if (age > pathplannerConstants.VISION_STALENESS_THRESHOLD_S) {
-            tab.add("Vision Warning",
-                String.format("Stale pose: %.2fs old (threshold %.2fs) — odometry only",
+            visionAlert.setText(
+                String.format("Pathfinding: stale vision pose, %.2fs old (threshold %.2fs) — odometry only",
                     age, pathplannerConstants.VISION_STALENESS_THRESHOLD_S));
+            visionAlert.set(true);
             return true;
         }
+        visionAlert.set(false);
         return false;
     }
 }

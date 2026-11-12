@@ -369,7 +369,7 @@ X-brace defense. Commands all four modules to 45° X pattern, zero drive speed. 
 
 ### `pathfindCommand`
 
-On-the-fly AD* pathfinding to a field target using PathPlanner. Requires `swerveDrive` — preempts `driveWithJoysticks` via scheduler, restores it on end. Vision staleness is checked at initialize and logged to Shuffleboard "Pathfinding" tab (command still runs on odometry if stale). Currently uses `pathfindToPose()`. TODO: upgrade to `pathfindThenFollowPath()` once `.path` files are authored in PathPlanner GUI.
+On-the-fly AD* pathfinding to a field target using PathPlanner. Requires `swerveDrive` — preempts `driveWithJoysticks` via scheduler, restores it on end. Vision staleness is checked at initialize and raised as a dashboard Alert (command still runs on odometry if stale). Currently uses `pathfindToPose()`. TODO: upgrade to `pathfindThenFollowPath()` once `.path` files are authored in PathPlanner GUI.
 
 ### `gamePieceHuntCommand`
 
