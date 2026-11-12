@@ -8,10 +8,10 @@ It is loaded automatically by Claude Code at the start of every session. Keep it
 ## Project Overview
 
 From-scratch swerve drive robot codebase for **FRC Team 8719**, built using:
-- **WPILib 2026** (Java)
+- **WPILib 2027 alpha 7** (Java 25, SystemCore) — this branch; see "WPILib 2027 / SystemCore Notes". The 2026 code lives on `master`.
 - **Phoenix 6** — CTRE motor/sensor library (Kraken X60 drive, Minion steer)
 - **PhotonVision** — three-camera vision system (AprilTag pose estimation + game piece detection)
-- **PathPlannerLib 2026.1.2** — on-the-fly AD* pathfinding
+- **PathPlannerLib** (SystemCore alpha) — on-the-fly AD* pathfinding; currently fails to load on 2027 alpha 7, so pathfinding is disabled
 
 ---
 
@@ -149,7 +149,7 @@ swerveDrive, vision and pathplanning stay in `frc.robot` for now because they re
 
 No command or subsystem should call `swerveDrive` drive methods directly. All driver-controlled motion routes through `driveInput` → `swerveDrive.drive()` or `swerveDrive.drivePointAt()`.
 
-**Exception — PathPlanner:** `swerveDrive.driveRobotRelative(ChassisSpeeds)` exists solely for PathPlanner's `AutoBuilder` lambda. PathPlanner outputs robot-relative `ChassisSpeeds` directly; routing through `driveInput` would require a coordinate-frame roundtrip for no benefit. This method is registered once in `configureForAutoBuilder()` and never called directly by any command or subsystem.
+**Exception — PathPlanner:** `swerveDrive.driveRobotRelative(ChassisVelocities)` exists solely for PathPlanner's `AutoBuilder` lambda. PathPlanner outputs robot-relative `ChassisSpeeds` directly; routing through `driveInput` would require a coordinate-frame roundtrip for no benefit. This method is registered once in `configureForAutoBuilder()` and never called directly by any command or subsystem.
 
 ### 2. `visionSubsystem` is the only vision interface
 
@@ -195,7 +195,7 @@ Architectural decisions are discussed and agreed before any code is written. Exp
 Use `Dashboard.log(key, value)` for values to view and `Dashboard.tunable(key, default)` /
 `Dashboard.toggle(key, default)` (created once, read with `get()` each loop) for values an
 operator edits live. Never call SmartDashboard / Telemetry / Tunables directly: `Dashboard` is
-implemented on SmartDashboard for WPILib 2026 and on Telemetry + Tunables on the 2027 branch,
+implemented on Telemetry + Tunables on this (2027) branch and on SmartDashboard for WPILib 2026,
 so switching WPILib years changes only that file. It is also where publishing policy (what to
 send during a match vs. while tuning) belongs.
 
@@ -242,14 +242,14 @@ Owns all four modules and the IMU. The only way to move the robot.
 | `driveWithHeadingBound(input, minDeg, maxDeg)` | Translation from driver; heading PID holds to nearest bound when outside `[minDeg, maxDeg]`; passes through driver omega when inside bounds. Publishes `Drive/HeadingBound/*` telemetry. |
 | `lockWheelsX()` | X-brace defense pattern |
 | `stop()` | Zero drive speed, hold steer angles |
-| `driveRobotRelative(ChassisSpeeds)` | PathPlanner-only — robot-relative, bypasses field-relative conversion |
+| `driveRobotRelative(ChassisVelocities)` | PathPlanner-only — robot-relative, bypasses field-relative conversion |
 
 **Pose API:**
 | Method | Description |
 |---|---|
 | `getPose()` | Kalman-filtered pose (vision + odometry fused) |
 | `resetPose(Pose2d)` | Seed estimator with known position |
-| `getRobotRelativeSpeeds()` | Encoder-derived ChassisSpeeds — PathPlanner feedback |
+| `getRobotRelativeSpeeds()` | Encoder-derived ChassisVelocities — PathPlanner feedback |
 | `addVisionMeasurement(pose, timestamp, tagCount)` | Inject vision into Kalman filter, trust scaled by tag count |
 | `getPoseAtTime(timestampSecs)` | Pose closest to given FPGA timestamp from ring buffer — for game piece back-projection |
 | `getOdometryState()` | Full `driveOdometryState` snapshot |
@@ -522,7 +522,7 @@ TODO: replace hardcoded pathfind target with a selector (dashboard chooser or bu
 ## Season Change Checklist
 
 Each new season:
-1. `RobotContainer.GAME_YEAR_FIELD` — update `AprilTagFields` enum value
+1. `RobotContainer.GAME_YEAR_FIELD` — update `Fields` enum value
 2. `FieldTargets.java` — replace stub coordinates with real field target poses
 3. `pathplannerConstants.ALLIANCE_ZONE_EXCLUSIONS` — populate with new field zone polygons
 4. `AprilTagIgnore.java` — review which tag IDs to suppress for known problem tags
@@ -533,11 +533,43 @@ Each new season:
 
 ---
 
-## WPILib 2026 Notes
+## WPILib Notes
 
 - `CommandBase` removed — all commands extend `Command` directly
 - `Command.schedule()` deprecated — use `CommandScheduler.getInstance().schedule(cmd)`
 - Phoenix 6 required for Kraken X60 and Minion — no Phoenix 5 APIs
+
+## WPILib 2027 / SystemCore Notes (this branch)
+
+This branch (`2027-staging`) is the 2026 code ported to **WPILib 2027 alpha 7**
+for **SystemCore**. Build with the 2027 JDK (Java 25):
+`JAVA_HOME=~/wpilib/2027_alpha7/jdk ./gradlew build`.
+
+| 2026 | 2027 on this branch |
+|---|---|
+| `edu.wpi.first.*` | `org.wpilib.*` (often a different subpackage) |
+| SmartDashboard (inside `Dashboard` only) | `Dashboard.log` → `Telemetry.log` → `/Telemetry/<key>`; `Dashboard.tunable/toggle` → `Tunables` → `/Tunables/<key>`. Callers are unchanged — only `Dashboard.java` differs between years |
+| `DriverStation.getAlliance()`, `Alliance.Red` | `MatchState.getAlliance()`, `Alliance.RED` |
+| `DriverStation.reportWarning/Error` | `DriverStationErrors.reportWarning/Error` |
+| `AprilTagFields` / `AprilTagFieldLayout` / `AprilTag` | `Fields` / `Field` / `FieldTag` |
+| `ChassisSpeeds`, `SwerveModuleState` | `ChassisVelocities`, `SwerveModuleVelocity` |
+| `MathUtil.clamp` | `Math.clamp` |
+| `Alert(text, AlertType)` | `Alert(id, text, Alert.Level)` |
+| `robotInit()`, `testInit()` | Robot constructor, `utilityInit()` |
+| One CAN bus | Every CAN device names a SystemCore port: `MotorIOConfig` / `mechanismConfig` `withCanPort()`, robot default `canIDs.CAN_PORT` |
+| REV conversion factors / position wrapping | Removed in REVLib 2027; `REVMotor` converts native units itself (velocity slot 0, position slot 1) and wraps in software |
+
+**Not available yet:**
+- **ThriftyLib** has no 2027 release. `NovaMotor` is excluded from the build;
+  `MotorIO.create()` returns `SimMotorIO` for Nova in simulation and throws on a
+  real robot. The default steer motor type is Nova, so a real robot won't start
+  until ThriftyLib ships or `swerveConstants.STEER_MOTOR_TYPE` changes.
+- **PathPlannerLib** 2027 alpha fails to load on WPILib alpha 7 (per 2027-staging);
+  `swerveDrive` catches it and pathfinding commands end immediately.
+
+**Not yet checked on SystemCore:** REV gain scaling and software wrap on
+hardware, and the roboRIO-specific notes elsewhere in this file (USB log path,
+FAT32, `/home/lvuser`).
 
 ---
 
@@ -556,7 +588,7 @@ Each new season:
 | Measure actual steer offset voltages | `swerveConstants.java` |
 | Confirm CAN IDs match physical wiring | `swerveConstants.java` |
 | Replace `buildTagReading()` delta calc with full reprojection geometry | `visionSubsystem.java` |
-| Update PhotonVision API (deprecated `getLatestResult()`, `update()`) | `visionSubsystem.java`, `gamePieceVisionSubsystem.java` |
+| Update PhotonVision API (deprecated `getLatestResult()`) | `visionSubsystem.java`, `gamePieceVisionSubsystem.java` |
 | Update `getPositionError()` (deprecated in WPILib 2026) | `swerveDrive.java` |
 | Measure intake camera mounting position + angle | `gamePieceConstants.GAME_PIECE_CAMERA_TRANSFORM` |
 | Update game piece height once 2026 game piece is known | `gamePieceConstants.GAME_PIECE_HEIGHT_M` |

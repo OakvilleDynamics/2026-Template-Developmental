@@ -1,6 +1,8 @@
 # FRC Team 8719 — Robot Codebase Architecture
 ### 2026 Season | Swerve Drive + Vision + PathPlanner
 
+> **This branch targets WPILib 2027 alpha 7 / SystemCore.** See "WPILib 2027 / SystemCore Notes" at the end for what differs from the 2026 code on `master`.
+
 ---
 
 ## What This Document Is
@@ -307,7 +309,7 @@ PathPlanner is configured once at startup in `swerveDrive.configureForAutoBuilde
 - **Where is the robot?** → `swerveDrive.getPose()` (Kalman-filtered pose)
 - **Reset pose** → `swerveDrive.resetPose()` (used at auto start)
 - **How fast is it going?** → `swerveDrive.getRobotRelativeSpeeds()` (encoder readout)
-- **Make it go this fast** → `swerveDrive.driveRobotRelative(ChassisSpeeds)` (the PathPlanner exception to the driveInput-only rule)
+- **Make it go this fast** → `swerveDrive.driveRobotRelative(ChassisVelocities)` (the PathPlanner exception to the driveInput-only rule)
 
 The last one is the only place in the codebase that bypasses `driveInput`. PathPlanner outputs robot-relative speed commands directly — wrapping them in `driveInput` would require an unnecessary coordinate-frame roundtrip. It's intentional, documented in `CLAUDE.md`, and only ever called by PathPlanner's internals.
 
@@ -454,7 +456,7 @@ Motor constants live in `motorModels.java` (sourced from vendor datasheets). Pas
 | Hardware duty cycle ramp | ✓ | ✓ | ✓ |
 | ENCODER_SYNC following | ✓ | ✓ | ✗ (Nova follow() API blocks independent readback) |
 | Per-follower mixed topology | ✓ | ✓ | ✓ (MECHANICAL only) |
-| Gear ratio (native) | `SensorToMechanismRatio` | `positionConversionFactor` | Manual scaling in wrapper |
+| Gear ratio (native) | `SensorToMechanismRatio` | Manual scaling in `REVMotor` (REVLib 2027 removed conversion factors) | Manual scaling in wrapper |
 
 ### Live PID tuning
 
@@ -660,3 +662,37 @@ These are known gaps — in priority order for competition readiness:
 ---
 
 *Last updated: 2026 preseason — Ryan + Claude (Code) | mechanismUnit: per-follower mixed topology (withFollowerConfig), follower-of-follower leader indices; FF library: gyroscopicTurret, springTurret direction-aware, friction deadbanding, signed gravity output; shooterMechanism pre-packaged subsystem; setpointDeadband + isAtSetpoint on mechanismUnit; shooter aim system: ShooterCalculator + shooterAimController + shooterConstants, headingBoundsDeg, TurretBoundState OTM machine, readyGate; IMU changed to Pigeon 2.0; driveWithJoysticks DriveMode enum + HEADING_BOUND + STATIC_SHOT_LOCK modes; driveWithHeadingBound() on swerveDrive; units.normalizeAngleDeg()*
+
+---
+
+## WPILib 2027 / SystemCore Notes (this branch)
+
+This branch (`2027-staging`) is the 2026 code ported to **WPILib 2027 alpha 7**
+for **SystemCore**. Build with the 2027 JDK (Java 25):
+`JAVA_HOME=~/wpilib/2027_alpha7/jdk ./gradlew build`.
+
+| 2026 | 2027 on this branch |
+|---|---|
+| `edu.wpi.first.*` | `org.wpilib.*` (often a different subpackage) |
+| SmartDashboard (inside `Dashboard` only) | `Dashboard.log` → `Telemetry.log` → `/Telemetry/<key>`; `Dashboard.tunable/toggle` → `Tunables` → `/Tunables/<key>`. Callers are unchanged — only `Dashboard.java` differs between years |
+| `DriverStation.getAlliance()`, `Alliance.Red` | `MatchState.getAlliance()`, `Alliance.RED` |
+| `DriverStation.reportWarning/Error` | `DriverStationErrors.reportWarning/Error` |
+| `AprilTagFields` / `AprilTagFieldLayout` / `AprilTag` | `Fields` / `Field` / `FieldTag` |
+| `ChassisSpeeds`, `SwerveModuleState` | `ChassisVelocities`, `SwerveModuleVelocity` |
+| `MathUtil.clamp` | `Math.clamp` |
+| `Alert(text, AlertType)` | `Alert(id, text, Alert.Level)` |
+| `robotInit()`, `testInit()` | Robot constructor, `utilityInit()` |
+| One CAN bus | Every CAN device names a SystemCore port: `MotorIOConfig` / `mechanismConfig` `withCanPort()`, robot default `canIDs.CAN_PORT` |
+| REV conversion factors / position wrapping | Removed in REVLib 2027; `REVMotor` converts native units itself (velocity slot 0, position slot 1) and wraps in software |
+
+**Not available yet:**
+- **ThriftyLib** has no 2027 release. `NovaMotor` is excluded from the build;
+  `MotorIO.create()` returns `SimMotorIO` for Nova in simulation and throws on a
+  real robot. The default steer motor type is Nova, so a real robot won't start
+  until ThriftyLib ships or `swerveConstants.STEER_MOTOR_TYPE` changes.
+- **PathPlannerLib** 2027 alpha fails to load on WPILib alpha 7 (per 2027-staging);
+  `swerveDrive` catches it and pathfinding commands end immediately.
+
+**Not yet checked on SystemCore:** REV gain scaling and software wrap on
+hardware, and the roboRIO-specific notes elsewhere in this document (USB log path,
+FAT32, `/home/lvuser`).
