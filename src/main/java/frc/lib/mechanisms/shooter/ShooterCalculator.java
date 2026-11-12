@@ -6,8 +6,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import frc.robot.constants.shooterConstants;
-import frc.robot.constants.shooterConstants.LookupEntry;
+import frc.lib.mechanisms.shooter.ShotProfile.LookupEntry;
 import frc.lib.control.mechanismConfig;
 
 /**
@@ -22,9 +21,10 @@ import frc.lib.control.mechanismConfig;
  *   calculateOnTheMove()   — robot is moving; compensates for robot and
  *                            turret motion during ball flight
  *
- * Shot profiles (RPM, hood angle, ToF) are read from shooterConstants.LOOKUP_TABLE.
- * Pivot geometry and turret limits are also sourced from shooterConstants but
- * passed in as constructor parameters so they can be overridden for testing.
+ * Shot profiles (RPM, hood angle, ToF), pivot geometry and the speed warning
+ * threshold come from the ShotProfile passed to the constructor; turret limits
+ * are constructor parameters too. Nothing here reads robot constants, so tests
+ * can supply any table (see ShooterCalculatorTest).
  *
  * ─── UNITS AT THIS INTERFACE ─────────────────────────────────────────────────
  * Angles           : degrees
@@ -51,6 +51,7 @@ public class ShooterCalculator {
     // Constructor / instance configuration
     // =========================================================================
 
+    private final ShotProfile profile;
     private final double controlLoopHz;
     private final int    maxFlightTimeIterations;
     private final double turretSoftLimitMinDeg;
@@ -74,15 +75,17 @@ public class ShooterCalculator {
      * softMin = softMax = hardMin = hardMax = 0.0. The heading bounds will collapse
      * to a tight window around the exact aim heading.
      *
+     * @param profile                 Shot table, pivot geometry, speed warning threshold.
      * @param controlLoopHz           Control loop rate (Hz).
      * @param maxFlightTimeIterations Maximum ToF refinement iterations for OnTheMove.
      * @param turretConfig            mechanismConfig of the turret sub-mechanism.
      */
     public ShooterCalculator(
+            ShotProfile profile,
             double controlLoopHz,
             int    maxFlightTimeIterations,
             mechanismConfig turretConfig) {
-        this(controlLoopHz, maxFlightTimeIterations,
+        this(profile, controlLoopHz, maxFlightTimeIterations,
              turretConfig.softLimitReverseDeg,
              turretConfig.softLimitForwardDeg,
              turretConfig.softLimitReverseDeg,
@@ -91,8 +94,9 @@ public class ShooterCalculator {
 
     /**
      * Full constructor — use when turret limits are not backed by a mechanismConfig
-     * (e.g. SWERVE_AS_TURRET, or standalone smoke testing).
+     * (e.g. SWERVE_AS_TURRET, or unit tests).
      *
+     * @param profile                  Shot table, pivot geometry, speed warning threshold.
      * @param controlLoopHz            Control loop rate (Hz) — used as convergence
      *                                 tolerance for ToF iteration (1 loop period).
      * @param maxFlightTimeIterations  Maximum ToF refinement iterations for OnTheMove.
@@ -102,6 +106,7 @@ public class ShooterCalculator {
      * @param turretHardLimitMaxDeg    Physical hard-stop maximum (robot-relative °).
      */
     public ShooterCalculator(
+            ShotProfile profile,
             double controlLoopHz,
             int    maxFlightTimeIterations,
             double turretSoftLimitMinDeg,
@@ -109,6 +114,7 @@ public class ShooterCalculator {
             double turretHardLimitMinDeg,
             double turretHardLimitMaxDeg) {
 
+        this.profile                 = profile;
         this.controlLoopHz           = controlLoopHz;
         this.maxFlightTimeIterations = maxFlightTimeIterations;
         this.turretSoftLimitMinDeg   = turretSoftLimitMinDeg;
@@ -290,7 +296,7 @@ public class ShooterCalculator {
     // =========================================================================
     // Primary entry point — StaticShot
     //
-    // @param targetType       Must match a targetType key in shooterConstants.LOOKUP_TABLE
+    // @param targetType       Must match a targetType key in profile.table
     // @param targetX          Field X of target (feet)
     // @param targetY          Field Y of target (feet)
     // @param robotX           Field X of robot center (feet)
@@ -395,7 +401,7 @@ public class ShooterCalculator {
 
         // Flag if robot speed is high enough to reduce compensation reliability
         double robotSpeed = Math.sqrt(robotLinVelX * robotLinVelX + robotLinVelY * robotLinVelY);
-        if (robotSpeed > shooterConstants.ROBOT_SPEED_WARNING_THRESHOLD_FT_S) {
+        if (robotSpeed > profile.robotSpeedWarningFtS) {
             warnings.add(ShooterWarning.ROBOT_SPEED_TOO_HIGH);
         }
 
@@ -564,7 +570,7 @@ public class ShooterCalculator {
 
         // --- Exact-distance match: use the entry with the lowest hood angle ---
         LookupEntry exactMatch = null;
-        for (LookupEntry e : shooterConstants.LOOKUP_TABLE) {
+        for (LookupEntry e : profile.table) {
             if (!e.targetType.equals(targetType)) continue;
             if (e.distance == distanceFt) {
                 if (exactMatch == null || e.hoodAngle < exactMatch.hoodAngle) {
@@ -667,7 +673,7 @@ public class ShooterCalculator {
     // =========================================================================
 
     private boolean targetTypeExists(String targetType) {
-        for (LookupEntry e : shooterConstants.LOOKUP_TABLE) {
+        for (LookupEntry e : profile.table) {
             if (e.targetType.equals(targetType)) return true;
         }
         return false;
@@ -675,7 +681,7 @@ public class ShooterCalculator {
 
     private double[] getUniqueHoodAngles(String targetType) {
         LinkedHashSet<Double> seen = new LinkedHashSet<>();
-        for (LookupEntry e : shooterConstants.LOOKUP_TABLE) {
+        for (LookupEntry e : profile.table) {
             if (e.targetType.equals(targetType)) seen.add(e.hoodAngle);
         }
         double[] result = new double[seen.size()];
@@ -686,7 +692,7 @@ public class ShooterCalculator {
 
     private LookupEntry[] getEntriesForAngle(String targetType, double angle) {
         List<LookupEntry> list = new ArrayList<>();
-        for (LookupEntry e : shooterConstants.LOOKUP_TABLE) {
+        for (LookupEntry e : profile.table) {
             if (e.targetType.equals(targetType) && Double.compare(e.hoodAngle, angle) == 0) {
                 list.add(e);
             }
@@ -700,15 +706,15 @@ public class ShooterCalculator {
     // =========================================================================
 
     /**
-     * Rotates the robot-local pivot offset (from shooterConstants) into the
+     * Rotates the robot-local pivot offset (from the ShotProfile) into the
      * field frame and adds it to the robot center position.
      * Returns [pivotFieldX, pivotFieldY] in feet.
      */
-    private static double[] pivotToFieldFrame(
+    private double[] pivotToFieldFrame(
             double robotX, double robotY, double robotHeadingDeg) {
 
-        double offsetX_ft = shooterConstants.PIVOT_OFFSET_X_IN / 12.0;
-        double offsetY_ft = shooterConstants.PIVOT_OFFSET_Y_IN / 12.0;
+        double offsetX_ft = profile.pivotOffsetXIn / 12.0;
+        double offsetY_ft = profile.pivotOffsetYIn / 12.0;
         double headingRad = Math.toRadians(robotHeadingDeg);
 
         double pivotFieldX = robotX + offsetX_ft * Math.cos(headingRad)
@@ -749,43 +755,5 @@ public class ShooterCalculator {
         if (angleDeg >  180.0) angleDeg -= 360.0;
         if (angleDeg <= -180.0) angleDeg += 360.0;
         return angleDeg;
-    }
-
-    // =========================================================================
-    // Smoke test — run as a standalone Java main to validate math without a robot
-    // =========================================================================
-    public static void main(String[] args) {
-        // Full constructor used here — no mechanismConfig available in a standalone test.
-        // Replace these with your actual turret soft/hard stop angles when characterizing.
-        ShooterCalculator calc = new ShooterCalculator(
-                50,     // 50 Hz control loop
-                2,      // 2 ToF iterations
-                -120,   // turret soft limit min (deg, robot-relative)
-                 120,   // turret soft limit max
-                -135,   // turret hard limit min
-                 135);  // turret hard limit max
-
-        // StaticShot: target at field origin, robot at (15, 10) facing 45°
-        System.out.println("=== StaticShot ===");
-        ShooterOutput staticOut = calc.calculateStaticShot(
-                "Hub", 0, 0, 15, 10, 45);
-        System.out.println("Result → " + staticOut);
-
-        System.out.println();
-
-        // OnTheMove: same pose, robot moving at 5 ft/s in field +X,
-        // slight CCW rotation at 10 deg/s, turret currently at 0° robot-relative
-        System.out.println("=== OnTheMove ===");
-        ShooterOutput otmOut = calc.calculateOnTheMove(
-                "Hub",
-                0, 0,       // target
-                15, 10, 45, // robot pose
-                5, 0,       // linear vel (ft/s)
-                0, 0,       // linear accel (ft/s²)
-                10, 0,      // angular vel/accel (deg/s, deg/s²)
-                0, 0,       // center of rotation — robot-relative (0,0 = robot center)
-                0,          // current turret angle (robot-relative)
-                5, 0);      // turret angular vel/accel (deg/s, deg/s²)
-        System.out.println("Result → " + otmOut);
     }
 }
