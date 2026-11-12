@@ -2,7 +2,7 @@ package frc.lib.mechanisms.elevator;
 
 import java.util.function.Supplier;
 
-import org.wpilib.driverstation.DriverStation;
+import org.wpilib.driverstation.DriverStationErrors;
 import org.wpilib.command2.SubsystemBase;
 
 import frc.lib.swerve.driveOdometryState;
@@ -626,7 +626,7 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
                     "elevatorMechanism.Builder '" + name + "': withPivot() and "
                     + "withExternalAngleSupplier() are mutually exclusive.");
             if (!holdThresholdSet)
-                DriverStation.reportWarning(
+                DriverStationErrors.reportWarning(
                     "[elevatorMechanism] '" + name + "': withElevatorHoldThresholdIn() was not "
                     + "called. Hold threshold defaults to 0 in — isReady() will drop to false "
                     + "any time elevator position is below setpoint.", false);

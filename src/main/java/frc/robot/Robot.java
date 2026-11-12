@@ -85,11 +85,11 @@ public class Robot extends TimedRobot {
     public void teleopPeriodic() {}
 
     @Override
-    public void testInit() {
+    public void utilityInit() {
         CommandScheduler.getInstance().cancelAll();
         Dashboard.log("Robot/Status", "Test");
     }
 
     @Override
-    public void testPeriodic() {}
+    public void utilityPeriodic() {}
 }

@@ -5,7 +5,7 @@ import com.thethriftybot.devices.ThriftyNova.EncoderType;
 import com.thethriftybot.devices.ThriftyNova.MotorType;
 import com.thethriftybot.devices.ThriftyNova.PIDSlot;
 
-import org.wpilib.driverstation.DriverStation;
+import org.wpilib.driverstation.DriverStationErrors;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -131,7 +131,7 @@ public class NovaMotor implements MotorIO {
     @Override
     public void follow(MotorIO leader, boolean opposeLeader) {
         if (opposeLeader) {
-            DriverStation.reportWarning("[NovaMotor] CAN " + config.canId
+            DriverStationErrors.reportWarning("[NovaMotor] CAN " + config.canId
                 + ": inverted follow requested, but Nova's follow() API does not support "
                 + "inversion in software. Use physical motor mounting instead.", false);
         }

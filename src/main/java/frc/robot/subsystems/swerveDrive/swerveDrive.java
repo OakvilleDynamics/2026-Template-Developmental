@@ -19,7 +19,9 @@ import org.wpilib.math.system.DCMotor;
 import com.ctre.phoenix6.hardware.Pigeon2;
 import org.wpilib.util.Alert;
 import org.wpilib.util.Alert.AlertType;
-import org.wpilib.driverstation.DriverStation;
+import org.wpilib.driverstation.Alliance;
+import org.wpilib.driverstation.DriverStationErrors;
+import org.wpilib.driverstation.MatchState;
 import org.wpilib.system.Timer;
 import frc.lib.util.Dashboard;
 import org.wpilib.command2.SubsystemBase;
@@ -471,8 +473,8 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
                                      pathplannerConstants.ROTATION_PID_kD)
                 ),
                 robotConfig,
-                () -> DriverStation.getAlliance()
-                        .filter(a -> a == DriverStation.Alliance.Red)
+                () -> MatchState.getAlliance()
+                        .filter(a -> a == Alliance.RED)
                         .isPresent(),
                 this
             );
@@ -481,7 +483,7 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
             pathPlannerAvailable = false;
             pathPlannerAlert.setText("PathPlanner unavailable — pathfinding disabled: " + t);
             pathPlannerAlert.set(true);
-            DriverStation.reportError(
+            DriverStationErrors.reportError(
                 "PathPlanner failed to initialize — pathfinding disabled: " + t, false);
         }
     }

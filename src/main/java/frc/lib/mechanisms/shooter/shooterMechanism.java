@@ -2,7 +2,7 @@ package frc.lib.mechanisms.shooter;
 
 import java.util.function.BooleanSupplier;
 
-import org.wpilib.driverstation.DriverStation;
+import org.wpilib.driverstation.DriverStationErrors;
 import org.wpilib.command2.SubsystemBase;
 
 import frc.lib.util.ConfigVerifiable;
@@ -423,7 +423,7 @@ public class shooterMechanism extends SubsystemBase implements ConfigVerifiable 
                 throw new IllegalStateException(
                     "shooterMechanism.Builder '" + name + "': withFlywheel() is required.");
             if (!holdThresholdSet)
-                DriverStation.reportWarning(
+                DriverStationErrors.reportWarning(
                     "[shooterMechanism] '" + name + "': withFlywheelHoldThresholdRpm() was not "
                     + "called. Hold threshold defaults to 0 RPM — isReady() will drop to false "
                     + "any time flywheel velocity is below its setpoint.", false);

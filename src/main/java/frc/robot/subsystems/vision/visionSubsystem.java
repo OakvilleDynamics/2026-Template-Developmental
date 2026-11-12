@@ -3,7 +3,8 @@ package frc.robot.subsystems.vision;
 import org.wpilib.fields.FieldTag;
 import org.wpilib.fields.Fields;
 import org.wpilib.math.geometry.Pose3d;
-import org.wpilib.driverstation.DriverStation;
+import org.wpilib.driverstation.Alliance;
+import org.wpilib.driverstation.MatchState;
 import frc.lib.util.Dashboard;
 import org.wpilib.command2.SubsystemBase;
 import frc.robot.constants.AprilTagIgnore;
@@ -66,7 +67,7 @@ public class visionSubsystem extends SubsystemBase {
     private Pose3d lastAcceptedRear  = null;
 
     // ── Alliance change detection ─────────────────────────────────────────────
-    private Optional<DriverStation.Alliance> lastKnownAlliance = Optional.empty();
+    private Optional<Alliance> lastKnownAlliance = Optional.empty();
 
     // ─────────────────────────────────────────────────────────────────────────
     // Inner record: one camera's reading of one tag
@@ -116,7 +117,7 @@ public class visionSubsystem extends SubsystemBase {
 
 @Override
     public void periodic() {
-        Optional<DriverStation.Alliance> currentAlliance = DriverStation.getAlliance();
+        Optional<Alliance> currentAlliance = MatchState.getAlliance();
         if (!currentAlliance.equals(lastKnownAlliance)) {
             lastKnownAlliance = currentAlliance;
             fieldCal.rebuildLayout();

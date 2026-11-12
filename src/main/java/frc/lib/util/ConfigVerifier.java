@@ -3,7 +3,7 @@ package frc.lib.util;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.wpilib.driverstation.DriverStation;
+import org.wpilib.driverstation.DriverStationErrors;
 
 import frc.lib.util.ConfigVerifiable;
 import frc.lib.util.ConfigVerifyResult;
@@ -40,7 +40,7 @@ import frc.lib.util.ConfigVerifyResult;
  * ─── FAULT SURFACE ───────────────────────────────────────────────────────────
  * Dashboard key  "ConfigVerifier/Status"     "OK" or "FAULTS DETECTED"
  * Dashboard key  "ConfigVerifier/Faults"     blank-separated fault details
- * Driver Station console — DriverStation.reportError() for any failure
+ * Driver Station console — DriverStationErrors.reportError() for any failure
  *
  * A per-device pass/fail is also pushed under "ConfigVerifier/<DeviceName>".
  */
@@ -111,7 +111,7 @@ public final class ConfigVerifier {
         Dashboard.log("ConfigVerifier/Faults", faultStr.toString());
 
         // DS console — loud and visible before enabling
-        DriverStation.reportError(
+        DriverStationErrors.reportError(
             "[ConfigVerifier] *** MOTOR CONFIG FAULT(S) — "
             + failures.size() + " of " + allResults.size() + " device(s) failed ***\n"
             + faultStr,

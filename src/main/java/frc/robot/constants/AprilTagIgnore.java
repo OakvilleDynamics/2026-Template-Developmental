@@ -1,7 +1,7 @@
 package frc.robot.constants;
 
-import org.wpilib.driverstation.DriverStation;
-import org.wpilib.driverstation.DriverStation.Alliance;
+import org.wpilib.driverstation.MatchState;
+import org.wpilib.driverstation.Alliance;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -27,7 +27,7 @@ import java.util.Optional;
  * "red"    — ignore this tag when robot is on RED alliance
  *
  * ─── ALLIANCE DETECTION ──────────────────────────────────────────────────────
- * Alliance color is read from DriverStation.getAlliance() at runtime.
+ * Alliance color is read from MatchState.getAlliance() at runtime.
  * If the alliance is not yet assigned by FMS (Optional is empty — common
  * before a match is loaded), ALL tags are used. This is the safe default.
  *
@@ -89,11 +89,11 @@ public final class AprilTagIgnore {
 
         if (condition.equals("always")) return true;
 
-        Optional<Alliance> alliance = DriverStation.getAlliance();
+        Optional<Alliance> alliance = MatchState.getAlliance();
         if (alliance.isEmpty()) return false;
 
-        if (condition.equals("blue") && alliance.get() == Alliance.Blue) return true;
-        if (condition.equals("red")  && alliance.get() == Alliance.Red)  return true;
+        if (condition.equals("blue") && alliance.get() == Alliance.BLUE) return true;
+        if (condition.equals("red")  && alliance.get() == Alliance.RED)  return true;
 
         return false;
     }

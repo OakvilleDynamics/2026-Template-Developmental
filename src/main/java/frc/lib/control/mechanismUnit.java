@@ -5,7 +5,7 @@ import java.util.List;
 
 import org.wpilib.datalog.*;
 import org.wpilib.system.DataLogManager;
-import org.wpilib.driverstation.DriverStation;
+import org.wpilib.driverstation.DriverStationErrors;
 import frc.lib.util.Dashboard;
 
 import frc.lib.hardware.motor.MotorIO;
@@ -220,7 +220,7 @@ public class mechanismUnit implements ConfigVerifiable {
         publishPIDToDashboard();
 
         if (config.setpointDeadband <= 0.0) {
-            DriverStation.reportWarning(
+            DriverStationErrors.reportWarning(
                 "[mechanismUnit] '" + config.name + "': setpointDeadband is not configured. "
                 + "isAtSetpoint() will always return false. "
                 + "Call withSetpointDeadband() in the mechanismConfig.Builder to enable it.", false);
@@ -265,7 +265,7 @@ public class mechanismUnit implements ConfigVerifiable {
      */
     public final void setDutyCycle(double duty) {
         if (isHoming()) {
-            DriverStation.reportWarning("[mechanismUnit] '" + config.name
+            DriverStationErrors.reportWarning("[mechanismUnit] '" + config.name
                 + "': setDutyCycle() called while homing — command ignored.", false);
             return;
         }
@@ -290,7 +290,7 @@ public class mechanismUnit implements ConfigVerifiable {
      */
     public final void setVelocity(double velocityRps) {
         if (isHoming()) {
-            DriverStation.reportWarning("[mechanismUnit] '" + config.name
+            DriverStationErrors.reportWarning("[mechanismUnit] '" + config.name
                 + "': setVelocity() called while homing — command ignored.", false);
             return;
         }
@@ -320,7 +320,7 @@ public class mechanismUnit implements ConfigVerifiable {
      */
     public final void setPosition(double positionDeg) {
         if (isHoming()) {
-            DriverStation.reportWarning("[mechanismUnit] '" + config.name
+            DriverStationErrors.reportWarning("[mechanismUnit] '" + config.name
                 + "': setPosition() called while homing — command ignored.", false);
             return;
         }
@@ -455,7 +455,7 @@ public class mechanismUnit implements ConfigVerifiable {
     public final boolean isAtSetpoint() {
         if (config.setpointDeadband <= 0.0) {
             if (!atSetpointWarningLogged) {
-                DriverStation.reportWarning(
+                DriverStationErrors.reportWarning(
                     "[mechanismUnit] '" + config.name + "': isAtSetpoint() called but "
                     + "setpointDeadband is not configured — returning false. "
                     + "Call withSetpointDeadband() in the mechanismConfig.Builder.", false);
