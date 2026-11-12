@@ -1,6 +1,7 @@
 package frc.lib.hardware.motor;
 
 import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.configs.MotorOutputConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
@@ -70,7 +71,7 @@ public class CTREMotor implements MotorIO {
         kP = config.kP; kI = config.kI; kD = config.kD;
         kS = config.kS; kV = config.kV; kA = config.kA;
 
-        motor = new TalonFX(config.canId);
+        motor = new TalonFX(config.canId, new CANBus(config.canPort));
         motor.getConfigurator().apply(buildConfiguration());
 
         BaseStatusSignal.setUpdateFrequencyForAll(config.signalUpdateHz,

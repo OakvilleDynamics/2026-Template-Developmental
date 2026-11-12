@@ -15,6 +15,7 @@ import org.wpilib.math.geometry.Rotation2d;
 import org.wpilib.math.geometry.Translation2d;
 import org.wpilib.math.kinematics.*;
 import org.wpilib.math.system.DCMotor;
+import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.hardware.Pigeon2;
 import org.wpilib.util.Alert;
 import org.wpilib.driverstation.Alliance;
@@ -91,7 +92,7 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
     // Hardware
     // ─────────────────────────────────────────────────────────────────────────
     private final swerveModule[] modules;
-    private final Pigeon2 imu = new Pigeon2(canIDs.PIGEON2);
+    private final Pigeon2 imu = new Pigeon2(canIDs.PIGEON2, new CANBus(canIDs.CAN_PORT));
 
     // ─────────────────────────────────────────────────────────────────────────
     // Kinematics and pose estimation

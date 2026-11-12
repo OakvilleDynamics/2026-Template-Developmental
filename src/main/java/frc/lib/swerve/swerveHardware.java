@@ -129,7 +129,9 @@ public final class swerveHardware {
             int analogPort, int cancoderCanId, double offsetVolts, double offsetRot) {
         switch (type) {
             case THRIFTY_ANALOG:   return new ThriftyAnalogEncoder(analogPort, offsetVolts);
-            case CTRE_CANCODER:    return new CTRECANcoderEncoder(cancoderCanId, offsetRot);
+            // The CANcoder shares its module's steer motor CAN port
+            case CTRE_CANCODER:    return new CTRECANcoderEncoder(
+                                       cancoderCanId, steerMotor.getConfig().canPort, offsetRot);
             case REV_THROUGH_BORE: return new REVThroughBoreEncoder(steerMotor, offsetRot);
             default: throw new IllegalArgumentException("swerveHardware: unsupported encoder type " + type);
         }

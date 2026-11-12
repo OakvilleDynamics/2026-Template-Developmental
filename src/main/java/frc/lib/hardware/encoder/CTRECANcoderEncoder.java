@@ -1,6 +1,8 @@
 package frc.lib.hardware.encoder;
 
+import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.hardware.CANcoder;
+import org.wpilib.hardware.bus.CANPort;
 
 /**
  * CTRECANcoderEncoder.java
@@ -25,10 +27,11 @@ public class CTRECANcoderEncoder implements AbsoluteEncoderIO {
 
     /**
      * @param canId           CANcoder CAN bus ID
+     * @param canPort         SystemCore CAN port the CANcoder is wired to
      * @param offsetRotations rotations to subtract so 0 rot = zero direction
      */
-    public CTRECANcoderEncoder(int canId, double offsetRotations) {
-        this.canCoder        = new CANcoder(canId);
+    public CTRECANcoderEncoder(int canId, CANPort canPort, double offsetRotations) {
+        this.canCoder        = new CANcoder(canId, new CANBus(canPort));
         this.offsetRotations = offsetRotations;
     }
 

@@ -7,6 +7,8 @@ import frc.lib.control.ff.ffProvider;
 import frc.lib.hardware.motor.MotorIOConfig;
 import frc.lib.hardware.motor.MotorVendor;
 
+import org.wpilib.hardware.bus.CANPort;
+
 /**
  * mechanismConfig.java
  * PATH: src/main/java/frc/lib/control/mechanismConfig.java
@@ -265,6 +267,9 @@ public final class mechanismConfig {
      */
     public final MotorIOConfig.NovaMotorType novaMotorType;
 
+    /** SystemCore CAN port every motor in this mechanism is wired to. Default CAN_S0. */
+    public final CANPort canPort;
+
     // ── CAN signals (CTRE only) ───────────────────────────────────────────────
 
     /** Status signal rate for velocity/position/current/voltage (Hz). Default 250. */
@@ -314,7 +319,8 @@ public final class mechanismConfig {
             .withCurrentLimits(supplyCurrentLimitAmps, statorCurrentLimitAmps)
             .withRampRates(openLoopRampSecs, closedLoopRampSecs)
             .withCanSignals(signalUpdateHz, tempSignalUpdateHz, optimizeCanUtilization)
-            .withNovaMotorType(novaMotorType);
+            .withNovaMotorType(novaMotorType)
+            .withCanPort(canPort);
         if (index == 0) {
             b.withInverted(inverted)
              .withGains(pid)
@@ -388,6 +394,7 @@ public final class mechanismConfig {
         this.stallDetectionCycles    = b.stallDetectionCycles;
         this.homingZeroOffsetDeg     = b.homingZeroOffsetDeg;
         this.novaMotorType           = b.novaMotorType;
+        this.canPort                 = b.canPort;
         this.signalUpdateHz          = b.signalUpdateHz;
         this.tempSignalUpdateHz      = b.tempSignalUpdateHz;
         this.optimizeCanUtilization  = b.optimizeCanUtilization;
@@ -431,6 +438,7 @@ public final class mechanismConfig {
         b.stallDetectionCycles     = stallDetectionCycles;
         b.homingZeroOffsetDeg      = homingZeroOffsetDeg;
         b.novaMotorType            = novaMotorType;
+        b.canPort                  = canPort;
         b.signalUpdateHz           = signalUpdateHz;
         b.tempSignalUpdateHz       = tempSignalUpdateHz;
         b.optimizeCanUtilization   = optimizeCanUtilization;
@@ -516,6 +524,7 @@ public final class mechanismConfig {
         private int    stallDetectionCycles       = 3;
         private double homingZeroOffsetDeg        = Double.NaN;
         private MotorIOConfig.NovaMotorType novaMotorType = null;
+        private CANPort canPort                   = CANPort.CAN_S0;
         private double  signalUpdateHz            = 250.0;
         private double  tempSignalUpdateHz        = 4.0;
         private boolean optimizeCanUtilization    = false;
@@ -807,6 +816,12 @@ public final class mechanismConfig {
          */
         public Builder withNovaMotorType(MotorIOConfig.NovaMotorType type) {
             this.novaMotorType = type;
+            return this;
+        }
+
+        /** SystemCore CAN port all of this mechanism's motors are wired to. Default CAN_S0. */
+        public Builder withCanPort(CANPort port) {
+            this.canPort = port;
             return this;
         }
 

@@ -1,5 +1,7 @@
 package frc.lib.hardware.motor;
 
+import org.wpilib.hardware.bus.CANPort;
+
 /**
  * MotorIOConfig.java
  * PATH: src/main/java/frc/lib/hardware/motor/MotorIOConfig.java
@@ -31,6 +33,7 @@ package frc.lib.hardware.motor;
  *   continuousWrap         : hardware on CTRE/REV, software on Nova
  *   signal rates / optimizeCanUtilization : CTRE only
  *   novaMotorType          : Nova only — checked by ConfigVerifier
+ *   canPort                : SystemCore CAN port (CTRE and REV; default CAN_S0)
  */
 public final class MotorIOConfig {
 
@@ -40,6 +43,8 @@ public final class MotorIOConfig {
     // ── Identity ──────────────────────────────────────────────────────────────
     public final int         canId;
     public final MotorVendor vendor;
+    /** SystemCore CAN port the controller is wired to. Default CAN_S0. */
+    public final CANPort     canPort;
 
     // ── Direction / neutral ───────────────────────────────────────────────────
     public final boolean inverted;
@@ -83,6 +88,7 @@ public final class MotorIOConfig {
     private MotorIOConfig(Builder b) {
         this.canId                   = b.canId;
         this.vendor                  = b.vendor;
+        this.canPort                 = b.canPort;
         this.inverted                = b.inverted;
         this.brakeOnNeutral          = b.brakeOnNeutral;
         this.gearRatio               = b.gearRatio;
@@ -117,6 +123,7 @@ public final class MotorIOConfig {
     /** Copy every field into a new Builder — used to derive follower configs. */
     public Builder toBuilder() {
         Builder b = new Builder(canId, vendor);
+        b.canPort                 = canPort;
         b.inverted                = inverted;
         b.brakeOnNeutral          = brakeOnNeutral;
         b.gearRatio               = gearRatio;
@@ -150,6 +157,7 @@ public final class MotorIOConfig {
     public static final class Builder {
         private int         canId;
         private MotorVendor vendor;
+        private CANPort     canPort = CANPort.CAN_S0;
 
         private boolean inverted                = false;
         private boolean brakeOnNeutral          = true;
@@ -263,6 +271,12 @@ public final class MotorIOConfig {
             this.signalUpdateHz         = updateHz;
             this.tempSignalUpdateHz     = tempUpdateHz;
             this.optimizeCanUtilization = optimizeCanUsage;
+            return this;
+        }
+
+        /** SystemCore CAN port the controller is wired to (CAN_S0..S4, CAN_D0..D5). */
+        public Builder withCanPort(CANPort port) {
+            this.canPort = port;
             return this;
         }
 

@@ -231,6 +231,7 @@ public class RobotContainer {
         MotorIO driveMotor = MotorIO.create(swerveHardware
             .driveMotorConfig(swerveConstants.DRIVE_MOTOR_TYPE, driveCanId, driveInverted,
                               drivePID, swerveConstants.DRIVE_GEAR_RATIO)
+            .withCanPort(canIDs.CAN_PORT)
             .withCanSignals(swerveConstants.SIGNAL_UPDATE_HZ, swerveConstants.SIGNAL_UPDATE_HZ_TEMP,
                             swerveConstants.OPTIMIZE_CAN_UTILIZATION)
             .build());
@@ -238,6 +239,7 @@ public class RobotContainer {
         MotorIO steerMotor = MotorIO.create(swerveHardware
             .steerMotorConfig(swerveConstants.STEER_MOTOR_TYPE, steerCanId,
                               steerPID, swerveConstants.STEER_GEAR_RATIO)
+            .withCanPort(canIDs.CAN_PORT)
             .withCanSignals(swerveConstants.SIGNAL_UPDATE_HZ, swerveConstants.SIGNAL_UPDATE_HZ_TEMP,
                             swerveConstants.OPTIMIZE_CAN_UTILIZATION)
             .build());

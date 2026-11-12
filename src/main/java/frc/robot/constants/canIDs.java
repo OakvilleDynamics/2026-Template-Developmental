@@ -1,5 +1,7 @@
 package frc.robot.constants;
 
+import org.wpilib.hardware.bus.CANPort;
+
 /**
  * canIDs.java
  * PATH: src/main/java/frc/robot/constants/canIDs.java
@@ -16,6 +18,10 @@ package frc.robot.constants;
  * TODO: confirm all IDs match physical wiring before first deploy.
  */
 public final class canIDs {
+
+    // ── CAN bus — SystemCore has multiple buses; every device must name one ──
+    // TODO: confirm which SystemCore CAN port the robot's devices are wired to
+    public static final CANPort CAN_PORT = CANPort.CAN_S0;
 
     // ── Swerve drive motors — Kraken X60 (TalonFX, Phoenix 6) ────────────────
     // TODO: confirm CAN IDs match physical wiring

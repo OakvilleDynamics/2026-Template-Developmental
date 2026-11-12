@@ -80,8 +80,8 @@ public class REVMotor implements MotorIO {
         kP = config.kP; kI = config.kI; kD = config.kD; kV = config.kV;
 
         spark = isFlex
-            ? new SparkFlex(config.canId, MotorType.kBrushless)
-            : new SparkMax(config.canId, MotorType.kBrushless);
+            ? new SparkFlex(config.canPort, config.canId, MotorType.kBrushless)
+            : new SparkMax(config.canPort, config.canId, MotorType.kBrushless);
         controller = spark.getClosedLoopController();
 
         spark.configure(buildConfiguration(), ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);

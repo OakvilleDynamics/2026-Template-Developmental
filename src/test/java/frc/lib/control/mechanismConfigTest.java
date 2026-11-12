@@ -12,6 +12,8 @@ import frc.lib.control.ff.ffProvider;
 import frc.lib.hardware.motor.MotorIOConfig;
 import frc.lib.hardware.motor.MotorVendor;
 
+import org.wpilib.hardware.bus.CANPort;
+
 /**
  * mechanismConfigTest.java
  * PATH: src/test/java/frc/lib/control/mechanismConfigTest.java
@@ -92,6 +94,7 @@ class mechanismConfigTest {
             .withHomingZeroOffset(-3.0)
             .withNovaMotorType(MotorIOConfig.NovaMotorType.MINION)
             .withCanSignals(100, 2, true)
+            .withCanPort(CANPort.CAN_S2)
             .withSetpointDeadband(0.5)
             .withEncoderSync(0.02, 0.9)
             .build();
@@ -108,6 +111,8 @@ class mechanismConfigTest {
         assertEquals(MotorIOConfig.NovaMotorType.MINION, copy.novaMotorType);
         assertEquals(100.0, copy.signalUpdateHz, EPS);
         assertTrue(copy.optimizeCanUtilization);
+        assertEquals(CANPort.CAN_S2, copy.canPort);
+        assertEquals(CANPort.CAN_S2, copy.motorConfig(1).canPort);   // reaches followers too
         assertEquals(0.5, copy.setpointDeadband, EPS);
         assertEquals(0.9, copy.encoderSyncKp, EPS);
         assertEquals(motorConstants.FollowMode.ENCODER_SYNC, copy.followModeOf(2));
