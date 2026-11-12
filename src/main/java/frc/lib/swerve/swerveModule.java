@@ -1,10 +1,5 @@
 package frc.lib.swerve;
 
-import com.revrobotics.spark.SparkBase;
-import com.revrobotics.spark.SparkFlex;
-import com.revrobotics.spark.SparkMax;
-import com.revrobotics.spark.SparkLowLevel.MotorType;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,41 +8,27 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
-import frc.robot.constants.swerveConstants;
-import frc.lib.util.RobotLogger;
+import frc.lib.hardware.encoder.AbsoluteEncoderIO;
+import frc.lib.hardware.encoder.ThriftyAnalogEncoder;
+import frc.lib.hardware.motor.MotorIO;
+import frc.lib.hardware.motor.MotorIOConfig;
 import frc.lib.util.ConfigVerifiable;
 import frc.lib.util.ConfigVerifyResult;
-
-import frc.robot.subsystems.swerveDrive.drive.SwerveDriveMotor;
-import frc.robot.subsystems.swerveDrive.drive.CTREDriveMotor;
-import frc.robot.subsystems.swerveDrive.drive.REVDriveMotor;
-import frc.robot.subsystems.swerveDrive.drive.NovaDriveMotor;
-import frc.robot.subsystems.swerveDrive.steer.SwerveSteerMotor;
-import frc.lib.hardware.encoder.SwerveAbsoluteEncoder;
-import frc.robot.subsystems.swerveDrive.steer.CTRESteerMotor;
-import frc.robot.subsystems.swerveDrive.steer.NovaSteerMotor;
-import frc.robot.subsystems.swerveDrive.steer.REVSteerMotor;
-import frc.lib.hardware.encoder.ThriftyAnalogEncoder;
-import frc.lib.hardware.encoder.CTRECANcoderEncoder;
-import frc.lib.hardware.encoder.REVThroughBoreEncoder;
+import frc.lib.util.RobotLogger;
+import frc.lib.util.units;
 
 /**
  * swerveModule.java
  * PATH: src/main/java/frc/lib/swerve/swerveModule.java
  *
- * One Thrifty Narrow swerve module — vendor-agnostic.
- *
- * Drive and steer motor types are selected in swerveConstants via:
- *   DRIVE_MOTOR_TYPE  — Kraken X60, Kraken X44, NEO Vortex, NEO, Nova/Pulsar
- *   STEER_MOTOR_TYPE  — Kraken X60, Kraken X44, Minion, Nova, NEO Vortex, NEO, NEO 550
- *   ABS_ENCODER_TYPE  — Thrifty analog, CTRE CANcoder, REV Through Bore
- *
- * Changing those three constants is the only code change required to swap hardware.
- * This class contains no vendor-specific logic.
+ * One swerve module — vendor-agnostic. Takes its drive motor, steer motor and
+ * absolute encoder as already-built MotorIO / AbsoluteEncoderIO objects; use
+ * swerveHardware to build them from a motor/encoder type. This class contains
+ * no vendor-specific logic and reads no robot constants.
  *
  * ─── UNITS ────────────────────────────────────────────────────────────────────
- * SwerveDriveMotor interface: wheel shaft rotations / rot·s⁻¹ (gear ratio inside)
- * SwerveSteerMotor interface: mechanism shaft rotations [-0.5, 0.5]
+ * Drive MotorIO: wheel shaft rotations / rot·s⁻¹ (gear ratio inside MotorIO)
+ * Steer MotorIO: module azimuth rotations [-0.5, 0.5], continuous wrap
  * Public API: meters, Rotation2d (WPILib standard)
  *
  * ─── ENCODER SEEDING ─────────────────────────────────────────────────────────
@@ -57,19 +38,20 @@ import frc.lib.hardware.encoder.REVThroughBoreEncoder;
  *
  * ─── PID LIVE TUNING ─────────────────────────────────────────────────────────
  * All PID values are published to SmartDashboard at startup and re-read every
- * loop. When a value changes, applyDashboardPIDUpdates() delegates to the motor
- * implementation — no vendor-specific logic here.
+ * loop. When a value changes, applyDashboardPIDUpdates() delegates to the
+ * MotorIO — no vendor-specific logic here.
  */
 public class swerveModule implements ConfigVerifiable {
 
     // ── Vendor-agnostic hardware ──────────────────────────────────────────────
-    private final SwerveDriveMotor      driveMotor;
-    private final SwerveSteerMotor      steerMotor;
-    private final SwerveAbsoluteEncoder absEncoder;
+    private final MotorIO           driveMotor;
+    private final MotorIO           steerMotor;
+    private final AbsoluteEncoderIO absEncoder;
 
-    // ── Identity ──────────────────────────────────────────────────────────────
+    // ── Identity / geometry ───────────────────────────────────────────────────
     private final String name;
     private final int    moduleIndex;  // 0=FL, 1=FR, 2=BL, 3=BR — for RobotLogger indexing
+    private final double wheelCircumferenceM;
 
     // ── Live PID values (read back from dashboard each loop) ──────────────────
     private double drive_kP, drive_kI, drive_kD, drive_kS, drive_kV, drive_kA;
@@ -80,160 +62,39 @@ public class swerveModule implements ConfigVerifiable {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @param name             Telemetry label: "FL", "FR", "BL", "BR"
-     * @param moduleIndex      0=FL, 1=FR, 2=BL, 3=BR
-     * @param driveCanId       Drive motor CAN ID
-     * @param steerCanId       Steer motor CAN ID
-     * @param analogPort       roboRIO analog port (THRIFTY_ANALOG only; ignored otherwise)
-     * @param cancoderCanId    CANcoder CAN ID (CTRE_CANCODER only; ignored otherwise)
-     * @param steerOffsetVolts Thrifty encoder voltage when wheel points forward
-     * @param steerOffsetRot   Rotation offset when wheel points forward
-     *                         (CTRE_CANCODER and REV_THROUGH_BORE; ignored for THRIFTY_ANALOG)
-     * @param driveInverted    true if drive motor output should be inverted
-     * @param drivePID         { kP, kI, kD, kS, kV, kA }
-     * @param steerPID         { kP, kI, kD, kS, kV }
+     * @param name                Telemetry label: "FL", "FR", "BL", "BR"
+     * @param moduleIndex         0=FL, 1=FR, 2=BL, 3=BR
+     * @param driveMotor          drive MotorIO (velocity, wheel-shaft units)
+     * @param steerMotor          steer MotorIO (position, azimuth units, continuous wrap)
+     * @param absEncoder          absolute azimuth encoder, zero = wheel straight forward
+     * @param wheelDiameterInches drive wheel diameter (inches)
      */
     public swerveModule(
             String name,
             int moduleIndex,
-            int driveCanId,
-            int steerCanId,
-            int analogPort,
-            int cancoderCanId,
-            double steerOffsetVolts,
-            double steerOffsetRot,
-            boolean driveInverted,
-            double[] drivePID,
-            double[] steerPID) {
+            MotorIO driveMotor,
+            MotorIO steerMotor,
+            AbsoluteEncoderIO absEncoder,
+            double wheelDiameterInches) {
 
-        this.name        = name;
-        this.moduleIndex = moduleIndex;
+        this.name                = name;
+        this.moduleIndex         = moduleIndex;
+        this.driveMotor          = driveMotor;
+        this.steerMotor          = steerMotor;
+        this.absEncoder          = absEncoder;
+        this.wheelCircumferenceM = Math.PI * units.inches_m(wheelDiameterInches);
 
-        drive_kP = drivePID[0]; drive_kI = drivePID[1]; drive_kD = drivePID[2];
-        drive_kS = drivePID[3]; drive_kV = drivePID[4]; drive_kA = drivePID[5];
-        steer_kP = steerPID[0]; steer_kI = steerPID[1]; steer_kD = steerPID[2];
-        steer_kS = steerPID[3]; steer_kV = steerPID[4];
+        MotorIOConfig d = driveMotor.getConfig();
+        MotorIOConfig s = steerMotor.getConfig();
+        drive_kP = d.kP; drive_kI = d.kI; drive_kD = d.kD;
+        drive_kS = d.kS; drive_kV = d.kV; drive_kA = d.kA;
+        steer_kP = s.kP; steer_kI = s.kI; steer_kD = s.kD;
+        steer_kS = s.kS; steer_kV = s.kV;
 
         publishPIDToDashboard();
 
-        driveMotor = buildDriveMotor(driveCanId, driveInverted, drivePID);
-
-        // Steer motor + encoder built together to handle the REV_THROUGH_BORE case
-        // where the SparkBase must be shared between encoder and motor controller.
-        Object[] steerAndEncoder = buildSteerAndEncoder(
-            steerCanId, analogPort, cancoderCanId,
-            steerOffsetVolts, steerOffsetRot, steerPID);
-        steerMotor = (SwerveSteerMotor)     steerAndEncoder[0];
-        absEncoder = (SwerveAbsoluteEncoder) steerAndEncoder[1];
-
+        driveMotor.setEncoderPosition(0.0);
         seedSteerFromAbsolute();
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Factory methods — read swerveConstants, return vendor implementations
-    // ─────────────────────────────────────────────────────────────────────────
-
-    private static SwerveDriveMotor buildDriveMotor(
-            int canId, boolean inverted, double[] pid) {
-        double gr = swerveConstants.DRIVE_GEAR_RATIO;
-        switch (swerveConstants.DRIVE_MOTOR_TYPE) {
-            case KRAKEN_X60:
-            case KRAKEN_X44:
-                return new CTREDriveMotor(swerveConstants.DRIVE_MOTOR_TYPE, canId, inverted, pid, gr);
-            case NEO_VORTEX:
-            case NEO:
-                return new REVDriveMotor(swerveConstants.DRIVE_MOTOR_TYPE, canId, inverted, pid, gr);
-            case NOVA_PULSAR:
-                return new NovaDriveMotor(canId, inverted, pid, gr);
-            default:
-                throw new IllegalArgumentException(
-                    "swerveModule: unknown DRIVE_MOTOR_TYPE " + swerveConstants.DRIVE_MOTOR_TYPE);
-        }
-    }
-
-    /**
-     * Returns {SwerveSteerMotor, SwerveAbsoluteEncoder}.
-     * Kept together so REV_THROUGH_BORE can share one SparkBase instance.
-     */
-    private static Object[] buildSteerAndEncoder(
-            int steerCanId, int analogPort, int cancoderCanId,
-            double offsetVolts, double offsetRot, double[] pid) {
-
-        double gr = swerveConstants.STEER_GEAR_RATIO;
-        SwerveSteerMotor    steer;
-        SwerveAbsoluteEncoder encoder;
-
-        if (swerveConstants.ABS_ENCODER_TYPE
-                == swerveConstants.AbsoluteEncoderType.REV_THROUGH_BORE) {
-            // SparkBase shared between encoder and motor — create once
-            validateRevThroughBoreCompatibility();
-            boolean isFlex = (swerveConstants.STEER_MOTOR_TYPE
-                              == swerveConstants.SteerMotorType.NEO_VORTEX);
-            SparkBase spark = isFlex
-                ? new SparkFlex(steerCanId, MotorType.kBrushless)
-                : new SparkMax(steerCanId, MotorType.kBrushless);
-            encoder = new REVThroughBoreEncoder(spark, offsetRot);
-            steer   = new REVSteerMotor(spark, isFlex, revSteerCurrentLimit(), pid, gr);
-        } else {
-            steer   = buildSteerMotor(steerCanId, pid, gr);
-            encoder = buildEncoder(analogPort, cancoderCanId, offsetVolts, offsetRot);
-        }
-
-        return new Object[]{steer, encoder};
-    }
-
-    private static SwerveSteerMotor buildSteerMotor(int canId, double[] pid, double gr) {
-        switch (swerveConstants.STEER_MOTOR_TYPE) {
-            case KRAKEN_X60:
-            case KRAKEN_X44:
-            case MINION:
-                return new CTRESteerMotor(swerveConstants.STEER_MOTOR_TYPE, canId, pid, gr);
-            case NOVA:
-                return new NovaSteerMotor(canId, pid, gr);
-            case NEO_VORTEX:
-            case NEO:
-            case NEO_550:
-                return new REVSteerMotor(swerveConstants.STEER_MOTOR_TYPE, canId, pid, gr);
-            default:
-                throw new IllegalArgumentException(
-                    "swerveModule: unknown STEER_MOTOR_TYPE " + swerveConstants.STEER_MOTOR_TYPE);
-        }
-    }
-
-    private static SwerveAbsoluteEncoder buildEncoder(
-            int analogPort, int cancoderCanId, double offsetVolts, double offsetRot) {
-        switch (swerveConstants.ABS_ENCODER_TYPE) {
-            case THRIFTY_ANALOG:
-                return new ThriftyAnalogEncoder(analogPort, offsetVolts);
-            case CTRE_CANCODER:
-                return new CTRECANcoderEncoder(cancoderCanId, offsetRot);
-            default:
-                throw new IllegalArgumentException(
-                    "swerveModule: unknown ABS_ENCODER_TYPE " + swerveConstants.ABS_ENCODER_TYPE);
-        }
-    }
-
-    private static void validateRevThroughBoreCompatibility() {
-        switch (swerveConstants.STEER_MOTOR_TYPE) {
-            case NEO_VORTEX:
-            case NEO:
-            case NEO_550:
-                return;
-            default:
-                throw new IllegalArgumentException(
-                    "swerveConstants: ABS_ENCODER_TYPE = REV_THROUGH_BORE requires a REV steer motor "
-                    + "(NEO_VORTEX, NEO, or NEO_550). STEER_MOTOR_TYPE = "
-                    + swerveConstants.STEER_MOTOR_TYPE + " is not compatible.");
-        }
-    }
-
-    private static int revSteerCurrentLimit() {
-        switch (swerveConstants.STEER_MOTOR_TYPE) {
-            case NEO_VORTEX: return 30;
-            case NEO:        return 25;
-            case NEO_550:    return 20;
-            default:         return 25;
-        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -244,23 +105,19 @@ public class swerveModule implements ConfigVerifiable {
         applyDashboardPIDUpdates();
 
         // Drive: convert m/s → wheel rot/s; gear ratio handled inside driveMotor
-        double wheelRotPerSec = desiredState.speedMetersPerSecond
-            / (Math.PI * swerveConstants.WHEEL_DIAMETER_INCHES * 0.0254);
-        driveMotor.setVelocityRotPerSec(wheelRotPerSec);
+        driveMotor.setVelocity(desiredState.speedMetersPerSecond / wheelCircumferenceM, 0.0);
 
         // Steer: getRotations() returns [-0.5, 0.5]; wrap handled inside steerMotor
-        steerMotor.setPositionRot(desiredState.angle.getRotations());
+        steerMotor.setPosition(desiredState.angle.getRotations(), 0.0);
     }
 
     public SwerveModuleState getState() {
-        double wheelRotPerSec = driveMotor.getVelocityRotPerSec();
-        double speedMPS = wheelRotPerSec * Math.PI * swerveConstants.WHEEL_DIAMETER_INCHES * 0.0254;
+        double speedMPS = driveMotor.getVelocityRps() * wheelCircumferenceM;
         return new SwerveModuleState(speedMPS, getSteerAngle());
     }
 
     public SwerveModulePosition getPosition() {
-        double wheelRot  = driveMotor.getPositionRot();
-        double distanceM = wheelRot * Math.PI * swerveConstants.WHEEL_DIAMETER_INCHES * 0.0254;
+        double distanceM = driveMotor.getPositionRot() * wheelCircumferenceM;
         return new SwerveModulePosition(distanceM, getSteerAngle());
     }
 
@@ -275,8 +132,8 @@ public class swerveModule implements ConfigVerifiable {
             absEncoder.getAbsoluteAngleRad() / (2.0 * Math.PI));
 
         // Thrifty analog: also publish raw voltage and log to DataLog
-        if (absEncoder instanceof ThriftyAnalogEncoder) {
-            double rawVolts = ((ThriftyAnalogEncoder) absEncoder).getRawVolts();
+        if (absEncoder instanceof ThriftyAnalogEncoder thrifty) {
+            double rawVolts = thrifty.getRawVolts();
             SmartDashboard.putNumber("Swerve/" + name + "/Raw Volts", rawVolts);
             RobotLogger.moduleSteerVolts[moduleIndex].append(rawVolts);
         }
@@ -323,12 +180,12 @@ public class swerveModule implements ConfigVerifiable {
         if (driveChanged) {
             drive_kP=ndkP; drive_kI=ndkI; drive_kD=ndkD;
             drive_kS=ndkS; drive_kV=ndkV; drive_kA=ndkA;
-            driveMotor.applyPIDGains(drive_kP, drive_kI, drive_kD, drive_kS, drive_kV, drive_kA);
+            driveMotor.applyGains(drive_kP, drive_kI, drive_kD, drive_kS, drive_kV, drive_kA);
         }
         if (steerChanged) {
             steer_kP=nskP; steer_kI=nskI; steer_kD=nskD;
             steer_kS=nskS; steer_kV=nskV;
-            steerMotor.applyPIDGains(steer_kP, steer_kI, steer_kD, steer_kS, steer_kV);
+            steerMotor.applyGains(steer_kP, steer_kI, steer_kD, steer_kS, steer_kV, 0.0);
         }
     }
 
@@ -353,10 +210,10 @@ public class swerveModule implements ConfigVerifiable {
      * and seeds the steer motor's internal encoder. Called once at construction.
      */
     private void seedSteerFromAbsolute() {
-        double angleRad           = absEncoder.getAbsoluteAngleRad(); // [0, 2π]
+        double angleRad           = absEncoder.getAbsoluteAngleRad(); // [0, 2π)
         double mechanismRotations = angleRad / (2.0 * Math.PI);       // [0, 1)
         if (mechanismRotations > 0.5) mechanismRotations -= 1.0;      // → [-0.5, 0.5)
-        steerMotor.seedPosition(mechanismRotations);
+        steerMotor.setEncoderPosition(mechanismRotations);
     }
 
     private Rotation2d getSteerAngle() {
