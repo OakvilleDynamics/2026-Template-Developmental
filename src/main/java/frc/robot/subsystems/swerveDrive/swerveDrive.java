@@ -434,6 +434,11 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
         // version mismatch), keep the robot running with pathfinding disabled
         // instead of crashing at startup. Commands that use AutoBuilder check
         // isPathPlannerAvailable() first.
+        //
+        // 2027: PathPlannerLib 2027.0.0-alpha-4 fails to load on WPILib 2027
+        // alpha-7 (its RobotConfig registers several Alerts under one id, which
+        // alpha-7 rejects), so pathfinding is currently disabled on this branch
+        // until a compatible PathPlannerLib is installed.
         try {
             Translation2d flPos = new Translation2d( wheelBaseM[0] / 2.0,  wheelBaseM[1] / 2.0);
             Translation2d frPos = new Translation2d( wheelBaseM[0] / 2.0, -wheelBaseM[1] / 2.0);
