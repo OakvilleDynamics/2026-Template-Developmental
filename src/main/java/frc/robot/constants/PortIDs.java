@@ -22,7 +22,6 @@ public final class PortIDs {
     // ── Analog Inputs (AI 0–3) ────────────────────────────────────────────────
     // Thrifty absolute encoders for swerve steer.
     // Used when SwerveConstants.ABS_ENCODER_TYPE = THRIFTY_ANALOG.
-    // TODO: confirm ports match physical wiring.
     public static final int AI_FL_STEER_ENCODER = 0;
     public static final int AI_FR_STEER_ENCODER = 1;
     public static final int AI_BL_STEER_ENCODER = 2;

@@ -5,9 +5,6 @@ import java.util.List;
 
 import edu.wpi.first.wpilibj.DriverStation;
 
-import frc.lib.util.ConfigVerifiable;
-import frc.lib.util.ConfigVerifyResult;
-
 /**
  * ConfigVerifier.java
  * PATH: src/main/java/frc/lib/util/ConfigVerifier.java
