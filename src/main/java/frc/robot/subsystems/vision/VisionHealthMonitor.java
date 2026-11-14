@@ -4,14 +4,14 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.util.datalog.IntegerLogEntry;
 import edu.wpi.first.wpilibj.DataLogManager;
 import frc.lib.util.Dashboard;
-import frc.lib.util.units;
+import frc.lib.util.Units;
 
 /**
- * visionHealthMonitor.java
- * PATH: src/main/java/frc/robot/subsystems/vision/visionHealthMonitor.java
+ * VisionHealthMonitor.java
+ * PATH: src/main/java/frc/robot/subsystems/vision/VisionHealthMonitor.java
  *
  * Pre-match validation and continuous vision health tracking.
- * Updated every loop by visionSubsystem via update().
+ * Updated every loop by VisionSubsystem via update().
  *
  * ─── HEALTH STATUS ───────────────────────────────────────────────────────────
  * UNKNOWN  — not enough data yet (cameras just connected)
@@ -33,7 +33,7 @@ import frc.lib.util.units;
  * Call clearExpectedStartPose() at match start so normal movement
  * doesn't trigger the plausibility check during play.
  */
-public class visionHealthMonitor {
+public class VisionHealthMonitor {
 
     // ── Thresholds ────────────────────────────────────────────────────────────
 
@@ -89,7 +89,7 @@ public class visionHealthMonitor {
     // Constructor
     // ─────────────────────────────────────────────────────────────────────────
 
-    public visionHealthMonitor() {
+    public VisionHealthMonitor() {
         var log = DataLogManager.getLog();
         logFrontMissFrames     = new IntegerLogEntry(log, "/Vision/Debug/FrontMissFrames");
         logRearMissFrames      = new IntegerLogEntry(log, "/Vision/Debug/RearMissFrames");
@@ -103,10 +103,10 @@ public class visionHealthMonitor {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Call from visionSubsystem.periodic() every loop.
+     * Call from VisionSubsystem.periodic() every loop.
      * Processes latest estimates and updates health status.
      */
-    public void update(robotPoseEstimate frontEstimate, robotPoseEstimate rearEstimate) {
+    public void update(RobotPoseEstimate frontEstimate, RobotPoseEstimate rearEstimate) {
         updateCameraHealth(frontEstimate, rearEstimate);
         updateInterCameraAgreement(frontEstimate, rearEstimate);
         updateOverallStatus();
@@ -126,8 +126,8 @@ public class visionHealthMonitor {
         this.expectedStartPose = expectedPose;
         Dashboard.log("Vision/Health/Expected Start",
             String.format("(%.2f ft, %.2f ft)",
-                units.m_feet(expectedPose.getX()),
-                units.m_feet(expectedPose.getY())));
+                Units.metersToFeet(expectedPose.getX()),
+                Units.metersToFeet(expectedPose.getY())));
     }
 
     /**
@@ -149,7 +149,7 @@ public class visionHealthMonitor {
     // Internal health logic
     // ─────────────────────────────────────────────────────────────────────────
 
-    private void updateCameraHealth(robotPoseEstimate front, robotPoseEstimate rear) {
+    private void updateCameraHealth(RobotPoseEstimate front, RobotPoseEstimate rear) {
         // Front camera
         if (front.isValid) {
             frontMissFrames    = 0;
@@ -178,7 +178,7 @@ public class visionHealthMonitor {
         else if (rear.isValid) rearHighAmbFrames = 0;
     }
 
-    private void updateInterCameraAgreement(robotPoseEstimate front, robotPoseEstimate rear) {
+    private void updateInterCameraAgreement(RobotPoseEstimate front, RobotPoseEstimate rear) {
         if (!front.isValid || !rear.isValid) {
             interCameraDisagree = 0;
             return;
@@ -229,7 +229,7 @@ public class visionHealthMonitor {
     // Dashboard updates
     // ─────────────────────────────────────────────────────────────────────────
 
-    private void publishToDashboard(robotPoseEstimate front, robotPoseEstimate rear) {
+    private void publishToDashboard(RobotPoseEstimate front, RobotPoseEstimate rear) {
         Dashboard.log(STATUS_PREFIX + "Front connected", frontConnected);
         Dashboard.log(STATUS_PREFIX + "Rear connected", rearConnected);
         Dashboard.log(STATUS_PREFIX + "Front sees tags", front.isValid);
@@ -243,13 +243,13 @@ public class visionHealthMonitor {
         // Plausibility check — only meaningful when expected pose is set
         boolean plausible = true;
         if (expectedStartPose != null) {
-            robotPoseEstimate best = robotPoseEstimate.best(front, rear);
+            RobotPoseEstimate best = RobotPoseEstimate.best(front, rear);
             if (best.isValid) {
                 double dist = expectedStartPose.getTranslation()
                     .getDistance(best.pose.getTranslation());
                 plausible = dist < POSE_PLAUSIBILITY_TOLERANCE_M;
                 Dashboard.log("Vision/Health/Start Pose Error (ft)",
-                    units.m_feet(dist));
+                    Units.metersToFeet(dist));
             }
         }
         Dashboard.log(CHECK_PREFIX + "Pose plausible", plausible);
@@ -257,12 +257,12 @@ public class visionHealthMonitor {
         Dashboard.log(DASH_PREFIX + "Overall Status", overallStatus.name());
 
         if (front.isValid) {
-            Dashboard.log(POSE_PREFIX + "Front X (ft)", units.m_feet(front.pose.getX()));
-            Dashboard.log(POSE_PREFIX + "Front Y (ft)", units.m_feet(front.pose.getY()));
+            Dashboard.log(POSE_PREFIX + "Front X (ft)", Units.metersToFeet(front.pose.getX()));
+            Dashboard.log(POSE_PREFIX + "Front Y (ft)", Units.metersToFeet(front.pose.getY()));
         }
         if (rear.isValid) {
-            Dashboard.log(POSE_PREFIX + "Rear X (ft)", units.m_feet(rear.pose.getX()));
-            Dashboard.log(POSE_PREFIX + "Rear Y (ft)", units.m_feet(rear.pose.getY()));
+            Dashboard.log(POSE_PREFIX + "Rear X (ft)", Units.metersToFeet(rear.pose.getX()));
+            Dashboard.log(POSE_PREFIX + "Rear Y (ft)", Units.metersToFeet(rear.pose.getY()));
         }
     }
 }

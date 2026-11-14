@@ -4,18 +4,18 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.constants.swerveConstants;
-import frc.lib.swerve.driveInput;
-import frc.robot.subsystems.swerveDrive.swerveDrive;
+import frc.robot.constants.SwerveConstants;
+import frc.lib.swerve.DriveInput;
+import frc.robot.subsystems.swerveDrive.SwerveDrive;
 import frc.lib.mechanisms.shooter.AimDriveModes;
-import frc.lib.util.units;
+import frc.lib.util.Units;
 
 /**
- * driveWithJoysticks.java
- * PATH: src/main/java/frc/robot/commands/driveWithJoysticks.java
+ * DriveWithJoysticks.java
+ * PATH: src/main/java/frc/robot/commands/DriveWithJoysticks.java
  *
  * Default drive command. Runs continuously while no other command requires
- * the swerveDrive subsystem.
+ * the SwerveDrive subsystem.
  *
  * ─── CONTROL MAPPING (Logitech Extreme 3D Pro) ───────────────────────────────
  *
@@ -41,7 +41,7 @@ import frc.lib.util.units;
  *                    PID-holds to nearest bound if heading exits the window
  * STATIC_SHOT_LOCK — wheels X-braced, no translation; for stationary shooting
  *
- * The shooterAimController sets the active mode each loop via the enable/clear
+ * The ShooterAimController sets the active mode each loop via the enable/clear
  * methods. This is the external driver-input pipeline — joystick values are read
  * every execute() but the output path is governed by the externally-set mode.
  *
@@ -49,7 +49,7 @@ import frc.lib.util.units;
  * squareInput() squares magnitude while preserving sign.
  * Gives finer low-speed control without losing full power at full deflection.
  */
-public class driveWithJoysticks extends Command implements AimDriveModes {
+public class DriveWithJoysticks extends Command implements AimDriveModes {
 
     // ── Logitech Extreme 3D Pro axis indices ──────────────────────────────────
     private static final int AXIS_X     = 0;  // stick left/right
@@ -57,7 +57,7 @@ public class driveWithJoysticks extends Command implements AimDriveModes {
     private static final int AXIS_TWIST = 2;  // twist rotation
 
     // ── Dependencies ──────────────────────────────────────────────────────────
-    private final swerveDrive drive;
+    private final SwerveDrive drive;
     private final Joystick    leftStick;
     private final Joystick    rightStick;
 
@@ -97,14 +97,14 @@ public class driveWithJoysticks extends Command implements AimDriveModes {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @param drive       swerveDrive subsystem
+     * @param drive       SwerveDrive subsystem
      * @param leftStick   Left flight stick — translation input
      * @param rightStick  Right flight stick — rotation, CoR, and button input
      * @param corMaxXIn   CoR forward/back bound in INCHES (use bumper half-length)
      * @param corMaxYIn   CoR left/right bound in INCHES (use bumper half-width)
      */
-    public driveWithJoysticks(
-            swerveDrive drive,
+    public DriveWithJoysticks(
+            SwerveDrive drive,
             Joystick leftStick,
             Joystick rightStick,
             double corMaxXIn,
@@ -113,14 +113,14 @@ public class driveWithJoysticks extends Command implements AimDriveModes {
         this.drive      = drive;
         this.leftStick  = leftStick;
         this.rightStick = rightStick;
-        this.corMaxX    = units.inches_m(corMaxXIn);
-        this.corMaxY    = units.inches_m(corMaxYIn);
+        this.corMaxX    = Units.inchesToMeters(corMaxXIn);
+        this.corMaxY    = Units.inchesToMeters(corMaxYIn);
 
         addRequirements(drive);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Drive mode control — called by shooterAimController each loop
+    // Drive mode control — called by ShooterAimController each loop
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
@@ -165,7 +165,7 @@ public class driveWithJoysticks extends Command implements AimDriveModes {
 
     /**
      * Restore NORMAL mode — full driver control, all heading overrides released.
-     * Called by shooterAimController.clearAimMode() on button release.
+     * Called by ShooterAimController.clearAimMode() on button release.
      */
     public void clearAimMode() {
         this.driveMode = DriveMode.NORMAL;
@@ -191,12 +191,12 @@ public class driveWithJoysticks extends Command implements AimDriveModes {
         double lX = applyDeadband(leftStick.getRawAxis(AXIS_X));
 
         // Y axis inverted: push forward = negative raw → positive vx (field forward)
-        double vxFtps =  squareInput(-lY) * swerveConstants.MAX_DRIVE_SPEED_FPS;
-        double vyFtps = -squareInput( lX) * swerveConstants.MAX_DRIVE_SPEED_FPS;
+        double vxFtps =  squareInput(-lY) * SwerveConstants.MAX_DRIVE_SPEED_FPS;
+        double vyFtps = -squareInput( lX) * SwerveConstants.MAX_DRIVE_SPEED_FPS;
 
         // ── Right stick twist: rotation ───────────────────────────────────────
         double twist = applyDeadband(rightStick.getRawAxis(AXIS_TWIST));
-        double omega = -squareInput(twist) * swerveConstants.MAX_ANGULAR_SPEED_RPS;
+        double omega = -squareInput(twist) * SwerveConstants.MAX_ANGULAR_SPEED_RPS;
 
         // ── Right stick X/Y: center of rotation ───────────────────────────────
         // Push stick forward  → CoR moves toward robot front (+X)
@@ -211,7 +211,7 @@ public class driveWithJoysticks extends Command implements AimDriveModes {
         Translation2d centerOfRotation = new Translation2d(corXm, corYm);
 
         // ── Build input and dispatch by drive mode ────────────────────────────
-        driveInput input = new driveInput(vxFtps, vyFtps, omega, centerOfRotation);
+        DriveInput input = new DriveInput(vxFtps, vyFtps, omega, centerOfRotation);
 
         switch (driveMode) {
             case POINT_AT:
@@ -249,7 +249,7 @@ public class driveWithJoysticks extends Command implements AimDriveModes {
     // ─────────────────────────────────────────────────────────────────────────
 
     private double applyDeadband(double value) {
-        return MathUtil.applyDeadband(value, swerveConstants.INPUT_DEADBAND);
+        return MathUtil.applyDeadband(value, SwerveConstants.INPUT_DEADBAND);
     }
 
     /** Squares magnitude while preserving sign for improved low-speed feel. */

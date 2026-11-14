@@ -4,18 +4,18 @@ import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
-import frc.lib.util.units;
+import frc.lib.util.Units;
 
 /**
- * visionConstants.java
- * PATH: src/main/java/frc/robot/constants/visionConstants.java
+ * VisionConstants.java
+ * PATH: src/main/java/frc/robot/constants/VisionConstants.java
  *
  * All PhotonVision and field vision configuration in one place.
  *
  * ─── SEASON SETUP CHECKLIST ──────────────────────────────────────────────────
  * Each new season, update:
  *   1. GAME_YEAR_FIELD  — change the AprilTagFields enum value in RobotContainer
- *                         (not here — visionConstants holds the default reference only)
+ *                         (not here — VisionConstants holds the default reference only)
  *   2. Camera transforms — remeasure if robot geometry changed
  *   3. Stream URLs       — verify port numbers in PhotonVision UI
  *   4. AprilTagIgnore.java — review tag IDs for new field layout
@@ -36,7 +36,7 @@ import frc.lib.util.units;
  *
  * ─── COPROCESSOR NETWORK ─────────────────────────────────────────────────────
  * This file covers the AprilTag pose estimation coprocessor only.
- * Game piece detection runs on a separate coprocessor — see gamePieceConstants.
+ * Game piece detection runs on a separate coprocessor — see GamePieceConstants.
  *
  * AprilTag OrangePi 5 static IP: 10.87.19.11
  *   Cameras: front_cam (OV9281), rear_cam (OV9281)
@@ -60,7 +60,7 @@ import frc.lib.util.units;
  * transparently regardless of which physical device the camera is on.
  * No robot code structural change is required to split coprocessors.
  */
-public final class visionConstants {
+public final class VisionConstants {
 
     //==========================================================================
     // GAME YEAR — reference value
@@ -109,13 +109,13 @@ public final class visionConstants {
     /** Front camera — faces forward, mounted toward robot front */
     public static final Transform3d FRONT_CAMERA_TRANSFORM = new Transform3d(
         new Translation3d(
-            units.inches_m( 12.0),   // X:  12" forward of robot center
-            units.inches_m(  0.0),   // Y:  on centerline
-            units.inches_m( 18.0)    // Z:  18" above floor
+            Units.inchesToMeters( 12.0),   // X:  12" forward of robot center
+            Units.inchesToMeters(  0.0),   // Y:  on centerline
+            Units.inchesToMeters( 18.0)    // Z:  18" above floor
         ),
         new Rotation3d(
             0.0,                     // roll:  level
-            units.deg_rad(-15.0),    // pitch: 15° down toward field
+            Units.degToRad(-15.0),    // pitch: 15° down toward field
             0.0                      // yaw:   facing straight forward
         )
     );
@@ -123,14 +123,14 @@ public final class visionConstants {
     /** Rear camera — faces backward (yaw = 180°), mounted toward robot rear */
     public static final Transform3d REAR_CAMERA_TRANSFORM = new Transform3d(
         new Translation3d(
-            units.inches_m(-12.0),   // X:  12" behind robot center
-            units.inches_m(  0.0),   // Y:  on centerline
-            units.inches_m( 18.0)    // Z:  18" above floor
+            Units.inchesToMeters(-12.0),   // X:  12" behind robot center
+            Units.inchesToMeters(  0.0),   // Y:  on centerline
+            Units.inchesToMeters( 18.0)    // Z:  18" above floor
         ),
         new Rotation3d(
             0.0,
-            units.deg_rad(-15.0),    // pitch: 15° down toward field
-            units.deg_rad(180.0)     // yaw:   facing rearward
+            Units.degToRad(-15.0),    // pitch: 15° down toward field
+            Units.degToRad(180.0)     // yaw:   facing rearward
         )
     );
 
@@ -229,7 +229,7 @@ public final class visionConstants {
     //==========================================================================
 
     /**
-     * Alpha weight for blended pose in driveOdometryState.
+     * Alpha weight for blended pose in DriveOdometryState.
      * 0.0 = pure IMU, 1.0 = pure encoder.
      * Linear velocity/accel: encoder-dominant (alpha weight).
      * Angular velocity/accel: IMU-dominant (1-alpha weight).

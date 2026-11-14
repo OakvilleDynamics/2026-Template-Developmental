@@ -9,29 +9,29 @@ import frc.lib.hardware.motor.MotorIOConfig;
 import frc.lib.hardware.motor.MotorVendor;
 
 /**
- * swerveHardware.java
- * PATH: src/main/java/frc/lib/swerve/swerveHardware.java
+ * SwerveHardware.java
+ * PATH: src/main/java/frc/lib/swerve/SwerveHardware.java
  *
  * Swerve hardware catalog: maps a motor/encoder TYPE to the MotorIOConfig and
  * AbsoluteEncoderIO that drive it. The per-type current limits, inversion
  * conventions, and ramp rates live here once, so swapping module hardware is a
- * one-value change to the type selected in the robot's swerveConstants.
+ * one-value change to the type selected in the robot's SwerveConstants.
  *
  * Returns MotorIOConfig.Builders so the caller can add robot-level settings
  * (e.g. CAN signal rates) before building.
  *
- *   MotorIO drive = MotorIO.create(swerveHardware
+ *   MotorIO drive = MotorIO.create(SwerveHardware
  *       .driveMotorConfig(DriveMotorType.KRAKEN_X60, 1, true, drivePID, 6.75)
  *       .withCanSignals(250, 4, false)
  *       .build());
  */
-public final class swerveHardware {
+public final class SwerveHardware {
 
     public enum DriveMotorType      { KRAKEN_X60, KRAKEN_X44, NEO_VORTEX, NEO, NOVA_PULSAR }
     public enum SteerMotorType      { KRAKEN_X60, KRAKEN_X44, MINION, NOVA, NEO_VORTEX, NEO, NEO_550 }
     public enum AbsoluteEncoderType { THRIFTY_ANALOG, CTRE_CANCODER, REV_THROUGH_BORE }
 
-    private swerveHardware() {}
+    private SwerveHardware() {}
 
     /**
      * Drive motor config: velocity control in wheel-shaft units, brake mode.
@@ -59,7 +59,7 @@ public final class swerveHardware {
             case NEO_VORTEX:  vendor = MotorVendor.REV_SPARKFLEX;   supplyAmps = 60.0; break;
             case NEO:         vendor = MotorVendor.REV_SPARKMAX;    supplyAmps = 50.0; break;
             case NOVA_PULSAR: vendor = MotorVendor.THRIFTYBOT_NOVA; supplyAmps = 60.0; ramps = false; break;
-            default: throw new IllegalArgumentException("swerveHardware: unsupported drive type " + type);
+            default: throw new IllegalArgumentException("SwerveHardware: unsupported drive type " + type);
         }
 
         MotorIOConfig.Builder b = MotorIOConfig.builder(canId, vendor)
@@ -101,7 +101,7 @@ public final class swerveHardware {
             case NEO_VORTEX: vendor = MotorVendor.REV_SPARKFLEX;   supplyAmps = 30.0; break;
             case NEO:        vendor = MotorVendor.REV_SPARKMAX;    supplyAmps = 25.0; break;
             case NEO_550:    vendor = MotorVendor.REV_SPARKMAX;    supplyAmps = 20.0; break;
-            default: throw new IllegalArgumentException("swerveHardware: unsupported steer type " + type);
+            default: throw new IllegalArgumentException("SwerveHardware: unsupported steer type " + type);
         }
 
         return MotorIOConfig.builder(canId, vendor)
@@ -131,7 +131,7 @@ public final class swerveHardware {
             case THRIFTY_ANALOG:   return new ThriftyAnalogEncoder(analogPort, offsetVolts);
             case CTRE_CANCODER:    return new CTRECANcoderEncoder(cancoderCanId, offsetRot);
             case REV_THROUGH_BORE: return new REVThroughBoreEncoder(steerMotor, offsetRot);
-            default: throw new IllegalArgumentException("swerveHardware: unsupported encoder type " + type);
+            default: throw new IllegalArgumentException("SwerveHardware: unsupported encoder type " + type);
         }
     }
 }

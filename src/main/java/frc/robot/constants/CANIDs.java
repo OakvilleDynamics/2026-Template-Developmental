@@ -1,12 +1,12 @@
 package frc.robot.constants;
 
 /**
- * canIDs.java
- * PATH: src/main/java/frc/robot/constants/canIDs.java
+ * CANIDs.java
+ * PATH: src/main/java/frc/robot/constants/CANIDs.java
  *
  * Single source of truth for ALL CAN bus IDs.
  * Update this file when rewiring the robot — no other files need to change.
- * roboRIO analog/digital/PWM port assignments live in portIDs.java.
+ * roboRIO analog/digital/PWM port assignments live in PortIDs.java.
  *
  * ─── VERIFICATION PROCEDURE ──────────────────────────────────────────────────
  * Before first deploy, verify each ID against the physical device:
@@ -15,7 +15,7 @@ package frc.robot.constants;
  *
  * TODO: confirm all IDs match physical wiring before first deploy.
  */
-public final class canIDs {
+public final class CANIDs {
 
     // ── Swerve drive motors — Kraken X60 (TalonFX, Phoenix 6) ────────────────
     // TODO: confirm CAN IDs match physical wiring

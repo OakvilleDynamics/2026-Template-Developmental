@@ -3,8 +3,8 @@ package frc.robot.subsystems.vision;
 import edu.wpi.first.math.geometry.Pose3d;
 
 /**
- * robotPoseEstimate.java
- * PATH: src/main/java/frc/robot/subsystems/vision/robotPoseEstimate.java
+ * RobotPoseEstimate.java
+ * PATH: src/main/java/frc/robot/subsystems/vision/RobotPoseEstimate.java
  *
  * Immutable snapshot of a single robot pose estimate from one camera.
  * Carries the full 3D pose plus metadata about the quality of the estimate.
@@ -27,14 +27,14 @@ import edu.wpi.first.math.geometry.Pose3d;
  * pose.toPose2d()                   — flattened 2D pose for odometry fusion later
  *
  * ─── USAGE ───────────────────────────────────────────────────────────────────
- * robotPoseEstimate best = vision.getBestPose();
+ * RobotPoseEstimate best = vision.getBestPose();
  * if (best.isValid) {
  *     double x   = best.pose.getX();               // meters
  *     double y   = best.pose.getY();               // meters
  *     double yaw = best.pose.getRotation().getZ(); // radians
  * }
  */
-public class robotPoseEstimate {
+public class RobotPoseEstimate {
 
     public final Pose3d  pose;
     public final double  timestampSecs;
@@ -47,7 +47,7 @@ public class robotPoseEstimate {
     // Valid estimate constructor
     // ─────────────────────────────────────────────────────────────────────────
 
-    public robotPoseEstimate(
+    public RobotPoseEstimate(
             Pose3d pose,
             double timestampSecs,
             double ambiguity,
@@ -65,7 +65,7 @@ public class robotPoseEstimate {
     // Invalid/empty estimate
     // ─────────────────────────────────────────────────────────────────────────
 
-    private robotPoseEstimate() {
+    private RobotPoseEstimate() {
         this.pose          = new Pose3d();
         this.timestampSecs = 0.0;
         this.ambiguity     = 1.0;
@@ -79,8 +79,8 @@ public class robotPoseEstimate {
      * Always check .isValid before reading any other field.
      * Safe to pass around and store — will never throw.
      */
-    public static robotPoseEstimate invalid() {
-        return new robotPoseEstimate();
+    public static RobotPoseEstimate invalid() {
+        return new RobotPoseEstimate();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -95,9 +95,9 @@ public class robotPoseEstimate {
      *   2. More tags over fewer tags (multi-tag is more reliable)
      *   3. Lower ambiguity over higher ambiguity
      *
-     * Used by visionSubsystem to pick the best estimate from two cameras.
+     * Used by VisionSubsystem to pick the best estimate from two cameras.
      */
-    public static robotPoseEstimate best(robotPoseEstimate a, robotPoseEstimate b) {
+    public static RobotPoseEstimate best(RobotPoseEstimate a, RobotPoseEstimate b) {
         if (!a.isValid) return b;
         if (!b.isValid) return a;
         if (a.tagCount != b.tagCount) return a.tagCount > b.tagCount ? a : b;

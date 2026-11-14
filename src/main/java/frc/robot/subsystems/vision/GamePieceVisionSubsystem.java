@@ -18,16 +18,16 @@ import edu.wpi.first.wpilibj.Timer;
 import frc.lib.util.Dashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
-import frc.robot.constants.gamePieceConstants;
-import frc.robot.subsystems.swerveDrive.swerveDrive;
+import frc.robot.constants.GamePieceConstants;
+import frc.robot.subsystems.swerveDrive.SwerveDrive;
 
 /**
- * gamePieceVisionSubsystem.java
- * PATH: src/main/java/frc/robot/subsystems/vision/gamePieceVisionSubsystem.java
+ * GamePieceVisionSubsystem.java
+ * PATH: src/main/java/frc/robot/subsystems/vision/GamePieceVisionSubsystem.java
  *
  * Tracks game pieces on the field using an intake-mounted PhotonVision camera.
  * Converts raw pixel detections to field-relative positions using robot pose
- * history from swerveDrive.getPoseAtTime() for latency compensation.
+ * history from SwerveDrive.getPoseAtTime() for latency compensation.
  *
  * ─── DETECTION PIPELINE ──────────────────────────────────────────────────────
  * Every loop:
@@ -59,11 +59,11 @@ import frc.robot.subsystems.swerveDrive.swerveDrive;
  * pieces within CLUSTER_RADIUS_M join it. Clusters are sorted by centroid
  * distance from the robot, nearest first.
  */
-public class gamePieceVisionSubsystem extends SubsystemBase {
+public class GamePieceVisionSubsystem extends SubsystemBase {
 
     // ── Hardware ──────────────────────────────────────────────────────────────
     private final PhotonCamera   intakeCam;
-    private final swerveDrive    drive;
+    private final SwerveDrive    drive;
 
     // ── Tracked pieces ────────────────────────────────────────────────────────
 
@@ -103,12 +103,12 @@ public class gamePieceVisionSubsystem extends SubsystemBase {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @param drive  swerveDrive reference — used for getPoseAtTime() during
+     * @param drive  SwerveDrive reference — used for getPoseAtTime() during
      *               back-projection. Must be constructed before this subsystem.
      */
-    public gamePieceVisionSubsystem(swerveDrive drive) {
+    public GamePieceVisionSubsystem(SwerveDrive drive) {
         this.drive     = drive;
-        this.intakeCam = new PhotonCamera(gamePieceConstants.GAME_PIECE_CAMERA_NAME);
+        this.intakeCam = new PhotonCamera(GamePieceConstants.GAME_PIECE_CAMERA_NAME);
 
         var log = DataLogManager.getLog();
         logCameraConnected   = new BooleanLogEntry(log, "/GamePieceVision/CameraConnected");
@@ -147,7 +147,7 @@ public class gamePieceVisionSubsystem extends SubsystemBase {
                     0.0, 0.0, robotPoseAtCapture.getRotation().getRadians())
             );
             Pose3d cameraPose = robotPose3d.transformBy(
-                gamePieceConstants.GAME_PIECE_CAMERA_TRANSFORM);
+                GamePieceConstants.GAME_PIECE_CAMERA_TRANSFORM);
 
             double cameraX         = cameraPose.getX();
             double cameraY         = cameraPose.getY();
@@ -156,7 +156,7 @@ public class gamePieceVisionSubsystem extends SubsystemBase {
             // Mount pitch: how far the camera is tilted down from horizontal.
             // Stored as negative in the Transform3d (tilt down = negative pitch),
             // so negate to get the positive downward angle used in the formula.
-            double cameraMountPitch = -gamePieceConstants.GAME_PIECE_CAMERA_TRANSFORM
+            double cameraMountPitch = -GamePieceConstants.GAME_PIECE_CAMERA_TRANSFORM
                                           .getRotation().getY();
 
             for (PhotonTrackedTarget target : result.getTargets()) {
@@ -164,14 +164,14 @@ public class gamePieceVisionSubsystem extends SubsystemBase {
                 // for AprilTags, but for object detection we use the raw detection
                 // confidence score from the pipeline.
                 double confidence = 1.0 - target.getPoseAmbiguity();
-                if (confidence < gamePieceConstants.DETECTION_CONFIDENCE_MIN) continue;
+                if (confidence < GamePieceConstants.DETECTION_CONFIDENCE_MIN) continue;
 
                 // Back-project target pixel angles to field Translation2d
                 double verticalAngleRad = cameraMountPitch
                                           - Math.toRadians(target.getPitch());
                 if (Math.tan(verticalAngleRad) <= 0.0) continue;  // piece above horizon — skip
 
-                double horizontalDist = (cameraHeight - gamePieceConstants.GAME_PIECE_HEIGHT_M)
+                double horizontalDist = (cameraHeight - GamePieceConstants.GAME_PIECE_HEIGHT_M)
                                         / Math.tan(verticalAngleRad);
                 double bearingField   = cameraYawField + Math.toRadians(target.getYaw());
 
@@ -185,7 +185,7 @@ public class gamePieceVisionSubsystem extends SubsystemBase {
 
         // Expire stale entries
         double now = Timer.getTimestamp();
-        trackedPieces.removeIf(p -> now - p.timestampSecs > gamePieceConstants.PIECE_STALE_SECS);
+        trackedPieces.removeIf(p -> now - p.timestampSecs > GamePieceConstants.PIECE_STALE_SECS);
 
         // DataLog
         boolean pieceDetected = !trackedPieces.isEmpty();
@@ -215,7 +215,7 @@ public class gamePieceVisionSubsystem extends SubsystemBase {
     /**
      * Returns the field position of the nearest tracked game piece to the robot.
      *
-     * @param robotPose  Current robot pose (from swerveDrive.getPose())
+     * @param robotPose  Current robot pose (from SwerveDrive.getPose())
      * @return  Nearest piece position, or empty if no pieces are tracked.
      */
     public Optional<Translation2d> getNearestPiece(Pose2d robotPose) {
@@ -239,7 +239,7 @@ public class gamePieceVisionSubsystem extends SubsystemBase {
      * Each inner list contains the field positions of all pieces in that cluster.
      * An empty outer list means no pieces are tracked.
      *
-     * @param robotPose  Current robot pose (from swerveDrive.getPose())
+     * @param robotPose  Current robot pose (from SwerveDrive.getPose())
      */
     public List<List<Translation2d>> getClusters(Pose2d robotPose) {
         if (trackedPieces.isEmpty()) return List.of();
@@ -267,7 +267,7 @@ public class gamePieceVisionSubsystem extends SubsystemBase {
             for (int j = i + 1; j < sorted.size(); j++) {
                 if (!assigned[j]
                         && sorted.get(j).getDistance(sorted.get(i))
-                           <= gamePieceConstants.CLUSTER_RADIUS_M) {
+                           <= GamePieceConstants.CLUSTER_RADIUS_M) {
                     cluster.add(sorted.get(j));
                     assigned[j] = true;
                 }
@@ -332,7 +332,7 @@ public class gamePieceVisionSubsystem extends SubsystemBase {
      * Otherwise a new entry is added.
      */
     private void mergeDetection(Translation2d fieldPos, double timestampSecs, double confidence) {
-        double mergeRadius = gamePieceConstants.CLUSTER_RADIUS_M / 3.0;
+        double mergeRadius = GamePieceConstants.CLUSTER_RADIUS_M / 3.0;
         for (int i = 0; i < trackedPieces.size(); i++) {
             DetectedPiece existing = trackedPieces.get(i);
             if (existing.fieldPos.getDistance(fieldPos) <= mergeRadius) {

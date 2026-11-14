@@ -3,11 +3,11 @@ package frc.robot.constants;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
-import frc.lib.util.units;
+import frc.lib.util.Units;
 
 /**
- * gamePieceConstants.java
- * PATH: src/main/java/frc/robot/constants/gamePieceConstants.java
+ * GamePieceConstants.java
+ * PATH: src/main/java/frc/robot/constants/GamePieceConstants.java
  *
  * Configuration for the game piece detection camera and hunt behavior.
  * This camera is separate from the two AprilTag pose estimation cameras and
@@ -19,7 +19,7 @@ import frc.lib.util.units;
  *   Camera: intake_cam (OV9782 — color sensor for game piece ML detection)
  *   PhotonVision UI: http://10.87.19.12:5800
  *
- * The AprilTag coprocessor (10.87.19.11) is configured in visionConstants.java.
+ * The AprilTag coprocessor (10.87.19.11) is configured in VisionConstants.java.
  * Both coprocessors connect to the roboRIO's NetworkTables server as NT clients.
  * PhotonCamera("intake_cam") resolves through NT transparently — no robot code
  * structural change is required to run cameras on separate physical devices.
@@ -56,10 +56,10 @@ import frc.lib.util.units;
  *   pieceX           = cameraX + horizontalDist * cos(bearingFieldRad)
  *   pieceY           = cameraY + horizontalDist * sin(bearingFieldRad)
  */
-public final class gamePieceConstants {
+public final class GamePieceConstants {
 
     // No instances
-    private gamePieceConstants() {}
+    private GamePieceConstants() {}
 
     // ─────────────────────────────────────────────────────────────────────────
     // Camera identity
@@ -93,13 +93,13 @@ public final class gamePieceConstants {
      */
     public static final Transform3d GAME_PIECE_CAMERA_TRANSFORM = new Transform3d(
         new Translation3d(
-            units.inches_m(14.0),   // forward from robot center (intake side)
-            units.inches_m(0.0),    // lateral offset (0 = centered)
-            units.inches_m(18.0)    // height above carpet
+            Units.inchesToMeters(14.0),   // forward from robot center (intake side)
+            Units.inchesToMeters(0.0),    // lateral offset (0 = centered)
+            Units.inchesToMeters(18.0)    // height above carpet
         ),
         new Rotation3d(
             0.0,                    // roll
-            units.deg_rad(-35.0),   // pitch — negative = tilted down toward floor
+            Units.degToRad(-35.0),   // pitch — negative = tilted down toward floor
             0.0                     // yaw — 0 = facing same direction as intake
         )
     );
@@ -162,7 +162,7 @@ public final class gamePieceConstants {
     public static final double APPROACH_HEADING_OFFSET_DEG = 0.0;
 
     /**
-     * Seconds without detecting a game piece before gamePieceHuntCommand
+     * Seconds without detecting a game piece before GamePieceHuntCommand
      * transitions to DONE and ends the hunt. Prevents the robot from
      * waiting indefinitely if all pieces were collected or out of view.
      */

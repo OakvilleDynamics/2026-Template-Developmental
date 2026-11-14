@@ -4,8 +4,8 @@ import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import frc.lib.util.Dashboard;
 import frc.robot.constants.AprilTagIgnore;
-import frc.robot.constants.visionConstants;
-import frc.lib.util.units;
+import frc.robot.constants.VisionConstants;
+import frc.lib.util.Units;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,7 +15,7 @@ import java.util.Map;
  * PATH: src/main/java/frc/robot/subsystems/vision/AprilTagFieldCalTab.java
  *
  * Publishes the data behind the "Field Calibration" Elastic tab.
- * Only talks to visionSubsystem — no direct access to internal vision objects.
+ * Only talks to VisionSubsystem — no direct access to internal vision objects.
  *
  * Widget placement, sizes and types are defined in the Elastic layout file, not
  * in code. Values and operator inputs are published through Dashboard under
@@ -52,14 +52,14 @@ import java.util.Map;
 public class AprilTagFieldCalTab {
 
     // ── Single reference to all vision data ───────────────────────────────────
-    private final visionSubsystem vision;
+    private final VisionSubsystem vision;
 
     // ── Dashboard key prefix ──────────────────────────────────────────────────
     private static final String DASH_PREFIX = "Field Calibration/";
 
     // ── Threshold input ───────────────────────────────────────────────────────
     private final Dashboard.TunableNumber toleranceTunable;
-    private double              toleranceInches = visionConstants.CALIBRATION_TOLERANCE_INCHES;
+    private double              toleranceInches = VisionConstants.CALIBRATION_TOLERANCE_INCHES;
 
     // ── Generate offsets file button ──────────────────────────────────────────
     private final Dashboard.TunableToggle generateButton;
@@ -74,13 +74,13 @@ public class AprilTagFieldCalTab {
     // Constructor
     // ─────────────────────────────────────────────────────────────────────────
 
-    public AprilTagFieldCalTab(visionSubsystem vision) {
+    public AprilTagFieldCalTab(VisionSubsystem vision) {
         this.vision   = vision;
         this.tagTable = NetworkTableInstance.getDefault()
             .getTable("FieldCalibration").getSubTable("Tags");
 
         toleranceTunable = Dashboard.tunable(
-            DASH_PREFIX + "Cal Tolerance (in)", visionConstants.CALIBRATION_TOLERANCE_INCHES);
+            DASH_PREFIX + "Cal Tolerance (in)", VisionConstants.CALIBRATION_TOLERANCE_INCHES);
         generateButton = Dashboard.toggle(DASH_PREFIX + "Offsets File/Generate File", false);
         Dashboard.log(DASH_PREFIX + "Offsets File/Last saved", "never");
 
@@ -110,12 +110,12 @@ public class AprilTagFieldCalTab {
         publishPose("Rear Cam POSE/",  vision.getRearPose());
     }
 
-    private void publishPose(String group, robotPoseEstimate estimate) {
+    private void publishPose(String group, RobotPoseEstimate estimate) {
         String prefix = DASH_PREFIX + group;
         if (estimate.isValid) {
-            Dashboard.log(prefix + "X (ft)",      units.m_feet(estimate.pose.getX()));
-            Dashboard.log(prefix + "Y (ft)",      units.m_feet(estimate.pose.getY()));
-            Dashboard.log(prefix + "Theta (deg)", units.rad_deg(estimate.pose.getRotation().getZ()));
+            Dashboard.log(prefix + "X (ft)",      Units.metersToFeet(estimate.pose.getX()));
+            Dashboard.log(prefix + "Y (ft)",      Units.metersToFeet(estimate.pose.getY()));
+            Dashboard.log(prefix + "Theta (deg)", Units.radToDeg(estimate.pose.getRotation().getZ()));
         } else {
             Dashboard.log(prefix + "X (ft)",      0.0);
             Dashboard.log(prefix + "Y (ft)",      0.0);
@@ -131,8 +131,8 @@ public class AprilTagFieldCalTab {
         var readings = vision.getTagReadings();
 
         readings.forEach((tagId, byCamera) -> {
-            var frontReading = byCamera.get(visionConstants.FRONT_CAMERA_NAME);
-            var rearReading  = byCamera.get(visionConstants.REAR_CAMERA_NAME);
+            var frontReading = byCamera.get(VisionConstants.FRONT_CAMERA_NAME);
+            var rearReading  = byCamera.get(VisionConstants.REAR_CAMERA_NAME);
             if (frontReading == null || rearReading == null) return;
 
             String frontRec = computeRecommendation(frontReading, rearReading, "front");
@@ -158,23 +158,23 @@ public class AprilTagFieldCalTab {
         });
     }
 
-    private void writeTagRow(NetworkTable row, visionSubsystem.tagReading reading,
+    private void writeTagRow(NetworkTable row, VisionSubsystem.TagReading reading,
                               String recommendation, String ignored, int tagId) {
         row.getEntry("TagID").setInteger(tagId);
         row.getEntry("Ignored").setString(ignored);
         row.getEntry("Camera").setString(reading.cameraName());
         row.getEntry("Visible").setBoolean(reading.visible());
         row.getEntry("Baseline X (ft)").setDouble(
-            units.m_feet(reading.baselinePose().getX()));
+            Units.metersToFeet(reading.baselinePose().getX()));
         row.getEntry("Baseline Y (ft)").setDouble(
-            units.m_feet(reading.baselinePose().getY()));
+            Units.metersToFeet(reading.baselinePose().getY()));
         row.getEntry("Recommendation").setString(recommendation);
 
         if (reading.visible()) {
             row.getEntry("Read X (ft)").setDouble(
-                reading.readPose() != null ? units.m_feet(reading.readPose().getX()) : 0);
+                reading.readPose() != null ? Units.metersToFeet(reading.readPose().getX()) : 0);
             row.getEntry("Read Y (ft)").setDouble(
-                reading.readPose() != null ? units.m_feet(reading.readPose().getY()) : 0);
+                reading.readPose() != null ? Units.metersToFeet(reading.readPose().getY()) : 0);
             row.getEntry("Delta X (in)").setDouble(reading.deltaXInches());
             row.getEntry("Delta Y (in)").setDouble(reading.deltaYInches());
             row.getEntry("Delta Z (in)").setDouble(reading.deltaZInches());
@@ -192,8 +192,8 @@ public class AprilTagFieldCalTab {
     }
 
     private void writeBlendRow(NetworkTable row,
-                                visionSubsystem.tagReading front,
-                                visionSubsystem.tagReading rear,
+                                VisionSubsystem.TagReading front,
+                                VisionSubsystem.TagReading rear,
                                 String recommendation, String ignored) {
         row.getEntry("Camera").setString("Blend");
         row.getEntry("Ignored").setString(ignored);
@@ -226,8 +226,8 @@ public class AprilTagFieldCalTab {
     // ─────────────────────────────────────────────────────────────────────────
 
     private String computeRecommendation(
-            visionSubsystem.tagReading thisCamera,
-            visionSubsystem.tagReading otherCamera,
+            VisionSubsystem.TagReading thisCamera,
+            VisionSubsystem.TagReading otherCamera,
             String whichCam) {
 
         if (!thisCamera.visible()) return "Tag not visible";
@@ -262,8 +262,8 @@ public class AprilTagFieldCalTab {
     }
 
     private String computeBlendRecommendation(
-            visionSubsystem.tagReading front,
-            visionSubsystem.tagReading rear,
+            VisionSubsystem.TagReading front,
+            VisionSubsystem.TagReading rear,
             String frontRec, String rearRec) {
 
         if (!front.visible() && !rear.visible()) return "No cameras see this tag";
@@ -282,8 +282,8 @@ public class AprilTagFieldCalTab {
     // ─────────────────────────────────────────────────────────────────────────
 
     private void updateOffsetInputs(int tagId, String recommendation,
-                                     visionSubsystem.tagReading front,
-                                     visionSubsystem.tagReading rear) {
+                                     VisionSubsystem.TagReading front,
+                                     VisionSubsystem.TagReading rear) {
         if (!recommendation.contains("offset")) return;
 
         Dashboard.TunableNumber[] entries = offsetInputs.computeIfAbsent(tagId, id -> {

@@ -4,8 +4,8 @@ import frc.lib.mechanisms.shooter.ShotProfile;
 import frc.lib.mechanisms.shooter.ShotProfile.LookupEntry;
 
 /**
- * shooterConstants.java
- * PATH: src/main/java/frc/robot/constants/shooterConstants.java
+ * ShooterConstants.java
+ * PATH: src/main/java/frc/robot/constants/ShooterConstants.java
  *
  * Shot profile lookup table and shooter geometry constants for THIS robot.
  * Bundled into PROFILE and passed to ShooterCalculator from RobotContainer.
@@ -26,10 +26,10 @@ import frc.lib.mechanisms.shooter.ShotProfile.LookupEntry;
  * picks the group whose bracket midpoint best matches the actual distance.
  *
  * ─── TURRET LIMITS ───────────────────────────────────────────────────────────
- * Turret soft limits live in the turret's mechanismConfig (single source of
+ * Turret soft limits live in the turret's MechanismConfig (single source of
  * truth); ShooterCalculator reads them from there.
  */
-public final class shooterConstants {
+public final class ShooterConstants {
 
     // =========================================================================
     // Shot Profile Lookup Table
@@ -77,5 +77,5 @@ public final class shooterConstants {
     public static final ShotProfile PROFILE = new ShotProfile(
         LOOKUP_TABLE, PIVOT_OFFSET_X_IN, PIVOT_OFFSET_Y_IN, ROBOT_SPEED_WARNING_THRESHOLD_FT_S);
 
-    private shooterConstants() {}
+    private ShooterConstants() {}
 }

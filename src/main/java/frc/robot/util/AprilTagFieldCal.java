@@ -9,7 +9,7 @@ import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import frc.lib.util.Dashboard;
 import frc.robot.constants.AprilTagIgnore;
-import frc.lib.util.units;
+import frc.lib.util.Units;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -26,13 +26,13 @@ import java.util.Optional;
  * Wraps the WPILib AprilTagFieldLayout and applies per-tag corrections.
  *
  * ─── CONSTRUCTOR ─────────────────────────────────────────────────────────────
- * Receives an AprilTagFields enum value from RobotContainer via visionSubsystem.
+ * Receives an AprilTagFields enum value from RobotContainer via VisionSubsystem.
  * This is the single point where game year is bound to the layout.
  *
  * ─── OFFSET SYSTEM ───────────────────────────────────────────────────────────
  * setTagOffset() registers a correction for a specific tag.
  * getCalibratedLayout() returns a layout with all corrections applied.
- * Call rebuildLayout() after changing offsets — visionSubsystem handles this.
+ * Call rebuildLayout() after changing offsets — VisionSubsystem handles this.
  *
  * ─── TAG IGNORE INTEGRATION ──────────────────────────────────────────────────
  * getCalibratedLayout() automatically excludes tags that AprilTagIgnore marks
@@ -46,7 +46,7 @@ import java.util.Optional;
  * ─── IMPORTANT NOTE ──────────────────────────────────────────────────────────
  * Offsets should be small (≤ 2 inches, ≤ 2 degrees).
  * Larger corrections usually mean the camera transform is wrong, not the field.
- * Fix visionConstants camera transforms before applying large field offsets.
+ * Fix VisionConstants camera transforms before applying large field offsets.
  */
 public class AprilTagFieldCal {
 
@@ -63,7 +63,7 @@ public class AprilTagFieldCal {
 
     /**
      * @param gameYearField  AprilTagFields enum for the current game year.
-     *                       Passed from RobotContainer via visionSubsystem.
+     *                       Passed from RobotContainer via VisionSubsystem.
      *                       Example: AprilTagFields.kDefaultField (2026)
      *                                AprilTagFields.k2025Reefscape
      */
@@ -101,14 +101,14 @@ public class AprilTagFieldCal {
                               double rollDeg,  double pitchDeg, double yawDeg) {
         tagOffsets.put(tagId, new Transform3d(
             new Translation3d(
-                units.inches_m(xInches),
-                units.inches_m(yInches),
-                units.inches_m(zInches)
+                Units.inchesToMeters(xInches),
+                Units.inchesToMeters(yInches),
+                Units.inchesToMeters(zInches)
             ),
             new Rotation3d(
-                units.deg_rad(rollDeg),
-                units.deg_rad(pitchDeg),
-                units.deg_rad(yawDeg)
+                Units.degToRad(rollDeg),
+                Units.degToRad(pitchDeg),
+                Units.degToRad(yawDeg)
             )
         ));
         Dashboard.log("FieldCal/Tag " + tagId + " Offset",
@@ -140,7 +140,7 @@ public class AprilTagFieldCal {
      * Rebuilds the calibrated layout with current offsets and ignore rules.
      * Must be called after any setTagOffset() or clearTagOffset() call,
      * and after alliance assignment changes (AprilTagIgnore is dynamic).
-     * visionSubsystem calls this automatically.
+     * VisionSubsystem calls this automatically.
      */
     public void rebuildLayout() {
         if (tagOffsets.isEmpty() && AprilTagIgnore.getIgnoreMap().isEmpty()) {
@@ -209,8 +209,8 @@ public class AprilTagFieldCal {
 
     public double getFieldLengthM()  { return baseLayout.getFieldLength(); }
     public double getFieldWidthM()   { return baseLayout.getFieldWidth(); }
-    public double getFieldLengthFt() { return units.m_feet(baseLayout.getFieldLength()); }
-    public double getFieldWidthFt()  { return units.m_feet(baseLayout.getFieldWidth()); }
+    public double getFieldLengthFt() { return Units.metersToFeet(baseLayout.getFieldLength()); }
+    public double getFieldWidthFt()  { return Units.metersToFeet(baseLayout.getFieldWidth()); }
 
     /**
      * Returns the far corner of the field from (0,0) in feet.
@@ -220,8 +220,8 @@ public class AprilTagFieldCal {
      */
     public double[] getFarCornerFt() {
         return new double[]{
-            units.m_feet(baseLayout.getFieldLength()),
-            units.m_feet(baseLayout.getFieldWidth())
+            Units.metersToFeet(baseLayout.getFieldLength()),
+            Units.metersToFeet(baseLayout.getFieldWidth())
         };
     }
 }

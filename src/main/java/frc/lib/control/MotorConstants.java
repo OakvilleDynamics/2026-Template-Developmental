@@ -1,14 +1,14 @@
 package frc.lib.control;
 
 /**
- * motorConstants.java
- * PATH: src/main/java/frc/lib/control/motorConstants.java
+ * MotorConstants.java
+ * PATH: src/main/java/frc/lib/control/MotorConstants.java
  *
- * Enumerations and constants shared by mechanismUnit and mechanismConfig.
+ * Enumerations and constants shared by MechanismUnit and MechanismConfig.
  * No vendor-specific imports. The vendor enum lives in
  * frc.lib.hardware.motor.MotorVendor.
  */
-public final class motorConstants {
+public final class MotorConstants {
 
     // ── Follow mode enum ──────────────────────────────────────────────────────
 
@@ -49,7 +49,7 @@ public final class motorConstants {
     /**
      * Default deadband for ENCODER_SYNC follow mode (rotations, mechanism shaft).
      * Correction is not applied when |leaderPos - followerPos| <= this value.
-     * Tune per-mechanism via mechanismConfig.Builder.withEncoderSync().
+     * Tune per-mechanism via MechanismConfig.Builder.withEncoderSync().
      */
     public static final double ENCODER_SYNC_DEADBAND_ROT = 0.05;
 
@@ -57,9 +57,9 @@ public final class motorConstants {
      * Default proportional gain for ENCODER_SYNC correction.
      * Output = kP × error (duty cycle per rotation of error).
      * Result is clamped to [-1.0, 1.0] before being applied.
-     * Tune per-mechanism via mechanismConfig.Builder.withEncoderSync().
+     * Tune per-mechanism via MechanismConfig.Builder.withEncoderSync().
      */
     public static final double ENCODER_SYNC_KP_DEFAULT = 0.5;
 
-    private motorConstants() {}
+    private MotorConstants() {}
 }

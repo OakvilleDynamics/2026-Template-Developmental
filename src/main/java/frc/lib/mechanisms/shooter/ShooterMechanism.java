@@ -7,21 +7,21 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import frc.lib.util.ConfigVerifiable;
 import frc.lib.util.ConfigVerifyResult;
-import frc.lib.control.mechanismConfig;
-import frc.lib.control.mechanismUnit;
+import frc.lib.control.MechanismConfig;
+import frc.lib.control.MechanismUnit;
 
 /**
- * shooterMechanism.java
- * PATH: src/main/java/frc/lib/mechanisms/shooter/shooterMechanism.java
+ * ShooterMechanism.java
+ * PATH: src/main/java/frc/lib/mechanisms/shooter/ShooterMechanism.java
  *
  * Pre-packaged shooter mechanism supporting up to three sub-mechanisms:
  *   - Flywheel  (required) — velocity controlled, RPM at interface
  *   - Turret    (optional) — position controlled, degrees
  *   - Hood      (optional) — position controlled, degrees
  *
- * Each sub-mechanism is configured via a full mechanismConfig (motor vendor,
- * CAN IDs, PID, FF, soft limits, setpointDeadband, etc.). The shooterMechanism
- * instantiates mechanismUnit instances internally — callers never touch the
+ * Each sub-mechanism is configured via a full MechanismConfig (motor vendor,
+ * CAN IDs, PID, FF, soft limits, setpointDeadband, etc.). The ShooterMechanism
+ * instantiates MechanismUnit instances internally — callers never touch the
  * vendor layer directly.
  *
  * ─── READY STATE ─────────────────────────────────────────────────────────────
@@ -30,7 +30,7 @@ import frc.lib.control.mechanismUnit;
  * SEEKING (initial, and after any setpoint change):
  *   isReady() = false
  *   Transitions to READY when all configured sub-mechanisms are simultaneously
- *   within their mechanismConfig.setpointDeadband.
+ *   within their MechanismConfig.setpointDeadband.
  *
  * READY:
  *   isReady() = true
@@ -52,12 +52,12 @@ import frc.lib.control.mechanismUnit;
  * RobotContainer before passing the config to the Builder, since RobotContainer
  * is where both flywheel and turret references co-exist.
  */
-public class shooterMechanism extends SubsystemBase implements ConfigVerifiable {
+public class ShooterMechanism extends SubsystemBase implements ConfigVerifiable {
 
     // ── Sub-mechanisms ────────────────────────────────────────────────────────
-    private final mechanismUnit flywheel;
-    private final mechanismUnit turret;   // null if not configured
-    private final mechanismUnit hood;     // null if not configured
+    private final MechanismUnit flywheel;
+    private final MechanismUnit turret;   // null if not configured
+    private final MechanismUnit hood;     // null if not configured
 
     // ── Default setpoints ─────────────────────────────────────────────────────
     private final double defaultFlywheelRps;
@@ -87,10 +87,10 @@ public class shooterMechanism extends SubsystemBase implements ConfigVerifiable 
     // Constructor (private — use Builder)
     // ─────────────────────────────────────────────────────────────────────────
 
-    private shooterMechanism(Builder b) {
-        flywheel           = mechanismUnit.create(b.flywheelConfig);
-        turret             = b.turretConfig != null ? mechanismUnit.create(b.turretConfig) : null;
-        hood               = b.hoodConfig   != null ? mechanismUnit.create(b.hoodConfig)   : null;
+    private ShooterMechanism(Builder b) {
+        flywheel           = MechanismUnit.create(b.flywheelConfig);
+        turret             = b.turretConfig != null ? MechanismUnit.create(b.turretConfig) : null;
+        hood               = b.hoodConfig   != null ? MechanismUnit.create(b.hoodConfig)   : null;
 
         defaultFlywheelRps = b.defaultFlywheelRpm / 60.0;
         defaultTurretDeg   = b.defaultTurretDeg;
@@ -193,8 +193,8 @@ public class shooterMechanism extends SubsystemBase implements ConfigVerifiable 
 
     /** Flywheel shaft acceleration (RPS²), estimated via finite difference. */
     public double getFlywheelAccelRpss() {
-        // Derived each loop inside mechanismUnit — re-expose via velocity delta if needed.
-        // For now returns 0; extend mechanismUnit to expose accelRpss if required.
+        // Derived each loop inside MechanismUnit — re-expose via velocity delta if needed.
+        // For now returns 0; extend MechanismUnit to expose accelRpss if required.
         return 0.0;
     }
 
@@ -295,14 +295,14 @@ public class shooterMechanism extends SubsystemBase implements ConfigVerifiable 
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Fluent builder for shooterMechanism.
+     * Fluent builder for ShooterMechanism.
      *
      * Required: withFlywheel(), withFlywheelHoldThresholdRpm().
      * Optional: withTurret(), withHood().
      *
      * Example — flywheel + turret + hood:
      * <pre>{@code
-     * shooterMechanism shooter = new shooterMechanism.Builder("Shooter")
+     * ShooterMechanism shooter = new ShooterMechanism.Builder("Shooter")
      *     .withFlywheel(flywheelConfig,  3500.0)
      *     .withTurret(turretConfig,         0.0)
      *     .withHood(hoodConfig,            45.0)
@@ -312,7 +312,7 @@ public class shooterMechanism extends SubsystemBase implements ConfigVerifiable 
      *
      * Example — flywheel only:
      * <pre>{@code
-     * shooterMechanism shooter = new shooterMechanism.Builder("Shooter")
+     * ShooterMechanism shooter = new ShooterMechanism.Builder("Shooter")
      *     .withFlywheel(flywheelConfig, 3500.0)
      *     .withFlywheelHoldThresholdRpm(200.0)
      *     .build();
@@ -323,15 +323,15 @@ public class shooterMechanism extends SubsystemBase implements ConfigVerifiable 
         private final String name;
 
         // Flywheel — required
-        private mechanismConfig flywheelConfig;
+        private MechanismConfig flywheelConfig;
         private double defaultFlywheelRpm = 0.0;
 
         // Turret — optional
-        private mechanismConfig turretConfig   = null;
+        private MechanismConfig turretConfig   = null;
         private double defaultTurretDeg        = 0.0;
 
         // Hood — optional
-        private mechanismConfig hoodConfig     = null;
+        private MechanismConfig hoodConfig     = null;
         private double defaultHoodDeg          = 0.0;
 
         // Hold threshold — required
@@ -347,12 +347,12 @@ public class shooterMechanism extends SubsystemBase implements ConfigVerifiable 
 
         /**
          * Configure the flywheel sub-mechanism.
-         * The mechanismConfig must have setpointDeadband set (in RPS).
+         * The MechanismConfig must have setpointDeadband set (in RPS).
          *
-         * @param config        full mechanismConfig for the flywheel motor(s)
+         * @param config        full MechanismConfig for the flywheel motor(s)
          * @param defaultRpm    default flywheel speed (RPM)
          */
-        public Builder withFlywheel(mechanismConfig config, double defaultRpm) {
+        public Builder withFlywheel(MechanismConfig config, double defaultRpm) {
             this.flywheelConfig    = config;
             this.defaultFlywheelRpm = defaultRpm;
             return this;
@@ -360,12 +360,12 @@ public class shooterMechanism extends SubsystemBase implements ConfigVerifiable 
 
         /**
          * Configure the turret sub-mechanism (optional).
-         * The mechanismConfig must have setpointDeadband set (in degrees).
+         * The MechanismConfig must have setpointDeadband set (in degrees).
          *
-         * @param config        full mechanismConfig for the turret motor(s)
+         * @param config        full MechanismConfig for the turret motor(s)
          * @param defaultDeg    default turret position (degrees)
          */
-        public Builder withTurret(mechanismConfig config, double defaultDeg) {
+        public Builder withTurret(MechanismConfig config, double defaultDeg) {
             this.turretConfig    = config;
             this.defaultTurretDeg = defaultDeg;
             return this;
@@ -373,12 +373,12 @@ public class shooterMechanism extends SubsystemBase implements ConfigVerifiable 
 
         /**
          * Configure the hood sub-mechanism (optional).
-         * The mechanismConfig must have setpointDeadband set (in degrees).
+         * The MechanismConfig must have setpointDeadband set (in degrees).
          *
-         * @param config        full mechanismConfig for the hood motor(s)
+         * @param config        full MechanismConfig for the hood motor(s)
          * @param defaultDeg    default hood position (degrees)
          */
-        public Builder withHood(mechanismConfig config, double defaultDeg) {
+        public Builder withHood(MechanismConfig config, double defaultDeg) {
             this.hoodConfig    = config;
             this.defaultHoodDeg = defaultDeg;
             return this;
@@ -407,7 +407,7 @@ public class shooterMechanism extends SubsystemBase implements ConfigVerifiable 
         /**
          * Set the flywheel RPM drop allowed before isReady() returns to false.
          * Applied relative to the active flywheel setpoint each cycle.
-         * Independent from the flywheel setpointDeadband in mechanismConfig.
+         * Independent from the flywheel setpointDeadband in MechanismConfig.
          *
          * @param thresholdRpm  maximum RPM drop below setpoint before losing READY state
          */
@@ -417,17 +417,17 @@ public class shooterMechanism extends SubsystemBase implements ConfigVerifiable 
             return this;
         }
 
-        /** Build and return the shooterMechanism instance. */
-        public shooterMechanism build() {
+        /** Build and return the ShooterMechanism instance. */
+        public ShooterMechanism build() {
             if (flywheelConfig == null)
                 throw new IllegalStateException(
-                    "shooterMechanism.Builder '" + name + "': withFlywheel() is required.");
+                    "ShooterMechanism.Builder '" + name + "': withFlywheel() is required.");
             if (!holdThresholdSet)
                 DriverStation.reportWarning(
-                    "[shooterMechanism] '" + name + "': withFlywheelHoldThresholdRpm() was not "
+                    "[ShooterMechanism] '" + name + "': withFlywheelHoldThresholdRpm() was not "
                     + "called. Hold threshold defaults to 0 RPM — isReady() will drop to false "
                     + "any time flywheel velocity is below its setpoint.", false);
-            return new shooterMechanism(this);
+            return new ShooterMechanism(this);
         }
     }
 }

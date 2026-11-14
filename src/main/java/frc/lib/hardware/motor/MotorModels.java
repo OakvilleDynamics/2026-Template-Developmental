@@ -1,18 +1,18 @@
 package frc.lib.hardware.motor;
 
 /**
- * motorModels.java
- * PATH: src/main/java/frc/lib/hardware/motor/motorModels.java
+ * MotorModels.java
+ * PATH: src/main/java/frc/lib/hardware/motor/MotorModels.java
  *
  * Catalog of approved FRC motors with vendor-datasheet specifications.
- * Used by mechanismUnit.FF to derive feed-forward voltages from first principles
+ * Used by MechanismUnit.FF to derive feed-forward voltages from first principles
  * rather than empirical calibration constants.
  *
  * ─── HOW TO USE ──────────────────────────────────────────────────────────────
- * Pass a MotorModel constant as the first argument to any mechanismUnit.FF factory:
+ * Pass a MotorModel constant as the first argument to any MechanismUnit.FF factory:
  *
- *   mechanismUnit.FF.rotatingArm(motorModels.NEO, gearRatio, ...)
- *   mechanismUnit.FF.multiStageElevator(motorModels.KRAKEN_X60, gearRatio, ...)
+ *   MechanismUnit.FF.rotatingArm(MotorModels.NEO, gearRatio, ...)
+ *   MechanismUnit.FF.multiStageElevator(MotorModels.KRAKEN_X60, gearRatio, ...)
  *
  * ─── HOW TO VERIFY SPECS ─────────────────────────────────────────────────────
  * Before competition, cross-check each constant against the current vendor
@@ -41,10 +41,10 @@ package frc.lib.hardware.motor;
  *
  * All spec values are at 12V nominal unless otherwise noted.
  */
-public final class motorModels {
+public final class MotorModels {
 
     // No instances
-    private motorModels() {}
+    private MotorModels() {}
 
     // =========================================================================
     // MotorModel — data class

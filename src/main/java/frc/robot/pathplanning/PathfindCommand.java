@@ -10,23 +10,23 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
-import frc.robot.constants.pathplannerConstants;
-import frc.robot.subsystems.swerveDrive.swerveDrive;
-import frc.robot.subsystems.vision.visionSubsystem;
+import frc.robot.constants.PathPlannerConstants;
+import frc.robot.subsystems.swerveDrive.SwerveDrive;
+import frc.robot.subsystems.vision.VisionSubsystem;
 import frc.lib.util.RobotLogger;
 
 import java.util.function.Supplier;
 
 /**
- * pathfindCommand.java
- * PATH: src/main/java/frc/robot/pathplanning/pathfindCommand.java
+ * PathfindCommand.java
+ * PATH: src/main/java/frc/robot/pathplanning/PathfindCommand.java
  *
  * On-the-fly pathfinding to a field target pose using PathPlanner's AD* algorithm.
- * Requires swerveDrive — interrupts driveWithJoysticks on schedule, restores it on end.
+ * Requires SwerveDrive — interrupts DriveWithJoysticks on schedule, restores it on end.
  *
  * ─── USAGE ───────────────────────────────────────────────────────────────────
  * Bind with .whileTrue() in RobotContainer. Button release ends the command and
- * the scheduler automatically resumes driveWithJoysticks as the default command.
+ * the scheduler automatically resumes DriveWithJoysticks as the default command.
  *
  * ─── TWO-PHASE NAVIGATION ────────────────────────────────────────────────────
  * Currently uses pathfindToPose() — AD* on-the-fly pathfinding only.
@@ -40,21 +40,21 @@ import java.util.function.Supplier;
  * The command still runs — odometry-only navigation is acceptable, just flagged.
  *
  * ─── ALLIANCE ZONE EXCLUSIONS ────────────────────────────────────────────────
- * Dynamic obstacle polygons from pathplannerConstants.ALLIANCE_ZONE_EXCLUSIONS
+ * Dynamic obstacle polygons from PathPlannerConstants.ALLIANCE_ZONE_EXCLUSIONS
  * are injected at initialize(). Currently an empty list — populate in
- * pathplannerConstants.java once 2026 field zone geometry is published.
+ * PathPlannerConstants.java once 2026 field zone geometry is published.
  */
-public class pathfindCommand extends Command {
+public class PathfindCommand extends Command {
 
-    private final swerveDrive     drive;
-    private final visionSubsystem vision;
+    private final SwerveDrive     drive;
+    private final VisionSubsystem vision;
     private final Supplier<Pose2d> targetSupplier;
 
     private final PathConstraints constraints = new PathConstraints(
-        pathplannerConstants.MAX_PATH_VEL_MPS,
-        pathplannerConstants.MAX_PATH_ACCEL_MPS2,
-        pathplannerConstants.MAX_PATH_ANG_VEL_RADPS,
-        pathplannerConstants.MAX_PATH_ANG_ACCEL_RADPS2
+        PathPlannerConstants.MAX_PATH_VEL_MPS,
+        PathPlannerConstants.MAX_PATH_ACCEL_MPS2,
+        PathPlannerConstants.MAX_PATH_ANG_VEL_RADPS,
+        PathPlannerConstants.MAX_PATH_ANG_ACCEL_RADPS2
     );
 
     private Command pathfinder = null;
@@ -70,11 +70,11 @@ public class pathfindCommand extends Command {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @param drive          swerveDrive subsystem — declared as requirement
-     * @param vision         visionSubsystem — read-only, for staleness check
+     * @param drive          SwerveDrive subsystem — declared as requirement
+     * @param vision         VisionSubsystem — read-only, for staleness check
      * @param targetSupplier Supplies the target Pose2d at initialize() time
      */
-    public pathfindCommand(swerveDrive drive, visionSubsystem vision,
+    public PathfindCommand(SwerveDrive drive, VisionSubsystem vision,
                            Supplier<Pose2d> targetSupplier) {
         this.drive          = drive;
         this.vision         = vision;
@@ -88,7 +88,7 @@ public class pathfindCommand extends Command {
 
     @Override
     public void initialize() {
-        // PathPlanner failed to load (see swerveDrive.configureForAutoBuilder) — end immediately
+        // PathPlanner failed to load (see SwerveDrive.configureForAutoBuilder) — end immediately
         if (!drive.isPathPlannerAvailable()) {
             pathfinder = null;
             unavailable = true;
@@ -150,10 +150,10 @@ public class pathfindCommand extends Command {
             return true;
         }
         double age = Timer.getTimestamp() - vision.getBestPose().timestampSecs;
-        if (age > pathplannerConstants.VISION_STALENESS_THRESHOLD_S) {
+        if (age > PathPlannerConstants.VISION_STALENESS_THRESHOLD_S) {
             visionAlert.setText(
                 String.format("Pathfinding: stale vision pose, %.2fs old (threshold %.2fs) — odometry only",
-                    age, pathplannerConstants.VISION_STALENESS_THRESHOLD_S));
+                    age, PathPlannerConstants.VISION_STALENESS_THRESHOLD_S));
             visionAlert.set(true);
             return true;
         }

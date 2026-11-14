@@ -10,10 +10,10 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
-import frc.robot.constants.gamePieceConstants;
-import frc.robot.constants.pathplannerConstants;
-import frc.robot.subsystems.swerveDrive.swerveDrive;
-import frc.robot.subsystems.vision.gamePieceVisionSubsystem;
+import frc.robot.constants.GamePieceConstants;
+import frc.robot.constants.PathPlannerConstants;
+import frc.robot.subsystems.swerveDrive.SwerveDrive;
+import frc.robot.subsystems.vision.GamePieceVisionSubsystem;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,8 +21,8 @@ import java.util.Optional;
 import java.util.function.BooleanSupplier;
 
 /**
- * gamePieceHuntCommand.java
- * PATH: src/main/java/frc/robot/pathplanning/gamePieceHuntCommand.java
+ * GamePieceHuntCommand.java
+ * PATH: src/main/java/frc/robot/pathplanning/GamePieceHuntCommand.java
  *
  * Autonomously navigates to and collects game pieces detected by the intake camera.
  * Uses PathPlanner AD* pathfinding for navigation and a state machine to sequence
@@ -51,7 +51,7 @@ import java.util.function.BooleanSupplier;
  *
  *   targetHeading = atan2(pieceY − robotY, pieceX − robotX) + APPROACH_HEADING_OFFSET_DEG
  *
- * APPROACH_HEADING_OFFSET_DEG in gamePieceConstants compensates for intakes
+ * APPROACH_HEADING_OFFSET_DEG in GamePieceConstants compensates for intakes
  * not exactly on the robot's forward axis.
  *
  * ─── INTAKE INTERFACE ────────────────────────────────────────────────────────
@@ -62,10 +62,10 @@ import java.util.function.BooleanSupplier;
  * Wire these in RobotContainer once the intake subsystem exists.
  *
  * ─── REQUIREMENTS ────────────────────────────────────────────────────────────
- * Requires swerveDrive — preempts driveWithJoysticks while active.
- * gamePieceVisionSubsystem is read-only (not declared as a requirement).
+ * Requires SwerveDrive — preempts DriveWithJoysticks while active.
+ * GamePieceVisionSubsystem is read-only (not declared as a requirement).
  */
-public class gamePieceHuntCommand extends Command {
+public class GamePieceHuntCommand extends Command {
 
     // ── Mode ──────────────────────────────────────────────────────────────────
 
@@ -86,18 +86,18 @@ public class gamePieceHuntCommand extends Command {
     private enum State { FINDING, PATHFINDING, INTAKING, DONE }
 
     // ── Dependencies ──────────────────────────────────────────────────────────
-    private final swerveDrive                drive;
-    private final gamePieceVisionSubsystem   gamePieceVision;
+    private final SwerveDrive                drive;
+    private final GamePieceVisionSubsystem   gamePieceVision;
     private final HuntMode                   mode;
     private final Runnable                   intakeTrigger;
     private final BooleanSupplier            intakeComplete;
 
     // ── PathPlanner ───────────────────────────────────────────────────────────
     private final PathConstraints constraints = new PathConstraints(
-        pathplannerConstants.MAX_PATH_VEL_MPS,
-        pathplannerConstants.MAX_PATH_ACCEL_MPS2,
-        pathplannerConstants.MAX_PATH_ANG_VEL_RADPS,
-        pathplannerConstants.MAX_PATH_ANG_ACCEL_RADPS2
+        PathPlannerConstants.MAX_PATH_VEL_MPS,
+        PathPlannerConstants.MAX_PATH_ACCEL_MPS2,
+        PathPlannerConstants.MAX_PATH_ANG_VEL_RADPS,
+        PathPlannerConstants.MAX_PATH_ANG_ACCEL_RADPS2
     );
 
     // ── Runtime state ─────────────────────────────────────────────────────────
@@ -121,7 +121,7 @@ public class gamePieceHuntCommand extends Command {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @param drive           swerveDrive subsystem (declared as requirement)
+     * @param drive           SwerveDrive subsystem (declared as requirement)
      * @param gamePieceVision game piece detection subsystem (read-only)
      * @param mode            one of the four HuntMode values
      * @param intakeTrigger   called once when the robot arrives at a piece;
@@ -129,8 +129,8 @@ public class gamePieceHuntCommand extends Command {
      * @param intakeComplete  returns true when the current piece has been secured;
      *                        wire to intake.hasGamePiece() or similar
      */
-    public gamePieceHuntCommand(swerveDrive drive,
-                                 gamePieceVisionSubsystem gamePieceVision,
+    public GamePieceHuntCommand(SwerveDrive drive,
+                                 GamePieceVisionSubsystem gamePieceVision,
                                  HuntMode mode,
                                  Runnable intakeTrigger,
                                  BooleanSupplier intakeComplete) {
@@ -154,7 +154,7 @@ public class gamePieceHuntCommand extends Command {
         pathfinder     = null;
         stateEnteredTimestamp = Timer.getTimestamp();
 
-        // PathPlanner failed to load (see swerveDrive.configureForAutoBuilder) — end immediately
+        // PathPlanner failed to load (see SwerveDrive.configureForAutoBuilder) — end immediately
         if (!drive.isPathPlannerAvailable()) state = State.DONE;
     }
 
@@ -189,7 +189,7 @@ public class gamePieceHuntCommand extends Command {
     private void executeFinding() {
         // Timeout — give up if no piece found within the configured window
         if (Timer.getTimestamp() - stateEnteredTimestamp
-                > gamePieceConstants.HUNT_NO_PIECE_TIMEOUT_SECS) {
+                > GamePieceConstants.HUNT_NO_PIECE_TIMEOUT_SECS) {
             transitionTo(State.DONE);
             return;
         }
@@ -204,7 +204,7 @@ public class gamePieceHuntCommand extends Command {
         double dx = currentTarget.getX() - robotPose.getX();
         double dy = currentTarget.getY() - robotPose.getY();
         double headingRad = Math.atan2(dy, dx)
-            + Math.toRadians(gamePieceConstants.APPROACH_HEADING_OFFSET_DEG);
+            + Math.toRadians(GamePieceConstants.APPROACH_HEADING_OFFSET_DEG);
 
         Pose2d targetPose = new Pose2d(
             currentTarget.getX(),
@@ -229,7 +229,7 @@ public class gamePieceHuntCommand extends Command {
     private void executeIntaking() {
         boolean complete = intakeComplete.getAsBoolean();
         boolean timedOut = Timer.getTimestamp() - stateEnteredTimestamp
-                           > gamePieceConstants.INTAKE_TIMEOUT_SECS;
+                           > GamePieceConstants.INTAKE_TIMEOUT_SECS;
 
         if (!complete && !timedOut) return;
 
@@ -279,7 +279,7 @@ public class gamePieceHuntCommand extends Command {
 
     /** True if the given position is close enough to a consumed target to be skipped. */
     private boolean isConsumed(Translation2d pos) {
-        double mergeRadius = gamePieceConstants.CLUSTER_RADIUS_M / 3.0;
+        double mergeRadius = GamePieceConstants.CLUSTER_RADIUS_M / 3.0;
         for (Translation2d consumed : consumedTargets) {
             if (consumed.getDistance(pos) <= mergeRadius) return true;
         }

@@ -54,8 +54,8 @@ public final class ConfigVerifier {
      * Register a device or mechanism group for startup verification.
      * Call once per device after construction, before runAll().
      *
-     * @param device any ConfigVerifiable — swerveModule, mechanismUnit subclass,
-     *               shooterMechanism, elevatorMechanism, etc.
+     * @param device any ConfigVerifiable — SwerveModule, MechanismUnit subclass,
+     *               ShooterMechanism, ElevatorMechanism, etc.
      */
     public static void register(ConfigVerifiable device) {
         registry.add(device);

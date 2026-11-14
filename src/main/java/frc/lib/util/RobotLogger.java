@@ -28,10 +28,10 @@ import edu.wpi.first.wpilibj.DataLogManager;
  * AdvantageScope can open both simultaneously on a shared timeline.
  *
  * ─── ENTRY NAMING CONVENTION ─────────────────────────────────────────────────
- * /Drive/...        — swerveDrive computed quantities
+ * /Drive/...        — SwerveDrive computed quantities
  * /Swerve/<FL|FR|BL|BR>/...  — per-module analog encoder (CAN signals via .hoot)
- * /Vision/...       — visionSubsystem estimates and health
- * /Pathfinding/...  — pathfindCommand state
+ * /Vision/...       — VisionSubsystem estimates and health
+ * /Pathfinding/...  — PathfindCommand state
  */
 public final class RobotLogger {
 

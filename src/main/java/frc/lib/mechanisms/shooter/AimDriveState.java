@@ -2,14 +2,14 @@ package frc.lib.mechanisms.shooter;
 
 import edu.wpi.first.math.geometry.Pose2d;
 
-import frc.lib.swerve.driveOdometryState;
+import frc.lib.swerve.DriveOdometryState;
 
 /**
  * AimDriveState.java
  * PATH: src/main/java/frc/lib/mechanisms/shooter/AimDriveState.java
  *
- * The drivetrain state shooterAimController reads each loop. Implemented by
- * frc.robot.subsystems.swerveDrive.swerveDrive; tests implement it with fixed values.
+ * The drivetrain state ShooterAimController reads each loop. Implemented by
+ * frc.robot.subsystems.swerveDrive.SwerveDrive; tests implement it with fixed values.
  */
 public interface AimDriveState {
 
@@ -17,7 +17,7 @@ public interface AimDriveState {
     Pose2d getPose();
 
     /** Full motion snapshot (SI units). */
-    driveOdometryState getOdometryState();
+    DriveOdometryState getOdometryState();
 
     /** True when the heading PID is at its point-at setpoint. */
     boolean isPointedAtTarget();

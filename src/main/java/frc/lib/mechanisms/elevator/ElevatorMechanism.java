@@ -5,19 +5,19 @@ import java.util.function.Supplier;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
-import frc.lib.swerve.driveOdometryState;
+import frc.lib.swerve.DriveOdometryState;
 import frc.lib.util.ConfigVerifiable;
 import frc.lib.util.ConfigVerifyResult;
 import frc.lib.control.ff.FF;
-import frc.lib.control.ff.ffProvider;
-import frc.lib.control.mechanismConfig;
-import frc.lib.control.mechanismUnit;
-import frc.lib.hardware.motor.motorModels;
-import frc.lib.util.units;
+import frc.lib.control.ff.FFProvider;
+import frc.lib.control.MechanismConfig;
+import frc.lib.control.MechanismUnit;
+import frc.lib.hardware.motor.MotorModels;
+import frc.lib.util.Units;
 
 /**
- * elevatorMechanism.java
- * PATH: src/main/java/frc/lib/mechanisms/elevator/elevatorMechanism.java
+ * ElevatorMechanism.java
+ * PATH: src/main/java/frc/lib/mechanisms/elevator/ElevatorMechanism.java
  *
  * Pre-packaged elevator mechanism supporting:
  *   - Elevator  (required) — linear lift driven by a fixed-radius timing belt pulley.
@@ -33,7 +33,7 @@ import frc.lib.util.units;
  *   linear travel (in) = shaft rotations × 2π × pulleyRadiusIn
  *   shaft degrees       = (positionIn / (2π × pulleyRadiusIn)) × 360
  *
- * pulleyRadiusIn is provided in the Builder and never touches mechanismConfig.
+ * pulleyRadiusIn is provided in the Builder and never touches MechanismConfig.
  *
  * ─── ANGLE RESOLUTION ───────────────────────────────────────────────────────────
  * The elevator angle relative to ground drives the gravity FF calculation.
@@ -79,11 +79,11 @@ import frc.lib.util.units;
  * automatically by CommandScheduler each loop. No additional per-loop calls needed;
  * encoder sync, FF, PID tuning, and telemetry are all automatic inside set*().
  */
-public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable {
+public class ElevatorMechanism extends SubsystemBase implements ConfigVerifiable {
 
     // ── Sub-mechanisms ────────────────────────────────────────────────────────
-    private final mechanismUnit elevator;
-    private final mechanismUnit pivot;      // null if not configured
+    private final MechanismUnit elevator;
+    private final MechanismUnit pivot;      // null if not configured
 
     // ── Linear ↔ rotational conversion ───────────────────────────────────────
     // shaft degrees per inch of linear travel
@@ -110,7 +110,7 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
     // Constructor (private — use Builder)
     // ─────────────────────────────────────────────────────────────────────────
 
-    private elevatorMechanism(Builder b) {
+    private ElevatorMechanism(Builder b) {
         // Conversion factor: shaft degrees per inch of linear travel
         // travel = rotations × 2π × r  →  rotations = travel / (2π × r)
         // degrees = rotations × 360
@@ -124,7 +124,7 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
 
         // Resolve angle supplier before building FF (pivot unit doesn't exist yet
         // for the internal-pivot case, so we use a holder filled after construction)
-        final mechanismUnit[] pivotHolder = { null };
+        final MechanismUnit[] pivotHolder = { null };
 
         Supplier<Double> angleSupplier;
         if (b.externalAngleSupplier != null) {
@@ -138,15 +138,15 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
         }
 
         // Wire elevator Tier-3 FF — all physics computed inside the factory
-        mechanismConfig elevatorConfigWithFF = applyElevatorFF(
+        MechanismConfig elevatorConfigWithFF = applyElevatorFF(
             b, angleSupplier);
 
-        elevator = mechanismUnit.create(elevatorConfigWithFF);
+        elevator = MechanismUnit.create(elevatorConfigWithFF);
 
         // Wire pivot Tier-3 FF and create pivot unit
         if (b.pivotConfig != null) {
-            mechanismConfig pivotConfigWithFF = applyPivotFF(b);
-            pivot = mechanismUnit.create(pivotConfigWithFF);
+            MechanismConfig pivotConfigWithFF = applyPivotFF(b);
+            pivot = MechanismUnit.create(pivotConfigWithFF);
             pivotHolder[0] = pivot;
         } else {
             pivot = null;
@@ -286,16 +286,16 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Returns a copy of the elevator mechanismConfig with Tier-3 FF wired.
+     * Returns a copy of the elevator MechanismConfig with Tier-3 FF wired.
      * Any existing tier3FF in the provided config is summed with the physics FF
      * via lambda composition so user-provided FF is not silently overwritten.
      */
-    private static mechanismConfig applyElevatorFF(Builder b,
+    private static MechanismConfig applyElevatorFF(Builder b,
                                                     Supplier<Double> angleSupplier) {
-        motorModels.MotorModel motor   = b.elevatorMotorModel;
+        MotorModels.MotorModel motor   = b.elevatorMotorModel;
         double gearRatio               = b.elevatorConfig.gearRatio;
-        double spoolM                  = units.inches_m(b.pulleyRadiusIn);
-        double carriageKg              = units.lbs_kg(b.carriageLbs);
+        double spoolM                  = Units.inchesToMeters(b.pulleyRadiusIn);
+        double carriageKg              = Units.lbsToKg(b.carriageLbs);
         double[] stageKg               = toKgArray(b.stageMassesLbs);
         double[] pieceKg               = toKgArray(b.gamePieceTypesLbs);
 
@@ -305,7 +305,7 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
         // Users set friction via kS in the PID array (Tier 1) or via a tier2FF lambda.
         // Tier-3 here covers only gravity + drivetrain inertia + centripetal.
 
-        ffProvider physicsFF = (positionDeg, velocityRps, accelRpss) -> {
+        FFProvider physicsFF = (positionDeg, velocityRps, accelRpss) -> {
             double totalKg = carriageKg;
             for (double s : stageKg) totalKg += s;
             for (int i = 0; i < pieceKg.length; i++)
@@ -319,7 +319,7 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
             double voltsGrav    = torqueGravNm * 12.0 / (gearRatio * motor.stallTorqueNm);
 
             // 2. Drivetrain linear inertia — forward accel projects onto lift axis
-            driveOdometryState odom  = b.odometrySupplier.get();
+            DriveOdometryState odom  = b.odometrySupplier.get();
             double robotHeading      = b.headingSupplier.get();
             double accelMag          = odom.blendedState.linearAccelerationMagnitude;
             double accelHeading      = odom.blendedState.linearAccelerationHeading;
@@ -330,7 +330,7 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
 
             // 3. Centripetal — robot rotation swings elevator CG in an arc
             double omega             = odom.blendedState.angularVelocity;
-            double cgOffsetM         = units.inches_m(b.cgOffsetFromRobotCenterIn);
+            double cgOffsetM         = Units.inchesToMeters(b.cgOffsetFromRobotCenterIn);
             double aCentripetal      = omega * omega * cgOffsetM;
             double torqueCentNm      = totalKg * aCentripetal
                                      * Math.cos(elevAngleRad) * spoolM;
@@ -340,21 +340,21 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
         };
 
         // Compose with any existing tier3FF so user-provided FF is preserved
-        ffProvider existing = b.elevatorConfig.tier3FF;
-        ffProvider combined = (pos, vel, accel) ->
+        FFProvider existing = b.elevatorConfig.tier3FF;
+        FFProvider combined = (pos, vel, accel) ->
             physicsFF.compute(pos, vel, accel) + existing.compute(pos, vel, accel);
 
         return rebuildWithTier3FF(b.elevatorConfig, combined);
     }
 
     /**
-     * Returns a copy of the pivot mechanismConfig with Tier-3 FF wired.
+     * Returns a copy of the pivot MechanismConfig with Tier-3 FF wired.
      * Only called when a pivot is configured (withPivot and withExternalAngleSupplier
      * are mutually exclusive, so the pivot's own position is the elevator angle).
      * Physics: FF.pivotingElevator — gravity + drivetrain inertia + centripetal.
      */
-    private static mechanismConfig applyPivotFF(Builder b) {
-        ffProvider physicsFF = FF.pivotingElevator(
+    private static MechanismConfig applyPivotFF(Builder b) {
+        FFProvider physicsFF = FF.pivotingElevator(
             b.pivotMotorModel, b.pivotConfig.gearRatio,
             b.cgDistanceFromPivotIn, b.cgOffsetFromRobotCenterIn,
             b.carriageLbs, b.stageMassesLbs,
@@ -362,18 +362,18 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
             b.gamePieceTypesLbs, b.pieceCountSuppliers,
             b.odometrySupplier, b.headingSupplier);
 
-        ffProvider existing = b.pivotConfig.tier3FF;
-        ffProvider combined = (pos, vel, accel) ->
+        FFProvider existing = b.pivotConfig.tier3FF;
+        FFProvider combined = (pos, vel, accel) ->
             physicsFF.compute(pos, vel, accel) + existing.compute(pos, vel, accel);
 
         return rebuildWithTier3FF(b.pivotConfig, combined);
     }
 
     /**
-     * Copy a mechanismConfig with a replacement tier3FF, preserving every other
+     * Copy a MechanismConfig with a replacement tier3FF, preserving every other
      * field (travel limits, homing, Nova motor type, CAN signals included).
      */
-    private static mechanismConfig rebuildWithTier3FF(mechanismConfig src, ffProvider ff) {
+    private static MechanismConfig rebuildWithTier3FF(MechanismConfig src, FFProvider ff) {
         return src.toBuilder().withTier3FF(ff).build();
     }
 
@@ -384,7 +384,7 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
     private static double[] toKgArray(double[] lbsArray) {
         if (lbsArray == null) return new double[0];
         double[] kg = new double[lbsArray.length];
-        for (int i = 0; i < lbsArray.length; i++) kg[i] = units.lbs_kg(lbsArray[i]);
+        for (int i = 0; i < lbsArray.length; i++) kg[i] = Units.lbsToKg(lbsArray[i]);
         return kg;
     }
 
@@ -425,15 +425,15 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Fluent builder for elevatorMechanism.
+     * Fluent builder for ElevatorMechanism.
      *
      * Required: withElevator(), withMasses(), withDrivetrainSuppliers().
      * Optional: withPivot() or withExternalAngleSupplier(), withElevatorHoldThresholdIn().
      *
      * Example — fixed vertical, single stage, one game piece type:
      * <pre>{@code
-     * elevatorMechanism elevator = new elevatorMechanism.Builder("Elevator")
-     *     .withElevator(elevatorConfig, motorModels.NEO_VORTEX, 0.75, 0.0)
+     * ElevatorMechanism elevator = new ElevatorMechanism.Builder("Elevator")
+     *     .withElevator(elevatorConfig, MotorModels.NEO_VORTEX, 0.75, 0.0)
      *     .withMasses(8.0, new double[]{ 3.0 },
      *                 new double[]{ 1.5 }, new Supplier[]{ indexer::getPieceCount })
      *     .withDrivetrainSuppliers(drive::getOdometryState, drive::getHeadingRad,
@@ -444,9 +444,9 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
      *
      * Example — pivoting base, two stages:
      * <pre>{@code
-     * elevatorMechanism elevator = new elevatorMechanism.Builder("PivotElevator")
-     *     .withElevator(elevatorConfig, motorModels.NEO_VORTEX, 0.75, 0.0)
-     *     .withPivot(pivotConfig, motorModels.NEO, 18.0, 6.0, 90.0)
+     * ElevatorMechanism elevator = new ElevatorMechanism.Builder("PivotElevator")
+     *     .withElevator(elevatorConfig, MotorModels.NEO_VORTEX, 0.75, 0.0)
+     *     .withPivot(pivotConfig, MotorModels.NEO, 18.0, 6.0, 90.0)
      *     .withMasses(8.0, new double[]{ 3.0, 2.5 },
      *                 new double[]{ 1.5 }, new Supplier[]{ indexer::getPieceCount })
      *     .withDrivetrainSuppliers(drive::getOdometryState, drive::getHeadingRad,
@@ -460,14 +460,14 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
         private final String name;
 
         // Elevator — required
-        mechanismConfig elevatorConfig;
-        motorModels.MotorModel elevatorMotorModel;
+        MechanismConfig elevatorConfig;
+        MotorModels.MotorModel elevatorMotorModel;
         double pulleyRadiusIn    = 0.0;
         double defaultElevatorIn = 0.0;
 
         // Pivot — optional
-        mechanismConfig pivotConfig              = null;
-        motorModels.MotorModel pivotMotorModel   = null;
+        MechanismConfig pivotConfig              = null;
+        MotorModels.MotorModel pivotMotorModel   = null;
         double cgDistanceFromPivotIn             = 0.0;
         double defaultPivotDeg                   = 90.0;
 
@@ -482,7 +482,7 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
         Supplier<Integer>[] pieceCountSuppliers  = new Supplier[0];
 
         // Drivetrain coupling — required
-        Supplier<driveOdometryState> odometrySupplier = null;
+        Supplier<DriveOdometryState> odometrySupplier = null;
         Supplier<Double> headingSupplier               = null;
         double cgOffsetFromRobotCenterIn               = 0.0;
 
@@ -496,16 +496,16 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
 
         /**
          * Configure the elevator sub-mechanism.
-         * setpointDeadband must be set in the mechanismConfig (in shaft degrees,
+         * setpointDeadband must be set in the MechanismConfig (in shaft degrees,
          * converted from inches: deadbandIn × degsPerIn).
          *
-         * @param config          full mechanismConfig for the elevator motor(s)
-         * @param motorModel      motor model for FF calculation (e.g. motorModels.NEO_VORTEX)
+         * @param config          full MechanismConfig for the elevator motor(s)
+         * @param motorModel      motor model for FF calculation (e.g. MotorModels.NEO_VORTEX)
          * @param pulleyRadiusIn  timing belt pulley output radius (inches, fixed)
          * @param defaultIn       default elevator position (inches)
          */
-        public Builder withElevator(mechanismConfig config,
-                                    motorModels.MotorModel motorModel,
+        public Builder withElevator(MechanismConfig config,
+                                    MotorModels.MotorModel motorModel,
                                     double pulleyRadiusIn,
                                     double defaultIn) {
             this.elevatorConfig    = config;
@@ -519,15 +519,15 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
          * Configure an internal pivot sub-mechanism. When present, the elevator
          * angle is read from the pivot motor's position each cycle.
          *
-         * @param config              full mechanismConfig for the pivot motor(s)
+         * @param config              full MechanismConfig for the pivot motor(s)
          * @param motorModel          motor model for pivot FF calculation
          * @param cgDistFromPivotIn   distance from pivot axis to assembly CG (inches)
          * @param cgOffsetFromCenterIn distance from robot center to assembly CG
          *                             projected onto rotation plane (inches)
          * @param defaultDeg          default pivot angle (degrees)
          */
-        public Builder withPivot(mechanismConfig config,
-                                 motorModels.MotorModel motorModel,
+        public Builder withPivot(MechanismConfig config,
+                                 MotorModels.MotorModel motorModel,
                                  double cgDistFromPivotIn,
                                  double cgOffsetFromCenterIn,
                                  double defaultDeg) {
@@ -572,7 +572,7 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
                 ? pieceCountSuppliers : new Supplier[0];
             if (this.gamePieceTypesLbs.length != this.pieceCountSuppliers.length)
                 throw new IllegalArgumentException(
-                    "elevatorMechanism.Builder '" + name + "': gamePieceTypesLbs and "
+                    "ElevatorMechanism.Builder '" + name + "': gamePieceTypesLbs and "
                     + "pieceCountSuppliers must be the same length.");
             return this;
         }
@@ -580,14 +580,14 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
         /**
          * Provide drivetrain state suppliers for inertia and centripetal FF.
          *
-         * @param odometrySupplier       supplies driveOdometryState each cycle
+         * @param odometrySupplier       supplies DriveOdometryState each cycle
          * @param headingSupplier        supplies robot heading (radians, field-relative, CCW+)
          * @param cgOffsetFromCenterIn   distance from robot center to elevator assembly CG,
          *                               projected onto rotation plane (inches).
          *                               Used for centripetal FF. Also used for pivot FF
          *                               if withPivot() does not set its own offset.
          */
-        public Builder withDrivetrainSuppliers(Supplier<driveOdometryState> odometrySupplier,
+        public Builder withDrivetrainSuppliers(Supplier<DriveOdometryState> odometrySupplier,
                                                Supplier<Double> headingSupplier,
                                                double cgOffsetFromCenterIn) {
             this.odometrySupplier           = odometrySupplier;
@@ -608,29 +608,29 @@ public class elevatorMechanism extends SubsystemBase implements ConfigVerifiable
             return this;
         }
 
-        /** Build and return the elevatorMechanism instance. */
-        public elevatorMechanism build() {
+        /** Build and return the ElevatorMechanism instance. */
+        public ElevatorMechanism build() {
             if (elevatorConfig == null)
                 throw new IllegalStateException(
-                    "elevatorMechanism.Builder '" + name + "': withElevator() is required.");
+                    "ElevatorMechanism.Builder '" + name + "': withElevator() is required.");
             if (elevatorMotorModel == null)
                 throw new IllegalStateException(
-                    "elevatorMechanism.Builder '" + name + "': motor model must be provided "
+                    "ElevatorMechanism.Builder '" + name + "': motor model must be provided "
                     + "in withElevator().");
             if (odometrySupplier == null || headingSupplier == null)
                 throw new IllegalStateException(
-                    "elevatorMechanism.Builder '" + name + "': withDrivetrainSuppliers() "
+                    "ElevatorMechanism.Builder '" + name + "': withDrivetrainSuppliers() "
                     + "is required.");
             if (pivotConfig != null && externalAngleSupplier != null)
                 throw new IllegalStateException(
-                    "elevatorMechanism.Builder '" + name + "': withPivot() and "
+                    "ElevatorMechanism.Builder '" + name + "': withPivot() and "
                     + "withExternalAngleSupplier() are mutually exclusive.");
             if (!holdThresholdSet)
                 DriverStation.reportWarning(
-                    "[elevatorMechanism] '" + name + "': withElevatorHoldThresholdIn() was not "
+                    "[ElevatorMechanism] '" + name + "': withElevatorHoldThresholdIn() was not "
                     + "called. Hold threshold defaults to 0 in — isReady() will drop to false "
                     + "any time elevator position is below setpoint.", false);
-            return new elevatorMechanism(this);
+            return new ElevatorMechanism(this);
         }
     }
 }

@@ -2,20 +2,20 @@ package frc.lib.control.ff;
 
 import java.util.function.Supplier;
 
-import frc.lib.hardware.motor.motorModels;
-import frc.lib.swerve.driveOdometryState;
-import frc.lib.util.units;
+import frc.lib.hardware.motor.MotorModels;
+import frc.lib.swerve.DriveOdometryState;
+import frc.lib.util.Units;
 
 /**
  * FF.java
  * PATH: src/main/java/frc/lib/control/ff/FF.java
  *
- * Static factory library for physics-based ffProvider lambdas.
- * (Formerly mechanismUnit.FF — pulled out so it can be unit-tested and reused
+ * Static factory library for physics-based FFProvider lambdas.
+ * (Formerly MechanismUnit.FF — pulled out so it can be unit-tested and reused
  * without constructing any motor hardware.)
  *
  * All voltage calculations are derived from motor datasheet constants
- * (via motorModels) rather than empirical calibration voltages, so
+ * (via MotorModels) rather than empirical calibration voltages, so
  * values are grounded in vendor-verified specs and require no per-mechanism
  * holding-voltage measurement.
  *
@@ -30,7 +30,7 @@ import frc.lib.util.units;
  * ─── UNITS AT THE INTERFACE ──────────────────────────────────────────────────
  * Masses    : lbs  (converted to kg internally)
  * Distances : inches  (converted to meters internally)
- * Angles    : degrees  (matches ffProvider positionDeg convention)
+ * Angles    : degrees  (matches FFProvider positionDeg convention)
  * Returns   : volts
  *
  * ─── TIER PLACEMENT ──────────────────────────────────────────────────────────
@@ -55,7 +55,7 @@ public final class FF {
     private FF() {}
 
     /** Provider that always returns zero — flat mechanisms or no Rio-side FF. */
-    public static ffProvider none() {
+    public static FFProvider none() {
         return (pos, vel, accel) -> 0.0;
     }
 
@@ -68,7 +68,7 @@ public final class FF {
      * V = τ_mech × V_nominal / (gearRatio × stallTorqueNm)
      */
     static double torqueToVolts(double torqueNm, double gearRatio,
-                                motorModels.MotorModel motor) {
+                                MotorModels.MotorModel motor) {
         return torqueNm * V_NOMINAL / (gearRatio * motor.stallTorqueNm);
     }
 
@@ -96,15 +96,15 @@ public final class FF {
      * at each angle stop and record force_lbs × distance_in as torqueLbIn.
      * Positive torque = spring assists the forward-rotation direction at that angle.
      *
-     * Internally converts lb·in → N·m via units.lbIn_Nm(), then:
+     * Internally converts lb·in → N·m via Units.lbInToNm(), then:
      *   V = τ × 12V / (gearRatio × motor.stallTorqueNm)
      *
-     * @param motor     motor model from motorModels (e.g. motorModels.NEO)
+     * @param motor     motor model from MotorModels (e.g. MotorModels.NEO)
      * @param gearRatio motor rotations per mechanism shaft rotation
      * @param points    Calibration pairs: double[][]{ {angleDeg, torqueLbIn}, ... }
      *                  Minimum 2 points, sorted ascending by angle.
      */
-    public static ffProvider springTurret(motorModels.MotorModel motor, double gearRatio,
+    public static FFProvider springTurret(MotorModels.MotorModel motor, double gearRatio,
                                           double[][] points) {
         if (points == null || points.length < 2)
             throw new IllegalArgumentException(
@@ -124,7 +124,7 @@ public final class FF {
         final double[] torquesNm = new double[points.length];
         for (int i = 0; i < points.length; i++) {
             angles[i]    = points[i][0];
-            torquesNm[i] = units.lbIn_Nm(points[i][1]);
+            torquesNm[i] = Units.lbInToNm(points[i][1]);
         }
 
         return (positionDeg, velocityRps, accelRpss) -> {
@@ -162,7 +162,7 @@ public final class FF {
      * For a fixed-CG arm with no game pieces, pass empty arrays for the
      * gamePiece* parameters.
      *
-     * @param motor               motor model from motorModels (e.g. motorModels.NEO)
+     * @param motor               motor model from MotorModels (e.g. MotorModels.NEO)
      * @param gearRatio           motor rotations per mechanism shaft rotation
      * @param armMassLbs          mass of the arm structure itself (lbs)
      * @param armCgDistanceIn     distance from pivot to arm structure CG (inches)
@@ -173,8 +173,8 @@ public final class FF {
      *                            Each supplier returns the integer count currently held.
      */
     @SuppressWarnings("unchecked") // new Supplier[0] safe — only read as Supplier<Integer>
-    public static ffProvider rotatingArm(
-            motorModels.MotorModel motor,
+    public static FFProvider rotatingArm(
+            MotorModels.MotorModel motor,
             double gearRatio,
             double armMassLbs,
             double armCgDistanceIn,
@@ -192,13 +192,13 @@ public final class FF {
                 "FF.rotatingArm: gamePieceTypesLbs, pieceCgDistancesIn, "
                 + "and pieceCountSuppliers must all be the same length.");
 
-        final double armKg   = units.lbs_kg(armMassLbs);
-        final double armCgM  = units.inches_m(armCgDistanceIn);
+        final double armKg   = Units.lbsToKg(armMassLbs);
+        final double armCgM  = Units.inchesToMeters(armCgDistanceIn);
         final double[] pieceKg  = new double[gamePieceTypesLbs.length];
         final double[] pieceCgM = new double[pieceCgDistancesIn.length];
         for (int i = 0; i < pieceKg.length; i++) {
-            pieceKg[i]  = units.lbs_kg(gamePieceTypesLbs[i]);
-            pieceCgM[i] = units.inches_m(pieceCgDistancesIn[i]);
+            pieceKg[i]  = Units.lbsToKg(gamePieceTypesLbs[i]);
+            pieceCgM[i] = Units.inchesToMeters(pieceCgDistancesIn[i]);
         }
         final Supplier<Integer>[] counts = pieceCountSuppliers;
 
@@ -242,21 +242,21 @@ public final class FF {
      * once at construction from a CAD model or measurement. Flywheel angular velocity
      * is read each cycle via the supplier.
      *
-     * This is Tier 3 because it closes over the flywheel mechanismUnit's velocity.
+     * This is Tier 3 because it closes over the flywheel MechanismUnit's velocity.
      * Wire it in RobotContainer where both mechanism references exist.
      *
-     * @param turretMotor              motor model for the turret (e.g. motorModels.MINION)
+     * @param turretMotor              motor model for the turret (e.g. MotorModels.MINION)
      * @param turretGearRatio          turret motor rotations per turret shaft rotation
      * @param flywheelMoiLbIn2         flywheel moment of inertia (lb·in²) — static, measured once
      * @param flywheelVelocityRpsSupplier  supplies flywheel shaft RPS each cycle
      */
-    public static ffProvider gyroscopicTurret(
-            motorModels.MotorModel turretMotor,
+    public static FFProvider gyroscopicTurret(
+            MotorModels.MotorModel turretMotor,
             double turretGearRatio,
             double flywheelMoiLbIn2,
             Supplier<Double> flywheelVelocityRpsSupplier) {
 
-        final double flywheelMoiKgM2 = units.lbIn2_kgM2(flywheelMoiLbIn2);
+        final double flywheelMoiKgM2 = Units.lbIn2ToKgM2(flywheelMoiLbIn2);
 
         return (positionDeg, velocityRps, accelRpss) -> {
             double omegaFlywheel = flywheelVelocityRpsSupplier.get() * (2.0 * Math.PI);
@@ -288,7 +288,7 @@ public final class FF {
      * that the physics model cannot capture. Set both to 0 for a first pass;
      * tune by observing position hold error at different load conditions.
      *
-     * @param motor                      motor model from motorModels
+     * @param motor                      motor model from MotorModels
      * @param gearRatio                  motor rotations per mechanism shaft rotation
      * @param spoolRadiusIn              spool or sprocket radius (inches) — converts linear
      *                                   force to shaft torque
@@ -302,8 +302,8 @@ public final class FF {
      *                                   90° = vertical, 0° = horizontal.
      */
     @SuppressWarnings("unchecked") // new Supplier[0] safe — only read as Supplier<Integer>
-    public static ffProvider multiStageElevator(
-            motorModels.MotorModel motor,
+    public static FFProvider multiStageElevator(
+            MotorModels.MotorModel motor,
             double gearRatio,
             double spoolRadiusIn,
             double carriageMassLbs,
@@ -323,12 +323,12 @@ public final class FF {
                 "FF.multiStageElevator: gamePieceTypesLbs and "
                 + "pieceCountSuppliers must be the same length.");
 
-        final double spoolM     = units.inches_m(spoolRadiusIn);
-        final double carriageKg = units.lbs_kg(carriageMassLbs);
+        final double spoolM     = Units.inchesToMeters(spoolRadiusIn);
+        final double carriageKg = Units.lbsToKg(carriageMassLbs);
         final double[] stageKg  = new double[stageMassesLbs.length];
-        for (int i = 0; i < stageKg.length; i++) stageKg[i] = units.lbs_kg(stageMassesLbs[i]);
+        for (int i = 0; i < stageKg.length; i++) stageKg[i] = Units.lbsToKg(stageMassesLbs[i]);
         final double[] pieceKg  = new double[gamePieceTypesLbs.length];
-        for (int i = 0; i < pieceKg.length; i++) pieceKg[i] = units.lbs_kg(gamePieceTypesLbs[i]);
+        for (int i = 0; i < pieceKg.length; i++) pieceKg[i] = Units.lbsToKg(gamePieceTypesLbs[i]);
         final Supplier<Integer>[] counts = pieceCountSuppliers;
 
         return (positionDeg, velocityRps, accelRpss) -> {
@@ -373,9 +373,9 @@ public final class FF {
      *      a_centripetal = ω² × cgOffsetFromCenter
      *      τ_centripetal = totalMass × a_centripetal × cgDist × sin(pivotAngle)
      *
-     * Robot state is read from driveOdometryState.blendedState each cycle.
+     * Robot state is read from DriveOdometryState.blendedState each cycle.
      *
-     * @param motor                      motor model from motorModels
+     * @param motor                      motor model from MotorModels
      * @param gearRatio                  motor rotations per mechanism shaft rotation
      * @param cgDistanceFromPivotIn      distance from base pivot to assembly CG (inches)
      * @param cgOffsetFromRobotCenterIn  distance from robot center to elevator CG,
@@ -386,12 +386,12 @@ public final class FF {
      * @param frictionOffsetVoltsDown    constant addend when pivoting down
      * @param gamePieceTypesLbs          mass of each game piece type (lbs)
      * @param pieceCountSuppliers        runtime count per type, parallel to gamePieceTypesLbs
-     * @param odometryStateSupplier      supplies driveOdometryState each cycle
+     * @param odometryStateSupplier      supplies DriveOdometryState each cycle
      * @param robotHeadingSupplier       supplies robot heading (radians, field-relative, CCW+)
      */
     @SuppressWarnings("unchecked") // new Supplier[0] safe — only read as Supplier<Integer>
-    public static ffProvider pivotingElevator(
-            motorModels.MotorModel motor,
+    public static FFProvider pivotingElevator(
+            MotorModels.MotorModel motor,
             double gearRatio,
             double cgDistanceFromPivotIn,
             double cgOffsetFromRobotCenterIn,
@@ -401,7 +401,7 @@ public final class FF {
             double frictionOffsetVoltsDown,
             double[] gamePieceTypesLbs,
             Supplier<Integer>[] pieceCountSuppliers,
-            Supplier<driveOdometryState> odometryStateSupplier,
+            Supplier<DriveOdometryState> odometryStateSupplier,
             Supplier<Double> robotHeadingSupplier) {
 
         if (stageMassesLbs == null)       stageMassesLbs      = new double[0];
@@ -413,13 +413,13 @@ public final class FF {
                 "FF.pivotingElevator: gamePieceTypesLbs and "
                 + "pieceCountSuppliers must be the same length.");
 
-        final double cgDistM       = units.inches_m(cgDistanceFromPivotIn);
-        final double cgOffsetM     = units.inches_m(cgOffsetFromRobotCenterIn);
-        final double carriageKg    = units.lbs_kg(carriageMassLbs);
+        final double cgDistM       = Units.inchesToMeters(cgDistanceFromPivotIn);
+        final double cgOffsetM     = Units.inchesToMeters(cgOffsetFromRobotCenterIn);
+        final double carriageKg    = Units.lbsToKg(carriageMassLbs);
         final double[] stageKg     = new double[stageMassesLbs.length];
-        for (int i = 0; i < stageKg.length; i++) stageKg[i] = units.lbs_kg(stageMassesLbs[i]);
+        for (int i = 0; i < stageKg.length; i++) stageKg[i] = Units.lbsToKg(stageMassesLbs[i]);
         final double[] pieceKg     = new double[gamePieceTypesLbs.length];
-        for (int i = 0; i < pieceKg.length; i++) pieceKg[i] = units.lbs_kg(gamePieceTypesLbs[i]);
+        for (int i = 0; i < pieceKg.length; i++) pieceKg[i] = Units.lbsToKg(gamePieceTypesLbs[i]);
         final Supplier<Integer>[] counts = pieceCountSuppliers;
 
         return (positionDeg, velocityRps, accelRpss) -> {
@@ -440,7 +440,7 @@ public final class FF {
             double voltsGrav     = torqueToVolts(torqueGrav, gearRatio, motor);
 
             // ── 2. Drivetrain linear inertia ──────────────────────────────
-            driveOdometryState odom = odometryStateSupplier.get();
+            DriveOdometryState odom = odometryStateSupplier.get();
             double robotHeading     = robotHeadingSupplier.get();
             double accelMag         = odom.blendedState.linearAccelerationMagnitude;
             double accelHeading     = odom.blendedState.linearAccelerationHeading;

@@ -8,26 +8,26 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-import frc.lib.control.ff.ffProvider;
+import frc.lib.control.ff.FFProvider;
 import frc.lib.hardware.motor.MotorIOConfig;
 import frc.lib.hardware.motor.MotorVendor;
 
 /**
- * mechanismConfigTest.java
- * PATH: src/test/java/frc/lib/control/mechanismConfigTest.java
+ * MechanismConfigTest.java
+ * PATH: src/test/java/frc/lib/control/MechanismConfigTest.java
  *
- * mechanismConfig → per-motor MotorIOConfig derivation, copy semantics, and
+ * MechanismConfig → per-motor MotorIOConfig derivation, copy semantics, and
  * builder validation. Pure Java — no HAL.
  */
-class mechanismConfigTest {
+class MechanismConfigTest {
 
     private static final double EPS = 1e-12;
 
-    private static mechanismConfig.Builder threeMotorElevator() {
-        return new mechanismConfig.Builder("Elevator", new int[]{ 20, 21, 22 }, MotorVendor.REV_SPARKMAX)
+    private static MechanismConfig.Builder threeMotorElevator() {
+        return new MechanismConfig.Builder("Elevator", new int[]{ 20, 21, 22 }, MotorVendor.REV_SPARKMAX)
             .withFollowerConfig(
-                new motorConstants.FollowMode[]{ motorConstants.FollowMode.MECHANICAL,
-                                                 motorConstants.FollowMode.ENCODER_SYNC },
+                new MotorConstants.FollowMode[]{ MotorConstants.FollowMode.MECHANICAL,
+                                                 MotorConstants.FollowMode.ENCODER_SYNC },
                 new boolean[]{ true, true },
                 new int[]{ 0, 0 })
             .withGearRatio(12.0)
@@ -55,7 +55,7 @@ class mechanismConfigTest {
 
     @Test
     void followersGetHardwareSettingsButNoClosedLoopSettings() {
-        mechanismConfig cfg = threeMotorElevator().build();
+        MechanismConfig cfg = threeMotorElevator().build();
         MotorIOConfig mech = cfg.motorConfig(1);
         MotorIOConfig sync = cfg.motorConfig(2);
 
@@ -73,7 +73,7 @@ class mechanismConfigTest {
 
     @Test
     void unsetSoftLimitsStayDisabled() {
-        MotorIOConfig leader = new mechanismConfig.Builder("Roller", new int[]{ 5 }, MotorVendor.THRIFTYBOT_NOVA)
+        MotorIOConfig leader = new MechanismConfig.Builder("Roller", new int[]{ 5 }, MotorVendor.THRIFTYBOT_NOVA)
             .build().motorConfig(0);
         assertTrue(Double.isNaN(leader.softLimitForwardRot));
         assertTrue(Double.isNaN(leader.softLimitReverseRot));
@@ -81,10 +81,10 @@ class mechanismConfigTest {
 
     @Test
     void toBuilderPreservesEveryField() {
-        // Regression: elevatorMechanism used to rebuild configs by hand and silently
+        // Regression: ElevatorMechanism used to rebuild configs by hand and silently
         // dropped travel limits, homing offset, Nova motor type, and CAN signal rates.
-        ffProvider t2 = (p, v, a) -> 1.0;
-        mechanismConfig src = threeMotorElevator()
+        FFProvider t2 = (p, v, a) -> 1.0;
+        MechanismConfig src = threeMotorElevator()
             .withTier2FF(t2)
             .withLeadTravelLimits(30, 0.1, 40, 0.2)
             .withFollowerTravelLimits(31, 0.11, 41, 0.21)
@@ -96,8 +96,8 @@ class mechanismConfigTest {
             .withEncoderSync(0.02, 0.9)
             .build();
 
-        ffProvider t3 = (p, v, a) -> 2.0;
-        mechanismConfig copy = src.toBuilder().withTier3FF(t3).build();
+        FFProvider t3 = (p, v, a) -> 2.0;
+        MechanismConfig copy = src.toBuilder().withTier3FF(t3).build();
 
         assertSame(t2, copy.tier2FF);
         assertSame(t3, copy.tier3FF);
@@ -110,20 +110,20 @@ class mechanismConfigTest {
         assertTrue(copy.optimizeCanUtilization);
         assertEquals(0.5, copy.setpointDeadband, EPS);
         assertEquals(0.9, copy.encoderSyncKp, EPS);
-        assertEquals(motorConstants.FollowMode.ENCODER_SYNC, copy.followModeOf(2));
+        assertEquals(MotorConstants.FollowMode.ENCODER_SYNC, copy.followModeOf(2));
         assertEquals(-36.0, copy.softLimitReverseDeg, EPS);
     }
 
     @Test
     void mixedVendorsAreRejected() {
         assertThrows(IllegalArgumentException.class, () ->
-            new mechanismConfig.Builder("Bad", new int[]{ 1, 2 },
+            new MechanismConfig.Builder("Bad", new int[]{ 1, 2 },
                 new MotorVendor[]{ MotorVendor.REV_SPARKMAX, MotorVendor.CTRE_TALONFX }));
     }
 
     @Test
     void singleVendorConstructorFillsEveryMotor() {
-        mechanismConfig cfg = new mechanismConfig.Builder("Flywheel", new int[]{ 10, 11 }, MotorVendor.CTRE_TALONFX)
+        MechanismConfig cfg = new MechanismConfig.Builder("Flywheel", new int[]{ 10, 11 }, MotorVendor.CTRE_TALONFX)
             .build();
         assertEquals(MotorVendor.CTRE_TALONFX, cfg.vendors[1]);
         assertEquals("2× CTRE TalonFX | CAN [10, 11]", cfg.toString());
@@ -132,8 +132,8 @@ class mechanismConfigTest {
     @Test
     void followerConfigValidatesLeaderIndices() {
         assertThrows(IllegalArgumentException.class, () ->
-            new mechanismConfig.Builder("Bad", new int[]{ 1, 2 }, MotorVendor.CTRE_TALONFX)
-                .withFollowerConfig(new motorConstants.FollowMode[]{ motorConstants.FollowMode.MECHANICAL },
+            new MechanismConfig.Builder("Bad", new int[]{ 1, 2 }, MotorVendor.CTRE_TALONFX)
+                .withFollowerConfig(new MotorConstants.FollowMode[]{ MotorConstants.FollowMode.MECHANICAL },
                                     new boolean[]{ false }, new int[]{ 1 }));   // follows itself
     }
 }

@@ -1,11 +1,11 @@
 package frc.lib.swerve;
 
 /**
- * driveOdometryState.java
- * PATH: src/main/java/frc/lib/swerve/driveOdometryState.java
+ * DriveOdometryState.java
+ * PATH: src/main/java/frc/lib/swerve/DriveOdometryState.java
  *
  * Full snapshot of drivetrain motion state, updated every 20ms loop.
- * Read via swerveDrive.getOdometryState() from any command or subsystem.
+ * Read via SwerveDrive.getOdometryState() from any command or subsystem.
  *
  * ─── THREE BUCKETS ───────────────────────────────────────────────────────────
  *
@@ -31,13 +31,13 @@ package frc.lib.swerve;
  * All headings in radians (field-relative, 0 = field forward, CCW positive).
  * centerOfRotation x/y in meters, relative to robot center (0,0).
  */
-public class driveOdometryState {
+public class DriveOdometryState {
 
     // ─────────────────────────────────────────────────────────────────────────
     // Inner class: one bucket of motion state
     // ─────────────────────────────────────────────────────────────────────────
 
-    public static class bucket {
+    public static class Bucket {
 
         /** Linear speed magnitude (m/s) */
         public final double linearVelocityMagnitude;
@@ -66,7 +66,7 @@ public class driveOdometryState {
         /** Rate of change of CoR velocity (m/s², robot-relative) */
         public final double[] centerOfRotationAcceleration; // [d²x/dt², d²y/dt²]
 
-        public bucket(
+        public Bucket(
                 double linearVelocityMagnitude,
                 double linearVelocityHeading,
                 double linearAccelerationMagnitude,
@@ -89,8 +89,8 @@ public class driveOdometryState {
         }
 
         /** Safe zeroed bucket — returned before first loop runs */
-        public static bucket zero() {
-            return new bucket(0, 0, 0, 0, 0, 0,
+        public static Bucket zero() {
+            return new Bucket(0, 0, 0, 0, 0, 0,
                 new double[]{0, 0}, new double[]{0, 0}, new double[]{0, 0});
         }
     }
@@ -99,17 +99,17 @@ public class driveOdometryState {
     // The three buckets + timestamp
     // ─────────────────────────────────────────────────────────────────────────
 
-    public final bucket encoderState;
-    public final bucket imuState;
-    public final bucket blendedState;
+    public final Bucket encoderState;
+    public final Bucket imuState;
+    public final Bucket blendedState;
 
     /** FPGA timestamp of this snapshot (seconds) */
     public final double timestampSeconds;
 
-    public driveOdometryState(
-            bucket encoderState,
-            bucket imuState,
-            bucket blendedState,
+    public DriveOdometryState(
+            Bucket encoderState,
+            Bucket imuState,
+            Bucket blendedState,
             double timestampSeconds) {
         this.encoderState     = encoderState;
         this.imuState         = imuState;
@@ -118,7 +118,7 @@ public class driveOdometryState {
     }
 
     /** Safe zeroed state — returned before first loop completes */
-    public static driveOdometryState zero() {
-        return new driveOdometryState(bucket.zero(), bucket.zero(), bucket.zero(), 0.0);
+    public static DriveOdometryState zero() {
+        return new DriveOdometryState(Bucket.zero(), Bucket.zero(), Bucket.zero(), 0.0);
     }
 }

@@ -1,13 +1,13 @@
 package frc.lib.swerve;
 
 import edu.wpi.first.math.geometry.Translation2d;
-import frc.lib.util.units;
+import frc.lib.util.Units;
 
 /**
- * driveInput.java
- * PATH: src/main/java/frc/lib/swerve/driveInput.java
+ * DriveInput.java
+ * PATH: src/main/java/frc/lib/swerve/DriveInput.java
  *
- * Immutable data object passed into swerveDrive.drive() each loop.
+ * Immutable data object passed into SwerveDrive.drive() each loop.
  * The only way to move the robot is to build one of these and hand it in.
  *
  * ─── UNITS AT THIS INTERFACE ─────────────────────────────────────────────────
@@ -16,7 +16,7 @@ import frc.lib.util.units;
  *          centerOfRotation in METERS (robot-relative from robot center)
  * Stored : all values in METERS/SECOND internally after conversion
  *
- * The conversion happens once here. swerveDrive never sees ft/s.
+ * The conversion happens once here. SwerveDrive never sees ft/s.
  *
  * ─── FIELD-RELATIVE CONVENTION ───────────────────────────────────────────────
  * vx  positive → toward the far field wall (away from your alliance station)
@@ -27,9 +27,9 @@ import frc.lib.util.units;
  * (0, 0) = robot geometric center — robot pivots in place
  * Positive X = toward robot front
  * Positive Y = toward robot left
- * Bounded to bumper corners by driveWithJoysticks before being passed here
+ * Bounded to bumper corners by DriveWithJoysticks before being passed here
  */
-public class driveInput {
+public class DriveInput {
 
     private final double      vxMps;
     private final double      vyMps;
@@ -42,31 +42,31 @@ public class driveInput {
      * @param omegaRadps       Rotation rate in RADIANS/SECOND (CCW positive)
      * @param centerOfRotation Robot-relative pivot point in METERS
      */
-    public driveInput(double vxFtps, double vyFtps, double omegaRadps,
+    public DriveInput(double vxFtps, double vyFtps, double omegaRadps,
                       Translation2d centerOfRotation) {
-        this.vxMps            = units.ftps_mps(vxFtps);
-        this.vyMps            = units.ftps_mps(vyFtps);
+        this.vxMps            = Units.ftpsToMps(vxFtps);
+        this.vyMps            = Units.ftpsToMps(vyFtps);
         this.omegaRadps       = omegaRadps;
         this.centerOfRotation = centerOfRotation;
     }
 
     /** Convenience constructor — CoR defaults to robot center (0,0) */
-    public driveInput(double vxFtps, double vyFtps, double omegaRadps) {
+    public DriveInput(double vxFtps, double vyFtps, double omegaRadps) {
         this(vxFtps, vyFtps, omegaRadps, new Translation2d());
     }
 
     /** Fully stopped, pivot at robot center */
-    public static driveInput stopped() {
-        return new driveInput(0.0, 0.0, 0.0);
+    public static DriveInput stopped() {
+        return new DriveInput(0.0, 0.0, 0.0);
     }
 
-    // ── Getters (SI — used by swerveDrive internally) ─────────────────────────
+    // ── Getters (SI — used by SwerveDrive internally) ─────────────────────────
     public double        getVxMps()             { return vxMps; }
     public double        getVyMps()             { return vyMps; }
     public double        getOmegaRadps()        { return omegaRadps; }
     public Translation2d getCenterOfRotation()  { return centerOfRotation; }
 
     // ── Getters (English — available for telemetry/logging) ───────────────────
-    public double getVxFtps()  { return units.mps_ftps(vxMps); }
-    public double getVyFtps()  { return units.mps_ftps(vyMps); }
+    public double getVxFtps()  { return Units.mpsToFtps(vxMps); }
+    public double getVyFtps()  { return Units.mpsToFtps(vyMps); }
 }

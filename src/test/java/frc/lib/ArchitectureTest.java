@@ -58,7 +58,7 @@ class ArchitectureTest {
     @Test
     void vendorLibrariesOnlyInHardwareLayer() throws IOException {
         // The robot's own drivetrain may still use vendor devices directly (e.g. the
-        // Pigeon IMU in swerveDrive); the rule applies to everything in frc.lib.
+        // Pigeon IMU in SwerveDrive); the rule applies to everything in frc.lib.
         List<String> violations = scan(LIB_ROOT, VENDOR_FQN, path -> !path.startsWith(HARDWARE_ROOT));
         assertTrue(violations.isEmpty(),
             "Vendor APIs are only allowed under frc/lib/hardware:\n  " + String.join("\n  ", violations));

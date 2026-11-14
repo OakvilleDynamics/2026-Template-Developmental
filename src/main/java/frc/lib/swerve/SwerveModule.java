@@ -15,15 +15,15 @@ import frc.lib.hardware.motor.MotorIOConfig;
 import frc.lib.util.ConfigVerifiable;
 import frc.lib.util.ConfigVerifyResult;
 import frc.lib.util.RobotLogger;
-import frc.lib.util.units;
+import frc.lib.util.Units;
 
 /**
- * swerveModule.java
- * PATH: src/main/java/frc/lib/swerve/swerveModule.java
+ * SwerveModule.java
+ * PATH: src/main/java/frc/lib/swerve/SwerveModule.java
  *
  * One swerve module — vendor-agnostic. Takes its drive motor, steer motor and
  * absolute encoder as already-built MotorIO / AbsoluteEncoderIO objects; use
- * swerveHardware to build them from a motor/encoder type. This class contains
+ * SwerveHardware to build them from a motor/encoder type. This class contains
  * no vendor-specific logic and reads no robot constants.
  *
  * ─── UNITS ────────────────────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ import frc.lib.util.units;
  * loop. When a value changes, applyDashboardPIDUpdates() delegates to the
  * MotorIO — no vendor-specific logic here.
  */
-public class swerveModule implements ConfigVerifiable {
+public class SwerveModule implements ConfigVerifiable {
 
     // ── Vendor-agnostic hardware ──────────────────────────────────────────────
     private final MotorIO           driveMotor;
@@ -73,7 +73,7 @@ public class swerveModule implements ConfigVerifiable {
      * @param absEncoder          absolute azimuth encoder, zero = wheel straight forward
      * @param wheelDiameterInches drive wheel diameter (inches)
      */
-    public swerveModule(
+    public SwerveModule(
             String name,
             int moduleIndex,
             MotorIO driveMotor,
@@ -86,7 +86,7 @@ public class swerveModule implements ConfigVerifiable {
         this.driveMotor          = driveMotor;
         this.steerMotor          = steerMotor;
         this.absEncoder          = absEncoder;
-        this.wheelCircumferenceM = Math.PI * units.inches_m(wheelDiameterInches);
+        this.wheelCircumferenceM = Math.PI * Units.inchesToMeters(wheelDiameterInches);
 
         MotorIOConfig d = driveMotor.getConfig();
         MotorIOConfig s = steerMotor.getConfig();

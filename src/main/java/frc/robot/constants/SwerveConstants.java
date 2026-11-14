@@ -1,13 +1,13 @@
 package frc.robot.constants;
 
-import frc.lib.swerve.swerveHardware.AbsoluteEncoderType;
-import frc.lib.swerve.swerveHardware.DriveMotorType;
-import frc.lib.swerve.swerveHardware.SteerMotorType;
-import frc.lib.util.units;
+import frc.lib.swerve.SwerveHardware.AbsoluteEncoderType;
+import frc.lib.swerve.SwerveHardware.DriveMotorType;
+import frc.lib.swerve.SwerveHardware.SteerMotorType;
+import frc.lib.util.Units;
 
 /**
- * swerveConstants.java
- * PATH: src/main/java/frc/robot/constants/swerveConstants.java
+ * SwerveConstants.java
+ * PATH: src/main/java/frc/robot/constants/SwerveConstants.java
  *
  * Hardware-fixed constants that don't change between modules or at runtime.
  *
@@ -16,17 +16,17 @@ import frc.lib.util.units;
  * heading PID defaults, blend alpha default.
  *
  * ─── WHAT DOES NOT LIVE HERE ─────────────────────────────────────────────────
- * Per-module PID values → RobotContainer (passed into each swerveModule constructor)
- * Robot geometry → RobotContainer (passed into swerveDrive constructor)
+ * Per-module PID values → RobotContainer (passed into each SwerveModule constructor)
+ * Robot geometry → RobotContainer (passed into SwerveDrive constructor)
  */
-public final class swerveConstants {
+public final class SwerveConstants {
 
     // ── Motor / encoder type selection ────────────────────────────────────────
     /**
      * Select the drive and steer motor types and absolute encoder type for this
      * robot build. All four modules always use the same hardware. Change these
      * three constants when swapping hardware — no other code changes required.
-     * The type → vendor / current limit mapping lives in frc.lib.swerve.swerveHardware.
+     * The type → vendor / current limit mapping lives in frc.lib.swerve.SwerveHardware.
      */
     public static final DriveMotorType      DRIVE_MOTOR_TYPE  = DriveMotorType.KRAKEN_X60;
     // NOVA = Thrifty Nova controller (driving a Minion motor in this build)
@@ -38,7 +38,7 @@ public final class swerveConstants {
     // ── Wheel ─────────────────────────────────────────────────────────────────
     /**
      * Drive wheel diameter in INCHES.
-     * Used only in swerveModule for unit conversion to meters.
+     * Used only in SwerveModule for unit conversion to meters.
      * Thrifty Narrow ships with a 4" billet wheel.
      * TODO: confirm with your actual wheel.
      */
@@ -58,17 +58,17 @@ public final class swerveConstants {
     // ── Speed limits ──────────────────────────────────────────────────────────
     /**
      * Maximum linear drive speed in ft/s (driver-facing unit).
-     * Stored in both ft/s and m/s — m/s used by kinematics, ft/s used by driveInput scaling.
+     * Stored in both ft/s and m/s — m/s used by kinematics, ft/s used by DriveInput scaling.
      * Kraken X60 at L2 theoretical max ≈ 15.5 ft/s. Cap at ~90% for control headroom.
      */
     public static final double MAX_DRIVE_SPEED_FPS = 14.0;
-    public static final double MAX_DRIVE_SPEED_MPS = units.ftps_mps(MAX_DRIVE_SPEED_FPS);
+    public static final double MAX_DRIVE_SPEED_MPS = Units.ftpsToMps(MAX_DRIVE_SPEED_FPS);
 
     /** Maximum angular speed (rad/s). ~1 full rotation per second. */
     public static final double MAX_ANGULAR_SPEED_RPS = 2.0 * Math.PI;
 
     // ── CAN IDs and port assignments ─────────────────────────────────────────
-    // All CAN IDs and roboRIO port assignments are in canIDs.java.
+    // All CAN IDs and roboRIO port assignments are in CANIDs.java.
     // Thrifty encoder full-scale voltage: ThriftyAnalogEncoder.DEFAULT_FULL_SCALE_VOLTS.
 
     // ── Steering zero offsets ─────────────────────────────────────────────────
@@ -114,7 +114,7 @@ public final class swerveConstants {
 
     // ── Complementary filter blend weight ─────────────────────────────────────
     /**
-     * Alpha weight for blendedState in driveOdometryState.
+     * Alpha weight for blendedState in DriveOdometryState.
      * 0.0 = pure IMU, 1.0 = pure encoder.
      * Linear velocity uses alpha (encoder-dominant).
      * Angular velocity uses (1-alpha) (IMU-dominant).
@@ -160,7 +160,7 @@ public final class swerveConstants {
 
     // ── Point-at-target heading PID defaults ──────────────────────────────────
     /**
-     * Default gains for the heading-lock PID controller in swerveDrive.
+     * Default gains for the heading-lock PID controller in SwerveDrive.
      * Input: heading error (radians). Output: omega correction (rad/s).
      * Tunable live from the dashboard: "Drive/HeadingPID/kP" etc.
      *

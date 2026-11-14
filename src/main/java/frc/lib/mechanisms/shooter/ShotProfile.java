@@ -6,7 +6,7 @@ package frc.lib.mechanisms.shooter;
  *
  * Robot-specific shooter data handed to ShooterCalculator: the shot lookup
  * table, the shooter pivot location, and the on-the-move speed warning limit.
- * The robot defines one in its constants (e.g. shooterConstants.PROFILE); the
+ * The robot defines one in its constants (e.g. ShooterConstants.PROFILE); the
  * calculator itself holds no robot data, so it can be reused and unit-tested
  * with any table.
  *

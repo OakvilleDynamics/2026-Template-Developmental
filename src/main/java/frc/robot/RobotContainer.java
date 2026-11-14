@@ -6,32 +6,32 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 
-import frc.robot.constants.canIDs;
-import frc.robot.constants.portIDs;
-import frc.robot.commands.driveWithJoysticks;
-import frc.robot.commands.xLockCommand;
-import frc.robot.constants.swerveConstants;
+import frc.robot.constants.CANIDs;
+import frc.robot.constants.PortIDs;
+import frc.robot.commands.DriveWithJoysticks;
+import frc.robot.commands.XLockCommand;
+import frc.robot.constants.SwerveConstants;
 import frc.robot.pathplanning.FieldTargets;
-import frc.robot.pathplanning.gamePieceHuntCommand;
-import frc.robot.pathplanning.gamePieceHuntCommand.HuntMode;
-import frc.robot.pathplanning.pathfindCommand;
-import frc.robot.subsystems.swerveDrive.swerveDrive;
+import frc.robot.pathplanning.GamePieceHuntCommand;
+import frc.robot.pathplanning.GamePieceHuntCommand.HuntMode;
+import frc.robot.pathplanning.PathfindCommand;
+import frc.robot.subsystems.swerveDrive.SwerveDrive;
 import frc.lib.hardware.encoder.AbsoluteEncoderIO;
 import frc.lib.hardware.motor.MotorIO;
-import frc.lib.swerve.swerveHardware;
-import frc.lib.swerve.swerveModule;
+import frc.lib.swerve.SwerveHardware;
+import frc.lib.swerve.SwerveModule;
 import frc.lib.util.ConfigVerifier;
 import frc.robot.subsystems.vision.AprilTagFieldCalTab;
-import frc.robot.subsystems.vision.gamePieceVisionSubsystem;
-import frc.robot.subsystems.vision.robotPoseEstimate;
-import frc.robot.subsystems.vision.visionSubsystem;
+import frc.robot.subsystems.vision.GamePieceVisionSubsystem;
+import frc.robot.subsystems.vision.RobotPoseEstimate;
+import frc.robot.subsystems.vision.VisionSubsystem;
 
 /**
  * RobotContainer.java
  * PATH: src/main/java/frc/robot/RobotContainer.java
  *
  * ─── SEASON CHANGE — ONE LINE ────────────────────────────────────────────────
- * Update GAME_YEAR_FIELD each season. Propagates to visionSubsystem →
+ * Update GAME_YEAR_FIELD each season. Propagates to VisionSubsystem →
  * AprilTagFieldCal → PhotonPoseEstimators → everywhere.
  *
  * ─── EVENT CHANGE — AprilTagIgnore.java ──────────────────────────────────────
@@ -84,9 +84,9 @@ public class RobotContainer {
     //==========================================================================
 
     private static final double[] HEADING_PID = {
-        swerveConstants.HEADING_PID_kP,
-        swerveConstants.HEADING_PID_kI,
-        swerveConstants.HEADING_PID_kD
+        SwerveConstants.HEADING_PID_kP,
+        SwerveConstants.HEADING_PID_kI,
+        SwerveConstants.HEADING_PID_kD
     };
 
     //==========================================================================
@@ -125,17 +125,17 @@ public class RobotContainer {
     // Subsystems, commands, calibration tab
     //==========================================================================
 
-    private final swerveDrive              drive;
-    private final visionSubsystem          vision;
-    private final gamePieceVisionSubsystem gamePieceVision;
-    private final driveWithJoysticks       driveCommand;
-    private final xLockCommand             xLock;
-    private final pathfindCommand          pathfind;
+    private final SwerveDrive              drive;
+    private final VisionSubsystem          vision;
+    private final GamePieceVisionSubsystem gamePieceVision;
+    private final DriveWithJoysticks       driveCommand;
+    private final XLockCommand             xLock;
+    private final PathfindCommand          pathfind;
     private final AprilTagFieldCalTab      calTab;
-    private final gamePieceHuntCommand     huntNearest;
-    private final gamePieceHuntCommand     huntSequential;
-    private final gamePieceHuntCommand     huntCluster;
-    private final gamePieceHuntCommand     huntSeqCluster;
+    private final GamePieceHuntCommand     huntNearest;
+    private final GamePieceHuntCommand     huntSequential;
+    private final GamePieceHuntCommand     huntCluster;
+    private final GamePieceHuntCommand     huntSeqCluster;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Constructor
@@ -144,32 +144,32 @@ public class RobotContainer {
     public RobotContainer() {
 
         // TODO: verify drive inversion — FL/BL assumed inverted, FR/BR not inverted.
-        swerveModule flModule = buildModule("FL", 0,
-            canIDs.FL_DRIVE,                 canIDs.FL_STEER,
-            portIDs.AI_FL_STEER_ENCODER,     canIDs.FL_CANCODER,
-            swerveConstants.FL_STEER_OFFSET_VOLTS, swerveConstants.FL_STEER_OFFSET_ROT,
+        SwerveModule flModule = buildModule("FL", 0,
+            CANIDs.FL_DRIVE,                 CANIDs.FL_STEER,
+            PortIDs.AI_FL_STEER_ENCODER,     CANIDs.FL_CANCODER,
+            SwerveConstants.FL_STEER_OFFSET_VOLTS, SwerveConstants.FL_STEER_OFFSET_ROT,
             true,  FL_DRIVE_PID, FL_STEER_PID);
 
-        swerveModule frModule = buildModule("FR", 1,
-            canIDs.FR_DRIVE,                 canIDs.FR_STEER,
-            portIDs.AI_FR_STEER_ENCODER,     canIDs.FR_CANCODER,
-            swerveConstants.FR_STEER_OFFSET_VOLTS, swerveConstants.FR_STEER_OFFSET_ROT,
+        SwerveModule frModule = buildModule("FR", 1,
+            CANIDs.FR_DRIVE,                 CANIDs.FR_STEER,
+            PortIDs.AI_FR_STEER_ENCODER,     CANIDs.FR_CANCODER,
+            SwerveConstants.FR_STEER_OFFSET_VOLTS, SwerveConstants.FR_STEER_OFFSET_ROT,
             false, FR_DRIVE_PID, FR_STEER_PID);
 
-        swerveModule blModule = buildModule("BL", 2,
-            canIDs.BL_DRIVE,                 canIDs.BL_STEER,
-            portIDs.AI_BL_STEER_ENCODER,     canIDs.BL_CANCODER,
-            swerveConstants.BL_STEER_OFFSET_VOLTS, swerveConstants.BL_STEER_OFFSET_ROT,
+        SwerveModule blModule = buildModule("BL", 2,
+            CANIDs.BL_DRIVE,                 CANIDs.BL_STEER,
+            PortIDs.AI_BL_STEER_ENCODER,     CANIDs.BL_CANCODER,
+            SwerveConstants.BL_STEER_OFFSET_VOLTS, SwerveConstants.BL_STEER_OFFSET_ROT,
             true,  BL_DRIVE_PID, BL_STEER_PID);
 
-        swerveModule brModule = buildModule("BR", 3,
-            canIDs.BR_DRIVE,                 canIDs.BR_STEER,
-            portIDs.AI_BR_STEER_ENCODER,     canIDs.BR_CANCODER,
-            swerveConstants.BR_STEER_OFFSET_VOLTS, swerveConstants.BR_STEER_OFFSET_ROT,
+        SwerveModule brModule = buildModule("BR", 3,
+            CANIDs.BR_DRIVE,                 CANIDs.BR_STEER,
+            PortIDs.AI_BR_STEER_ENCODER,     CANIDs.BR_CANCODER,
+            SwerveConstants.BR_STEER_OFFSET_VOLTS, SwerveConstants.BR_STEER_OFFSET_ROT,
             false, BR_DRIVE_PID, BR_STEER_PID);
 
-        drive = new swerveDrive(
-            new swerveModule[]{ flModule, frModule, blModule, brModule },
+        drive = new SwerveDrive(
+            new SwerveModule[]{ flModule, frModule, blModule, brModule },
             WHEEL_BASE_IN, FRAME_IN, BUMPER_IN, WHEEL_DIAM_IN, HEADING_PID
         );
 
@@ -181,34 +181,34 @@ public class RobotContainer {
         ConfigVerifier.register(brModule);
 
         // GAME_YEAR_FIELD propagates from here into the entire vision stack
-        vision = new visionSubsystem(GAME_YEAR_FIELD);
+        vision = new VisionSubsystem(GAME_YEAR_FIELD);
 
         // Game piece detection camera — must be constructed after drive (needs getPoseAtTime)
-        gamePieceVision = new gamePieceVisionSubsystem(drive);
+        gamePieceVision = new GamePieceVisionSubsystem(drive);
 
-        // Calibration tab receives only visionSubsystem — single interface
+        // Calibration tab receives only VisionSubsystem — single interface
         calTab = new AprilTagFieldCalTab(vision);
 
-        driveCommand = new driveWithJoysticks(
+        driveCommand = new DriveWithJoysticks(
             drive, leftStick, rightStick, COR_MAX_X_IN, COR_MAX_Y_IN
         );
-        xLock = new xLockCommand(drive);
+        xLock = new XLockCommand(drive);
 
         drive.configureForAutoBuilder();
 
-        pathfind = new pathfindCommand(
+        pathfind = new PathfindCommand(
             drive, vision,
             () -> FieldTargets.get("speaker") // TODO: wire to button/selector for target choice
         );
 
         // TODO: replace stub lambdas with real intake subsystem calls once intake exists
-        huntNearest    = new gamePieceHuntCommand(drive, gamePieceVision, HuntMode.NEAREST_PIECE,
+        huntNearest    = new GamePieceHuntCommand(drive, gamePieceVision, HuntMode.NEAREST_PIECE,
                              () -> {}, () -> false);
-        huntSequential = new gamePieceHuntCommand(drive, gamePieceVision, HuntMode.SEQUENTIAL_PIECES,
+        huntSequential = new GamePieceHuntCommand(drive, gamePieceVision, HuntMode.SEQUENTIAL_PIECES,
                              () -> {}, () -> false);
-        huntCluster    = new gamePieceHuntCommand(drive, gamePieceVision, HuntMode.NEAREST_CLUSTER,
+        huntCluster    = new GamePieceHuntCommand(drive, gamePieceVision, HuntMode.NEAREST_CLUSTER,
                              () -> {}, () -> false);
-        huntSeqCluster = new gamePieceHuntCommand(drive, gamePieceVision, HuntMode.SEQUENTIAL_CLUSTERS,
+        huntSeqCluster = new GamePieceHuntCommand(drive, gamePieceVision, HuntMode.SEQUENTIAL_CLUSTERS,
                              () -> {}, () -> false);
 
         ConfigVerifier.runAll();
@@ -218,36 +218,36 @@ public class RobotContainer {
     }
 
     /**
-     * Build one swerve module from the hardware types selected in swerveConstants.
+     * Build one swerve module from the hardware types selected in SwerveConstants.
      * Changing DRIVE_MOTOR_TYPE / STEER_MOTOR_TYPE / ABS_ENCODER_TYPE there is the
      * only change needed to swap module hardware.
      */
-    private static swerveModule buildModule(
+    private static SwerveModule buildModule(
             String name, int index,
             int driveCanId, int steerCanId, int analogPort, int cancoderCanId,
             double offsetVolts, double offsetRot,
             boolean driveInverted, double[] drivePID, double[] steerPID) {
 
-        MotorIO driveMotor = MotorIO.create(swerveHardware
-            .driveMotorConfig(swerveConstants.DRIVE_MOTOR_TYPE, driveCanId, driveInverted,
-                              drivePID, swerveConstants.DRIVE_GEAR_RATIO)
-            .withCanSignals(swerveConstants.SIGNAL_UPDATE_HZ, swerveConstants.SIGNAL_UPDATE_HZ_TEMP,
-                            swerveConstants.OPTIMIZE_CAN_UTILIZATION)
+        MotorIO driveMotor = MotorIO.create(SwerveHardware
+            .driveMotorConfig(SwerveConstants.DRIVE_MOTOR_TYPE, driveCanId, driveInverted,
+                              drivePID, SwerveConstants.DRIVE_GEAR_RATIO)
+            .withCanSignals(SwerveConstants.SIGNAL_UPDATE_HZ, SwerveConstants.SIGNAL_UPDATE_HZ_TEMP,
+                            SwerveConstants.OPTIMIZE_CAN_UTILIZATION)
             .build());
 
-        MotorIO steerMotor = MotorIO.create(swerveHardware
-            .steerMotorConfig(swerveConstants.STEER_MOTOR_TYPE, steerCanId,
-                              steerPID, swerveConstants.STEER_GEAR_RATIO)
-            .withCanSignals(swerveConstants.SIGNAL_UPDATE_HZ, swerveConstants.SIGNAL_UPDATE_HZ_TEMP,
-                            swerveConstants.OPTIMIZE_CAN_UTILIZATION)
+        MotorIO steerMotor = MotorIO.create(SwerveHardware
+            .steerMotorConfig(SwerveConstants.STEER_MOTOR_TYPE, steerCanId,
+                              steerPID, SwerveConstants.STEER_GEAR_RATIO)
+            .withCanSignals(SwerveConstants.SIGNAL_UPDATE_HZ, SwerveConstants.SIGNAL_UPDATE_HZ_TEMP,
+                            SwerveConstants.OPTIMIZE_CAN_UTILIZATION)
             .build());
 
-        AbsoluteEncoderIO absEncoder = swerveHardware.buildEncoder(
-            swerveConstants.ABS_ENCODER_TYPE, steerMotor,
+        AbsoluteEncoderIO absEncoder = SwerveHardware.buildEncoder(
+            SwerveConstants.ABS_ENCODER_TYPE, steerMotor,
             analogPort, cancoderCanId, offsetVolts, offsetRot);
 
-        return new swerveModule(name, index, driveMotor, steerMotor, absEncoder,
-                                swerveConstants.WHEEL_DIAMETER_INCHES);
+        return new SwerveModule(name, index, driveMotor, steerMotor, absEncoder,
+                                SwerveConstants.WHEEL_DIAMETER_INCHES);
     }
 
     private void configureDefaultCommands() {
@@ -273,9 +273,9 @@ public class RobotContainer {
     // Accessors
     // ─────────────────────────────────────────────────────────────────────────
 
-    public swerveDrive              getDrive()           { return drive; }
-    public visionSubsystem          getVision()          { return vision; }
-    public gamePieceVisionSubsystem getGamePieceVision() { return gamePieceVision; }
+    public SwerveDrive              getDrive()           { return drive; }
+    public VisionSubsystem          getVision()          { return vision; }
+    public GamePieceVisionSubsystem getGamePieceVision() { return gamePieceVision; }
 
     /** Called from Robot.java's robotPeriodic() every loop */
     public void updateCalibrationTab() { calTab.update(); }
@@ -287,7 +287,7 @@ public class RobotContainer {
      */
     public void updatePoseEstimator() {
         if (!vision.hasValidPose()) return;
-        robotPoseEstimate best = vision.getBestPose();
+        RobotPoseEstimate best = vision.getBestPose();
         drive.addVisionMeasurement(
             best.pose.toPose2d(),
             best.timestampSecs,

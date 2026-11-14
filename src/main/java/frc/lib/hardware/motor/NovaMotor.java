@@ -29,7 +29,7 @@ import frc.lib.util.ConfigVerifyResult;
  *
  * ─── MOTION PROFILE ──────────────────────────────────────────────────────────
  * No MotionMagic/MAXMotion equivalent — hasHardwareMotionProfile() is false,
- * so mechanismUnit applies its software setpoint step-limiter instead.
+ * so MechanismUnit applies its software setpoint step-limiter instead.
  *
  * ─── CONTINUOUS WRAP ─────────────────────────────────────────────────────────
  * No hardware wrap — setPosition() computes the shortest path in software.

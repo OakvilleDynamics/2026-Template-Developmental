@@ -1,11 +1,11 @@
 package frc.robot.commands;
 
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.subsystems.swerveDrive.swerveDrive;
+import frc.robot.subsystems.swerveDrive.SwerveDrive;
 
 /**
- * xLockCommand.java
- * PATH: src/main/java/frc/robot/commands/xLockCommand.java
+ * XLockCommand.java
+ * PATH: src/main/java/frc/robot/commands/XLockCommand.java
  *
  * Sets all four swerve modules to an X brace pattern and holds zero
  * drive speed. The robot resists being pushed from any direction.
@@ -20,11 +20,11 @@ import frc.robot.subsystems.swerveDrive.swerveDrive;
  *       /       \
  *   BL: -45°  BR:  45°
  */
-public class xLockCommand extends Command {
+public class XLockCommand extends Command {
 
-    private final swerveDrive drive;
+    private final SwerveDrive drive;
 
-    public xLockCommand(swerveDrive drive) {
+    public XLockCommand(SwerveDrive drive) {
         this.drive = drive;
         addRequirements(drive);
     }

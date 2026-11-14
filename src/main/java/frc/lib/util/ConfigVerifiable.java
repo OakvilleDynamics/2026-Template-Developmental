@@ -7,9 +7,9 @@ import java.util.List;
  * PATH: src/main/java/frc/lib/util/ConfigVerifiable.java
  *
  * Marker interface for any object that can verify its motor controller
- * configurations were applied correctly. Implemented by mechanismUnit
- * subclasses, swerveModule, and mechanism wrappers (elevatorMechanism,
- * shooterMechanism).
+ * configurations were applied correctly. Implemented by MechanismUnit
+ * subclasses, SwerveModule, and mechanism wrappers (ElevatorMechanism,
+ * ShooterMechanism).
  *
  * Register any ConfigVerifiable with ConfigVerifier.register(), then call
  * ConfigVerifier.runAll() once at robot startup before enabling motors.

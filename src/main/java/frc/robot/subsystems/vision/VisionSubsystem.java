@@ -7,10 +7,10 @@ import edu.wpi.first.wpilibj.DriverStation;
 import frc.lib.util.Dashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.AprilTagIgnore;
-import frc.robot.constants.visionConstants;
+import frc.robot.constants.VisionConstants;
 import frc.robot.util.AprilTagFieldCal;
 import frc.lib.util.RobotLogger;
-import frc.lib.util.units;
+import frc.lib.util.Units;
 
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
@@ -22,8 +22,8 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * visionSubsystem.java
- * PATH: src/main/java/frc/robot/subsystems/vision/visionSubsystem.java
+ * VisionSubsystem.java
+ * PATH: src/main/java/frc/robot/subsystems/vision/VisionSubsystem.java
  *
  * Single public interface for all vision data.
  * AprilTagFieldCalTab, RobotContainer, and all commands/middleware
@@ -35,15 +35,15 @@ import java.util.Optional;
  *
  * ─── INTERNAL OBJECTS ────────────────────────────────────────────────────────
  * AprilTagFieldCal    — field layout, per-tag offsets, geometry
- * visionHealthMonitor — pre-match validation, health tracking
+ * VisionHealthMonitor — pre-match validation, health tracking
  * These are not accessible from outside — all access goes through
  * the public methods below.
  */
-public class visionSubsystem extends SubsystemBase {
+public class VisionSubsystem extends SubsystemBase {
 
     // ── Internal objects — not accessible from outside ────────────────────────
     private final AprilTagFieldCal    fieldCal;
-    private final visionHealthMonitor healthMonitor;
+    private final VisionHealthMonitor healthMonitor;
 
     // ── Cameras ───────────────────────────────────────────────────────────────
     private final PhotonCamera frontCamera;
@@ -54,12 +54,12 @@ public class visionSubsystem extends SubsystemBase {
     private PhotonPoseEstimator rearEstimator;
 
     // ── Current pose estimates ────────────────────────────────────────────────
-    private robotPoseEstimate frontPose = robotPoseEstimate.invalid();
-    private robotPoseEstimate rearPose  = robotPoseEstimate.invalid();
-    private robotPoseEstimate bestPose  = robotPoseEstimate.invalid();
+    private RobotPoseEstimate frontPose = RobotPoseEstimate.invalid();
+    private RobotPoseEstimate rearPose  = RobotPoseEstimate.invalid();
+    private RobotPoseEstimate bestPose  = RobotPoseEstimate.invalid();
 
     // ── Per-tag readings for AprilTagFieldCalTab ──────────────────────────────
-    private final Map<Integer, Map<String, tagReading>> tagReadings = new HashMap<>();
+    private final Map<Integer, Map<String, TagReading>> tagReadings = new HashMap<>();
 
     // ── Outlier rejection ─────────────────────────────────────────────────────
     private Pose3d lastAcceptedFront = null;
@@ -72,7 +72,7 @@ public class visionSubsystem extends SubsystemBase {
     // Inner record: one camera's reading of one tag
     // ─────────────────────────────────────────────────────────────────────────
 
-    public record tagReading(
+    public record TagReading(
         int     tagId,
         String  cameraName,
         boolean visible,
@@ -84,8 +84,8 @@ public class visionSubsystem extends SubsystemBase {
         double  deltaYawDeg,
         double  ambiguity
     ) {
-        public static tagReading notVisible(int tagId, String cameraName, Pose3d baseline) {
-            return new tagReading(tagId, cameraName, false,
+        public static TagReading notVisible(int tagId, String cameraName, Pose3d baseline) {
+            return new TagReading(tagId, cameraName, false,
                 null, baseline, 0, 0, 0, 0, 1.0);
         }
     }
@@ -98,12 +98,12 @@ public class visionSubsystem extends SubsystemBase {
      * @param gameYearField  AprilTagFields enum for current game year.
      *                       Set once in RobotContainer — propagates everywhere.
      */
-    public visionSubsystem(AprilTagFields gameYearField) {
+    public VisionSubsystem(AprilTagFields gameYearField) {
         fieldCal      = new AprilTagFieldCal(gameYearField);
-        healthMonitor = new visionHealthMonitor();
+        healthMonitor = new VisionHealthMonitor();
 
-        frontCamera = new PhotonCamera(visionConstants.FRONT_CAMERA_NAME);
-        rearCamera  = new PhotonCamera(visionConstants.REAR_CAMERA_NAME);
+        frontCamera = new PhotonCamera(VisionConstants.FRONT_CAMERA_NAME);
+        rearCamera  = new PhotonCamera(VisionConstants.REAR_CAMERA_NAME);
 
         buildEstimators();
 
@@ -127,17 +127,17 @@ public class visionSubsystem extends SubsystemBase {
 
         frontPose = processCamera(
             frontCamera, frontEstimator,
-            visionConstants.FRONT_CAMERA_NAME, lastAcceptedFront
+            VisionConstants.FRONT_CAMERA_NAME, lastAcceptedFront
         );
         if (frontPose.isValid) lastAcceptedFront = frontPose.pose;
 
         rearPose = processCamera(
             rearCamera, rearEstimator,
-            visionConstants.REAR_CAMERA_NAME, lastAcceptedRear
+            VisionConstants.REAR_CAMERA_NAME, lastAcceptedRear
         );
         if (rearPose.isValid) lastAcceptedRear = rearPose.pose;
 
-        bestPose = robotPoseEstimate.best(frontPose, rearPose);
+        bestPose = RobotPoseEstimate.best(frontPose, rearPose);
 
         updateTagReadings();
         healthMonitor.update(frontPose, rearPose);
@@ -148,9 +148,9 @@ public class visionSubsystem extends SubsystemBase {
     // Public API — pose data
     // ─────────────────────────────────────────────────────────────────────────
 
-    public robotPoseEstimate getBestPose()     { return bestPose; }
-    public robotPoseEstimate getFrontPose()    { return frontPose; }
-    public robotPoseEstimate getRearPose()     { return rearPose; }
+    public RobotPoseEstimate getBestPose()     { return bestPose; }
+    public RobotPoseEstimate getFrontPose()    { return frontPose; }
+    public RobotPoseEstimate getRearPose()     { return rearPose; }
     public boolean           hasValidPose()    { return bestPose.isValid; }
     public boolean           bothCamerasValid(){ return frontPose.isValid && rearPose.isValid; }
 
@@ -187,12 +187,12 @@ public class visionSubsystem extends SubsystemBase {
     // Public API — per-tag readings (for AprilTagFieldCalTab)
     // ─────────────────────────────────────────────────────────────────────────
 
-    public Map<Integer, Map<String, tagReading>> getTagReadings() {
+    public Map<Integer, Map<String, TagReading>> getTagReadings() {
         return java.util.Collections.unmodifiableMap(tagReadings);
     }
 
-    public Optional<tagReading> getTagReading(int tagId, String cameraName) {
-        Map<String, tagReading> byCamera = tagReadings.get(tagId);
+    public Optional<TagReading> getTagReading(int tagId, String cameraName) {
+        Map<String, TagReading> byCamera = tagReadings.get(tagId);
         if (byCamera == null) return Optional.empty();
         return Optional.ofNullable(byCamera.get(cameraName));
     }
@@ -212,7 +212,7 @@ public class visionSubsystem extends SubsystemBase {
     // ─────────────────────────────────────────────────────────────────────────
 
     public boolean                          isHealthy()       { return healthMonitor.isOverallHealthy(); }
-    public visionHealthMonitor.HealthStatus getHealthStatus() { return healthMonitor.getOverallStatus(); }
+    public VisionHealthMonitor.HealthStatus getHealthStatus() { return healthMonitor.getOverallStatus(); }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Public API — calibration
@@ -242,13 +242,13 @@ public class visionSubsystem extends SubsystemBase {
      * non-zero tag offsets. Published to three destinations:
      *   1. NetworkTables key (AprilTagFieldCalWatch.py saves to file on laptop)
      *   2. NetworkTables clipboard key (AprilTagFieldCalWatch.py copies to clipboard)
-     *   3. File on roboRIO at visionConstants.OFFSETS_ROBORIO_PATH
+     *   3. File on roboRIO at VisionConstants.OFFSETS_ROBORIO_PATH
      */
     public void generateOffsetsOutput() {
         String snippet = buildOffsetsSnippet();
 
-        Dashboard.log(visionConstants.OFFSETS_OUTPUT_NT_KEY,    snippet);
-        Dashboard.log(visionConstants.OFFSETS_CLIPBOARD_NT_KEY, snippet);
+        Dashboard.log(VisionConstants.OFFSETS_OUTPUT_NT_KEY,    snippet);
+        Dashboard.log(VisionConstants.OFFSETS_CLIPBOARD_NT_KEY, snippet);
 
         writeToRoboRIO(snippet);
 
@@ -268,7 +268,7 @@ public class visionSubsystem extends SubsystemBase {
     // Internal — camera processing
     // ─────────────────────────────────────────────────────────────────────────
 
-    private robotPoseEstimate processCamera(
+    private RobotPoseEstimate processCamera(
             PhotonCamera camera,
             PhotonPoseEstimator estimator,
             String name,
@@ -278,7 +278,7 @@ public class visionSubsystem extends SubsystemBase {
 
         if (!result.hasTargets()) {
             Dashboard.log("Vision/" + name + "/Has Target", false);
-            return robotPoseEstimate.invalid();
+            return RobotPoseEstimate.invalid();
         }
 
         Dashboard.log("Vision/" + name + "/Has Target", true);
@@ -287,16 +287,16 @@ public class visionSubsystem extends SubsystemBase {
         double ambiguity = result.getBestTarget().getPoseAmbiguity();
         Dashboard.log("Vision/" + name + "/Ambiguity", ambiguity);
 
-        if (tagCount < visionConstants.MIN_TAGS_FOR_ESTIMATE) {
+        if (tagCount < VisionConstants.MIN_TAGS_FOR_ESTIMATE) {
             Dashboard.log("Vision/" + name + "/Rejected",
                 "Too few tags: " + tagCount);
-            return robotPoseEstimate.invalid();
+            return RobotPoseEstimate.invalid();
         }
 
-        if (ambiguity > visionConstants.MAX_AMBIGUITY) {
+        if (ambiguity > VisionConstants.MAX_AMBIGUITY) {
             Dashboard.log("Vision/" + name + "/Rejected",
                 "High ambiguity: " + String.format("%.3f", ambiguity));
-            return robotPoseEstimate.invalid();
+            return RobotPoseEstimate.invalid();
         }
 
         // Multi-tag PnP on the coprocessor, falling back to lowest ambiguity
@@ -304,7 +304,7 @@ public class visionSubsystem extends SubsystemBase {
         if (estimated.isEmpty()) estimated = estimator.estimateLowestAmbiguityPose(result);
         if (estimated.isEmpty()) {
             Dashboard.log("Vision/" + name + "/Rejected", "Estimator empty");
-            return robotPoseEstimate.invalid();
+            return RobotPoseEstimate.invalid();
         }
 
         Pose3d pose3d    = estimated.get().estimatedPose;
@@ -313,15 +313,15 @@ public class visionSubsystem extends SubsystemBase {
         if (lastAccepted != null) {
             double jump = lastAccepted.getTranslation()
                 .getDistance(pose3d.getTranslation());
-            if (jump > visionConstants.MAX_POSE_JUMP_M) {
+            if (jump > VisionConstants.MAX_POSE_JUMP_M) {
                 Dashboard.log("Vision/" + name + "/Rejected",
                     "Pose jump: " + String.format("%.2f", jump) + "m");
-                return robotPoseEstimate.invalid();
+                return RobotPoseEstimate.invalid();
             }
         }
 
         Dashboard.log("Vision/" + name + "/Rejected", "none");
-        return new robotPoseEstimate(pose3d, timestamp, ambiguity, tagCount, name);
+        return new RobotPoseEstimate(pose3d, timestamp, ambiguity, tagCount, name);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -337,24 +337,24 @@ public class visionSubsystem extends SubsystemBase {
             Optional<Pose3d> baseline = fieldCal.getBaselineTagPose(tagId);
             if (baseline.isEmpty()) continue;
 
-            Map<String, tagReading> byCamera = tagReadings.computeIfAbsent(
+            Map<String, TagReading> byCamera = tagReadings.computeIfAbsent(
                 tagId, k -> new HashMap<>()
             );
 
-            byCamera.put(visionConstants.FRONT_CAMERA_NAME,
-                buildTagReading(tagId, visionConstants.FRONT_CAMERA_NAME,
+            byCamera.put(VisionConstants.FRONT_CAMERA_NAME,
+                buildTagReading(tagId, VisionConstants.FRONT_CAMERA_NAME,
                     frontResult, frontPose, baseline.get()));
 
-            byCamera.put(visionConstants.REAR_CAMERA_NAME,
-                buildTagReading(tagId, visionConstants.REAR_CAMERA_NAME,
+            byCamera.put(VisionConstants.REAR_CAMERA_NAME,
+                buildTagReading(tagId, VisionConstants.REAR_CAMERA_NAME,
                     rearResult, rearPose, baseline.get()));
         }
     }
 
-    private tagReading buildTagReading(
+    private TagReading buildTagReading(
             int tagId, String cameraName,
             PhotonPipelineResult result,
-            robotPoseEstimate poseEstimate,
+            RobotPoseEstimate poseEstimate,
             Pose3d baseline) {
 
         Optional<PhotonTrackedTarget> targetOpt = result.hasTargets()
@@ -364,13 +364,13 @@ public class visionSubsystem extends SubsystemBase {
             : Optional.empty();
 
         if (targetOpt.isEmpty() || !poseEstimate.isValid) {
-            return tagReading.notVisible(tagId, cameraName, baseline);
+            return TagReading.notVisible(tagId, cameraName, baseline);
         }
 
         double ambiguity = targetOpt.get().getPoseAmbiguity();
 
         // Simplified delta — full tag reprojection is a future refinement
-        return new tagReading(tagId, cameraName, true,
+        return new TagReading(tagId, cameraName, true,
             baseline, baseline, 0, 0, 0, 0, ambiguity);
     }
 
@@ -383,8 +383,8 @@ public class visionSubsystem extends SubsystemBase {
 
         // Strategy is chosen per call in processCamera(); the PoseStrategy
         // constructor argument is deprecated (removed in PhotonLib 2027).
-        frontEstimator = new PhotonPoseEstimator(layout, visionConstants.FRONT_CAMERA_TRANSFORM);
-        rearEstimator  = new PhotonPoseEstimator(layout, visionConstants.REAR_CAMERA_TRANSFORM);
+        frontEstimator = new PhotonPoseEstimator(layout, VisionConstants.FRONT_CAMERA_TRANSFORM);
+        rearEstimator  = new PhotonPoseEstimator(layout, VisionConstants.REAR_CAMERA_TRANSFORM);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -399,18 +399,18 @@ public class visionSubsystem extends SubsystemBase {
 
         sb.append("// AprilTag field calibration offsets generated: ")
           .append(timestamp).append("\n");
-        sb.append("// Paste into RobotContainer after constructing visionSubsystem:\n\n");
+        sb.append("// Paste into RobotContainer after constructing VisionSubsystem:\n\n");
 
         if (offsets.isEmpty()) {
             sb.append("// No offsets currently applied — all tags at WPILib baseline.\n");
         } else {
             offsets.forEach((tagId, transform) -> {
-                double xIn  = units.m_inches(transform.getX());
-                double yIn  = units.m_inches(transform.getY());
-                double zIn  = units.m_inches(transform.getZ());
-                double yDeg = units.rad_deg(transform.getRotation().getZ());
-                double pDeg = units.rad_deg(transform.getRotation().getY());
-                double rDeg = units.rad_deg(transform.getRotation().getX());
+                double xIn  = Units.metersToInches(transform.getX());
+                double yIn  = Units.metersToInches(transform.getY());
+                double zIn  = Units.metersToInches(transform.getZ());
+                double yDeg = Units.radToDeg(transform.getRotation().getZ());
+                double pDeg = Units.radToDeg(transform.getRotation().getY());
+                double rDeg = Units.radToDeg(transform.getRotation().getX());
                 sb.append(String.format(
                     "vision.setTagOffset(%d, %.3f, %.3f, %.3f, %.3f, %.3f, %.3f);\n",
                     tagId, xIn, yIn, zIn, rDeg, pDeg, yDeg));
@@ -424,7 +424,7 @@ public class visionSubsystem extends SubsystemBase {
     private void writeToRoboRIO(String content) {
         try {
             java.nio.file.Files.writeString(
-                java.nio.file.Path.of(visionConstants.OFFSETS_ROBORIO_PATH),
+                java.nio.file.Path.of(VisionConstants.OFFSETS_ROBORIO_PATH),
                 content
             );
             Dashboard.log("FieldCal/RoboRIO Save", "OK");
@@ -449,12 +449,12 @@ public class visionSubsystem extends SubsystemBase {
 
         if (hasValid) {
             Pose3d p = bestPose.pose;
-            Dashboard.log("Vision/Best/X (ft)",      units.m_feet(p.getX()));
-            Dashboard.log("Vision/Best/Y (ft)",      units.m_feet(p.getY()));
-            Dashboard.log("Vision/Best/Z (in)",      units.m_inches(p.getZ()));
-            Dashboard.log("Vision/Best/Yaw (deg)",   units.rad_deg(p.getRotation().getZ()));
-            Dashboard.log("Vision/Best/Pitch (deg)", units.rad_deg(p.getRotation().getY()));
-            Dashboard.log("Vision/Best/Roll (deg)",  units.rad_deg(p.getRotation().getX()));
+            Dashboard.log("Vision/Best/X (ft)",      Units.metersToFeet(p.getX()));
+            Dashboard.log("Vision/Best/Y (ft)",      Units.metersToFeet(p.getY()));
+            Dashboard.log("Vision/Best/Z (in)",      Units.metersToInches(p.getZ()));
+            Dashboard.log("Vision/Best/Yaw (deg)",   Units.radToDeg(p.getRotation().getZ()));
+            Dashboard.log("Vision/Best/Pitch (deg)", Units.radToDeg(p.getRotation().getY()));
+            Dashboard.log("Vision/Best/Roll (deg)",  Units.radToDeg(p.getRotation().getX()));
         }
 
         // ── DataLog ───────────────────────────────────────────────────────────
@@ -472,10 +472,10 @@ public class visionSubsystem extends SubsystemBase {
             Pose3d p = bestPose.pose;
             RobotLogger.visionBestPoseX.append(p.getX());
             RobotLogger.visionBestPoseY.append(p.getY());
-            RobotLogger.visionBestPoseHeadingDeg.append(units.rad_deg(p.getRotation().getZ()));
+            RobotLogger.visionBestPoseHeadingDeg.append(Units.radToDeg(p.getRotation().getZ()));
             RobotLogger.visionBestPoseZ.append(p.getZ());
-            RobotLogger.visionBestPosePitchDeg.append(units.rad_deg(p.getRotation().getY()));
-            RobotLogger.visionBestPoseRollDeg.append(units.rad_deg(p.getRotation().getX()));
+            RobotLogger.visionBestPosePitchDeg.append(Units.radToDeg(p.getRotation().getY()));
+            RobotLogger.visionBestPoseRollDeg.append(Units.radToDeg(p.getRotation().getX()));
         }
 
         RobotLogger.visionFrontValid.append(frontPose.isValid);

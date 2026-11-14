@@ -13,18 +13,18 @@ import frc.lib.util.ConfigVerifiable;
 import frc.lib.util.ConfigVerifyResult;
 
 /**
- * mechanismUnit.java
- * PATH: src/main/java/frc/lib/control/mechanismUnit.java
+ * MechanismUnit.java
+ * PATH: src/main/java/frc/lib/control/MechanismUnit.java
  *
  * One mechanism's motor group (leader + optional followers) with all shared
  * control logic. Built on MotorIO, so it contains no vendor code — the vendor
- * for every motor comes from the mechanismConfig.
+ * for every motor comes from the MechanismConfig.
  *
  * Instantiate via factory:
- *   mechanismUnit arm = mechanismUnit.create(config);
+ *   MechanismUnit arm = MechanismUnit.create(config);
  *
  * Or with pre-built MotorIOs (unit tests use FakeMotorIO this way):
- *   mechanismUnit arm = new mechanismUnit(config, leaderIO, followerIO);
+ *   MechanismUnit arm = new MechanismUnit(config, leaderIO, followerIO);
  *
  * Vendor-only features (CTRE torque control, Nova PID slot 1, ...) are reached
  * by casting getLeader() to CTREMotor / REVMotor / NovaMotor.
@@ -50,7 +50,7 @@ import frc.lib.util.ConfigVerifyResult;
  *   (CommandScheduler.run() context). No synchronization is performed.
  *   The tier-2/3 FF lambdas and all state fields assume single-threaded access.
  */
-public class mechanismUnit implements ConfigVerifiable {
+public class MechanismUnit implements ConfigVerifiable {
 
     // ── Homing direction (public — used in startHoming() calls) ───────────────
 
@@ -66,7 +66,7 @@ public class mechanismUnit implements ConfigVerifiable {
     private enum HomingState { IDLE, IN_PROGRESS, COMPLETE }
 
     // ── Config + hardware ─────────────────────────────────────────────────────
-    protected final mechanismConfig config;
+    protected final MechanismConfig config;
     private   final MotorIO         leader;
     /** followers[i] drives canIds[i + 1]. */
     private   final MotorIO[]       followers;
@@ -160,16 +160,16 @@ public class mechanismUnit implements ConfigVerifiable {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Create a mechanismUnit for the given config, constructing one MotorIO per
+     * Create a MechanismUnit for the given config, constructing one MotorIO per
      * CAN ID with the vendor named in the config.
      */
-    public static mechanismUnit create(mechanismConfig config) {
+    public static MechanismUnit create(MechanismConfig config) {
         MotorIO   leader    = MotorIO.create(config.motorConfig(0));
         MotorIO[] followers = new MotorIO[config.canIds.length - 1];
         for (int i = 0; i < followers.length; i++) {
             followers[i] = MotorIO.create(config.motorConfig(i + 1));
         }
-        return new mechanismUnit(config, leader, followers);
+        return new MechanismUnit(config, leader, followers);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -183,10 +183,10 @@ public class mechanismUnit implements ConfigVerifiable {
      * @throws IllegalArgumentException if the follower count does not match the
      *         config, or an ENCODER_SYNC follower uses a controller that cannot sync
      */
-    public mechanismUnit(mechanismConfig config, MotorIO leader, MotorIO... followers) {
+    public MechanismUnit(MechanismConfig config, MotorIO leader, MotorIO... followers) {
         if (followers.length != config.canIds.length - 1)
             throw new IllegalArgumentException(
-                "mechanismUnit '" + config.name + "': expected " + (config.canIds.length - 1)
+                "MechanismUnit '" + config.name + "': expected " + (config.canIds.length - 1)
                 + " follower MotorIOs, got " + followers.length);
 
         this.config     = config;
@@ -208,7 +208,7 @@ public class mechanismUnit implements ConfigVerifiable {
         // Must be set before initLogEntries(), which uses it to allocate log entries.
         int syncIdx = -1;
         for (int i = 1; i < config.canIds.length; i++) {
-            if (config.followModeOf(i) == motorConstants.FollowMode.ENCODER_SYNC) {
+            if (config.followModeOf(i) == MotorConstants.FollowMode.ENCODER_SYNC) {
                 syncIdx = i;
                 break;
             }
@@ -221,9 +221,9 @@ public class mechanismUnit implements ConfigVerifiable {
 
         if (config.setpointDeadband <= 0.0) {
             DriverStation.reportWarning(
-                "[mechanismUnit] '" + config.name + "': setpointDeadband is not configured. "
+                "[MechanismUnit] '" + config.name + "': setpointDeadband is not configured. "
                 + "isAtSetpoint() will always return false. "
-                + "Call withSetpointDeadband() in the mechanismConfig.Builder to enable it.", false);
+                + "Call withSetpointDeadband() in the MechanismConfig.Builder to enable it.", false);
         }
     }
 
@@ -233,15 +233,15 @@ public class mechanismUnit implements ConfigVerifiable {
      */
     private void configureFollowers() {
         for (int i = 1; i < config.canIds.length; i++) {
-            motorConstants.FollowMode mode = config.followModeOf(i);
-            if (mode == motorConstants.FollowMode.MECHANICAL) {
+            MotorConstants.FollowMode mode = config.followModeOf(i);
+            if (mode == MotorConstants.FollowMode.MECHANICAL) {
                 // Follows the designated leader (may be another follower)
                 followers[i - 1].follow(motorAt(config.followerLeaderIndexOf(i)),
                                         config.isFollowerInverted(i));
-            } else if (mode == motorConstants.FollowMode.ENCODER_SYNC
+            } else if (mode == MotorConstants.FollowMode.ENCODER_SYNC
                        && !followers[i - 1].supportsEncoderSync()) {
                 throw new IllegalArgumentException(
-                    "mechanismUnit '" + config.name + "': ENCODER_SYNC follow mode is not supported by "
+                    "MechanismUnit '" + config.name + "': ENCODER_SYNC follow mode is not supported by "
                     + followers[i - 1].getConfig() + " (motor index " + i + "). Use MECHANICAL instead.");
             }
         }
@@ -265,7 +265,7 @@ public class mechanismUnit implements ConfigVerifiable {
      */
     public final void setDutyCycle(double duty) {
         if (isHoming()) {
-            DriverStation.reportWarning("[mechanismUnit] '" + config.name
+            DriverStation.reportWarning("[MechanismUnit] '" + config.name
                 + "': setDutyCycle() called while homing — command ignored.", false);
             return;
         }
@@ -290,7 +290,7 @@ public class mechanismUnit implements ConfigVerifiable {
      */
     public final void setVelocity(double velocityRps) {
         if (isHoming()) {
-            DriverStation.reportWarning("[mechanismUnit] '" + config.name
+            DriverStation.reportWarning("[MechanismUnit] '" + config.name
                 + "': setVelocity() called while homing — command ignored.", false);
             return;
         }
@@ -320,7 +320,7 @@ public class mechanismUnit implements ConfigVerifiable {
      */
     public final void setPosition(double positionDeg) {
         if (isHoming()) {
-            DriverStation.reportWarning("[mechanismUnit] '" + config.name
+            DriverStation.reportWarning("[MechanismUnit] '" + config.name
                 + "': setPosition() called while homing — command ignored.", false);
             return;
         }
@@ -400,7 +400,7 @@ public class mechanismUnit implements ConfigVerifiable {
      */
     private void runEncoderSync() {
         for (int i = 1; i < config.canIds.length; i++) {
-            if (config.followModeOf(i) != motorConstants.FollowMode.ENCODER_SYNC) continue;
+            if (config.followModeOf(i) != MotorConstants.FollowMode.ENCODER_SYNC) continue;
 
             double leaderPosRot   = motorAt(config.followerLeaderIndexOf(i)).getPositionRot();
             double followerPosRot = followers[i - 1].getPositionRot();
@@ -456,9 +456,9 @@ public class mechanismUnit implements ConfigVerifiable {
         if (config.setpointDeadband <= 0.0) {
             if (!atSetpointWarningLogged) {
                 DriverStation.reportWarning(
-                    "[mechanismUnit] '" + config.name + "': isAtSetpoint() called but "
+                    "[MechanismUnit] '" + config.name + "': isAtSetpoint() called but "
                     + "setpointDeadband is not configured — returning false. "
-                    + "Call withSetpointDeadband() in the mechanismConfig.Builder.", false);
+                    + "Call withSetpointDeadband() in the MechanismConfig.Builder.", false);
                 atSetpointWarningLogged = true;
             }
             return false;
@@ -468,11 +468,11 @@ public class mechanismUnit implements ConfigVerifiable {
     }
 
     /** The immutable config this unit was built from. */
-    public final mechanismConfig getConfig() { return config; }
+    public final MechanismConfig getConfig() { return config; }
 
     /**
      * The leader MotorIO. Cast to CTREMotor / REVMotor / NovaMotor for
-     * vendor-only features. Prefer the mechanismUnit API where possible.
+     * vendor-only features. Prefer the MechanismUnit API where possible.
      */
     public final MotorIO getLeader() { return leader; }
 
@@ -499,7 +499,7 @@ public class mechanismUnit implements ConfigVerifiable {
      */
     private void updateAcceleration() {
         double currentVel = leader.getVelocityRps();
-        accelRpss     = (currentVel - prevVelocityRps) / motorConstants.LOOP_PERIOD_SECS;
+        accelRpss     = (currentVel - prevVelocityRps) / MotorConstants.LOOP_PERIOD_SECS;
         prevVelocityRps = currentVel;
     }
 
@@ -514,7 +514,7 @@ public class mechanismUnit implements ConfigVerifiable {
             rampedDutyCycle = target;
             return target;
         }
-        double maxDelta = motorConstants.LOOP_PERIOD_SECS / config.openLoopRampSecs;
+        double maxDelta = MotorConstants.LOOP_PERIOD_SECS / config.openLoopRampSecs;
         double delta    = target - rampedDutyCycle;
         delta           = Math.max(-maxDelta, Math.min(maxDelta, delta));
         rampedDutyCycle += delta;
@@ -529,7 +529,7 @@ public class mechanismUnit implements ConfigVerifiable {
      */
     private double applyVelocityRamp(double targetRps) {
         if (config.motionAccelerationRpss <= 0.0) return targetRps;
-        double maxDelta = config.motionAccelerationRpss * motorConstants.LOOP_PERIOD_SECS;
+        double maxDelta = config.motionAccelerationRpss * MotorConstants.LOOP_PERIOD_SECS;
         double delta    = targetRps - rampedVelocitySetpoint;
         delta           = Math.max(-maxDelta, Math.min(maxDelta, delta));
         rampedVelocitySetpoint += delta;
@@ -547,7 +547,7 @@ public class mechanismUnit implements ConfigVerifiable {
             rampedPositionSetpoint = leader.getPositionRot();
             positionInitialized    = true;
         }
-        double maxDelta = config.motionAccelerationRpss * motorConstants.LOOP_PERIOD_SECS;
+        double maxDelta = config.motionAccelerationRpss * MotorConstants.LOOP_PERIOD_SECS;
         double delta    = targetRot - rampedPositionSetpoint;
         delta           = Math.max(-maxDelta, Math.min(maxDelta, delta));
         rampedPositionSetpoint += delta;
@@ -941,7 +941,7 @@ public class mechanismUnit implements ConfigVerifiable {
         List<ConfigVerifyResult> results = new ArrayList<>();
         results.add(leader.verifyConfig(config.name + " Leader"));
         for (int i = 1; i < config.canIds.length; i++) {
-            if (config.followModeOf(i) == motorConstants.FollowMode.ENCODER_SYNC) {
+            if (config.followModeOf(i) == MotorConstants.FollowMode.ENCODER_SYNC) {
                 results.add(followers[i - 1].verifyConfig(config.name + " Follower[" + i + "]"));
             }
         }

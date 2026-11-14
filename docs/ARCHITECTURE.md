@@ -14,14 +14,14 @@ A guide to how the robot code is organized, what each piece does, and how they c
 The robot is a **swerve drive** controlled by two flight sticks. It tracks its position on the field using a combination of **wheel encoders** and **AprilTag cameras**, fused together by a **Kalman filter**. A driver can press a button to trigger **autonomous pathfinding** — either to a fixed scoring target or to the nearest detected game piece on the field.
 
 ```
-Driver sticks ──► driveWithJoysticks ──► driveInput ──► swerveDrive ──► 4× swerveModule
+Driver sticks ──► DriveWithJoysticks ──► DriveInput ──► SwerveDrive ──► 4× SwerveModule
                                                               ▲
 PathPlanner ──────────────────────────────────────────────────┘
   ▲                                                           ▲
-  │ gamePieceHuntCommand                    SwerveDrivePoseEstimator
+  │ GamePieceHuntCommand                    SwerveDrivePoseEstimator
   │  (piece detection → auto-navigate)       ▲                  ▲
   │                                    wheel encoders      PhotonVision
-gamePieceVisionSubsystem                  + IMU              (AprilTags)
+GamePieceVisionSubsystem                  + IMU              (AprilTags)
   (OV9782 intake camera → field position)
 ```
 
@@ -41,17 +41,17 @@ src/main/java/frc/lib/
 │
 ├── util/                   ← units, Dashboard, RobotLogger, ConfigVerifier
 ├── hardware/
-│   ├── motor/              ← MotorIO interface + CTREMotor / REVMotor / NovaMotor, MotorIOConfig, motorModels
+│   ├── motor/              ← MotorIO interface + CTREMotor / REVMotor / NovaMotor, MotorIOConfig, MotorModels
 │   └── encoder/            ← AbsoluteEncoderIO + Thrifty analog / CANcoder / Through Bore
 ├── control/
-│   ├── mechanismUnit       ← One mechanism's motor group on MotorIO (FF, ramps, sync, limits, homing)
-│   ├── mechanismConfig     ← Immutable config (Builder); derives one MotorIOConfig per motor
-│   ├── motorConstants      ← FollowMode enum + loop/sync constants
-│   └── ff/                 ← ffProvider + FF physics factories
-├── swerve/                 ← swerveModule, swerveHardware (type → motor config), driveInput, driveOdometryState
+│   ├── MechanismUnit       ← One mechanism's motor group on MotorIO (FF, ramps, sync, limits, homing)
+│   ├── MechanismConfig     ← Immutable config (Builder); derives one MotorIOConfig per motor
+│   ├── MotorConstants      ← FollowMode enum + loop/sync constants
+│   └── ff/                 ← FFProvider + FF physics factories
+├── swerve/                 ← SwerveModule, SwerveHardware (type → motor config), DriveInput, DriveOdometryState
 └── mechanisms/             ← One folder per mechanism, each self-contained
-    ├── shooter/            ← shooterMechanism, ShooterCalculator, ShotProfile, shooterAimController
-    └── elevator/           ← elevatorMechanism
+    ├── shooter/            ← ShooterMechanism, ShooterCalculator, ShotProfile, ShooterAimController
+    └── elevator/           ← ElevatorMechanism
 
 src/test/java/frc/lib/      ← Unit tests mirroring lib/ (FakeMotorIO stands in for real motors)
 
@@ -62,32 +62,32 @@ src/main/java/frc/robot/
 ├── Constants.java          ← Minimal operator constants
 │
 ├── commands/               ← Things the robot does (driver commands)
-│   ├── driveWithJoysticks  ← Default: read sticks, drive robot
-│   ├── xLockCommand        ← Defense: lock wheels in X pattern
+│   ├── DriveWithJoysticks  ← Default: read sticks, drive robot
+│   ├── XLockCommand        ← Defense: lock wheels in X pattern
 │   └── Autos.java          ← Autonomous routines (stub for now)
 │
 ├── constants/              ← All tunable numbers in one place
-│   ├── swerveConstants         ← CAN IDs, gear ratios, speed limits, PID defaults
-│   ├── visionConstants         ← AprilTag camera names, transforms, filter thresholds
-│   ├── gamePieceConstants      ← Game piece camera, clustering, hunt behavior
-│   ├── pathplannerConstants    ← PathPlanner config, robot mass/MOI, constraints
-│   ├── shooterConstants        ← Shooter lookup table, pivot geometry → PROFILE (a ShotProfile)
-│   ├── canIDs / portIDs        ← Every CAN ID and roboRIO port in one place
+│   ├── SwerveConstants         ← CAN IDs, gear ratios, speed limits, PID defaults
+│   ├── VisionConstants         ← AprilTag camera names, transforms, filter thresholds
+│   ├── GamePieceConstants      ← Game piece camera, clustering, hunt behavior
+│   ├── PathPlannerConstants    ← PathPlanner config, robot mass/MOI, constraints
+│   ├── ShooterConstants        ← Shooter lookup table, pivot geometry → PROFILE (a ShotProfile)
+│   ├── CANIDs / PortIDs        ← Every CAN ID and roboRIO port in one place
 │   └── AprilTagIgnore          ← Tag IDs to suppress at specific events
 │
 ├── pathplanning/           ← PathPlanner integration
 │   ├── FieldTargets            ← "speaker" → field coordinate lookup table
-│   ├── pathfindCommand         ← Navigate to fixed target on button press
-│   └── gamePieceHuntCommand    ← Vision-guided game piece collection (4 modes)
+│   ├── PathfindCommand         ← Navigate to fixed target on button press
+│   └── GamePieceHuntCommand    ← Vision-guided game piece collection (4 modes)
 │
 ├── subsystems/
 │   ├── swerveDrive/        ← Drivetrain
-│   │   └── swerveDrive         ← Manages all 4 modules (from lib/swerve) + pose estimator + pose history
+│   │   └── SwerveDrive         ← Manages all 4 modules (from lib/swerve) + pose estimator + pose history
 │   └── vision/             ← Vision
-│       ├── visionSubsystem         ← Public interface: AprilTag pose estimates
-│       ├── gamePieceVisionSubsystem ← Game piece detection, field position tracking
-│       ├── robotPoseEstimate        ← One camera's pose estimate (AprilTag)
-│       ├── visionHealthMonitor      ← Pre-match checks, ongoing health + DataLog
+│       ├── VisionSubsystem         ← Public interface: AprilTag pose estimates
+│       ├── GamePieceVisionSubsystem ← Game piece detection, field position tracking
+│       ├── RobotPoseEstimate        ← One camera's pose estimate (AprilTag)
+│       ├── VisionHealthMonitor      ← Pre-match checks, ongoing health + DataLog
 │       └── AprilTagFieldCalTab      ← Field Calibration dashboard data (Elastic)
 │
 └── util/
@@ -98,7 +98,7 @@ src/main/java/frc/robot/
 
 1. Copy `frc/lib/util/`, `frc/lib/hardware/`, `frc/lib/control/`, and the mechanism's folder (e.g. `frc/lib/mechanisms/shooter/`). Add `frc/lib/swerve/` too if the mechanism uses drivetrain state (elevator FF, aim controller).
 2. Copy the matching test folders from `src/test/java/frc/lib/` and run `./gradlew test`.
-3. In the new robot's `RobotContainer`, build the mechanism's `mechanismConfig` with that robot's CAN IDs and vendor, construct it, and `ConfigVerifier.register()` it.
+3. In the new robot's `RobotContainer`, build the mechanism's `MechanismConfig` with that robot's CAN IDs and vendor, construct it, and `ConfigVerifier.register()` it.
 
 ---
 
@@ -106,21 +106,21 @@ src/main/java/frc/robot/
 
 ### How driving works
 
-The driver moves the left stick to translate (move forward/back/strafe) and twists the right stick to rotate. These inputs go into `driveWithJoysticks`, which reads the joystick axes, applies deadband and input shaping, then builds a `driveInput` object and hands it to `swerveDrive`.
+The driver moves the left stick to translate (move forward/back/strafe) and twists the right stick to rotate. These inputs go into `DriveWithJoysticks`, which reads the joystick axes, applies deadband and input shaping, then builds a `DriveInput` object and hands it to `SwerveDrive`.
 
 **Field-relative control** means "push stick forward" always moves the robot toward the far field wall — regardless of which way the robot is facing. The code rotates joystick inputs by the robot's current heading before sending them to the wheels.
 
 **Dynamic center of rotation** — the right stick X/Y axis shifts the pivot point of rotation anywhere within the robot's bumper footprint. Centered stick = pivot in place. Full deflection = pivot at a bumper corner. This lets the driver swing around a game piece or defense target.
 
-**Drive modes** (`driveWithJoysticks.DriveMode`): `NORMAL` (default), `POINT_AT` (heading PID locks to field point), `HEADING_BOUND` (heading PID clamps to window when outside, driver omega passes through when inside), `STATIC_SHOT_LOCK` (X-brace, no translation). `shooterAimController` drives these transitions — see Shooter Aim System section.
+**Drive modes** (`DriveWithJoysticks.DriveMode`): `NORMAL` (default), `POINT_AT` (heading PID locks to field point), `HEADING_BOUND` (heading PID clamps to window when outside, driver omega passes through when inside), `STATIC_SHOT_LOCK` (X-brace, no translation). `ShooterAimController` drives these transitions — see Shooter Aim System section.
 
-### `driveInput` — the one interface rule
+### `DriveInput` — the one interface rule
 
-**The only way to command the drivetrain is through `driveInput`.** No command or subsystem directly tells the motors what to do — they all build a `driveInput` and pass it to `swerveDrive`. This keeps input handling cleanly separated from drive execution.
+**The only way to command the drivetrain is through `DriveInput`.** No command or subsystem directly tells the motors what to do — they all build a `DriveInput` and pass it to `SwerveDrive`. This keeps input handling cleanly separated from drive execution.
 
-The one exception: PathPlanner bypasses `driveInput` (see PathPlanner section below).
+The one exception: PathPlanner bypasses `DriveInput` (see PathPlanner section below).
 
-### Each `swerveModule`
+### Each `SwerveModule`
 
 One Kraken X60 (drive) + one Minion (steer) + one Thrifty analog encoder. The analog encoder measures absolute wheel angle and seeds the Minion's built-in encoder at startup. After that, the Minion's high-resolution internal encoder runs the closed-loop steering — the analog sensor is only used once at power-on.
 
@@ -128,7 +128,7 @@ All PID gains are published as dashboard tunables and can be adjusted live durin
 
 ### The odometry state
 
-Every 20ms, `swerveDrive` computes a `driveOdometryState` — a rich snapshot of motion containing three buckets:
+Every 20ms, `SwerveDrive` computes a `DriveOdometryState` — a rich snapshot of motion containing three buckets:
 
 | Bucket | Source | Best for |
 |---|---|---|
@@ -160,29 +160,29 @@ Not all vision frames are equally trustworthy. A frame with 3+ tags visible is m
 | 2 tags | Baseline trust (std devs × 1.0) |
 | 3+ tags | Higher trust (std devs × 0.5) |
 
-These multipliers are in `visionConstants.VISION_STD_DEV_TAG_SCALE`.
+These multipliers are in `VisionConstants.VISION_STD_DEV_TAG_SCALE`.
 
 ### 3D pose data
 
 PhotonVision provides full 3D pose (X, Y, Z, roll, pitch, yaw). The Kalman filter only uses 2D (X, Y, heading) since the robot drives on a flat field. However, the Z, pitch, and roll data is preserved and exposed via:
 
-- `visionSubsystem.getBestPoseZ()` — height above floor (useful if robot climbs)
-- `visionSubsystem.getBestPosePitch()` — nose-up/down tilt
-- `visionSubsystem.getBestPoseRoll()` — side-to-side tilt
+- `VisionSubsystem.getBestPoseZ()` — height above floor (useful if robot climbs)
+- `VisionSubsystem.getBestPosePitch()` — nose-up/down tilt
+- `VisionSubsystem.getBestPoseRoll()` — side-to-side tilt
 
 ### Vision filtering pipeline
 
 Each frame from each camera is checked before being accepted:
 1. Must have at least one AprilTag visible
-2. Tag count must meet minimum threshold (`visionConstants.MIN_TAGS_FOR_ESTIMATE`)
-3. Pose ambiguity must be below threshold (`visionConstants.MAX_AMBIGUITY`)
+2. Tag count must meet minimum threshold (`VisionConstants.MIN_TAGS_FOR_ESTIMATE`)
+3. Pose ambiguity must be below threshold (`VisionConstants.MAX_AMBIGUITY`)
 4. Pose must not jump more than `MAX_POSE_JUMP_M` from last accepted estimate
 
 Frames failing any check are discarded. The filter continues on odometry alone.
 
 ### Vision health monitoring
 
-`visionHealthMonitor` runs pre-match checks and ongoing health tracking. During disabled mode, `Robot.disabledPeriodic()` reads the health status and posts it to the dashboard so the drive team knows if vision is ready before auto starts.
+`VisionHealthMonitor` runs pre-match checks and ongoing health tracking. During disabled mode, `Robot.disabledPeriodic()` reads the health status and posts it to the dashboard so the drive team knows if vision is ready before auto starts.
 
 ---
 
@@ -212,7 +212,7 @@ PhotonVision UI for each: `http://<IP>:5800`
 |---|---|
 | Fault isolation | A game piece pipeline crash or frame-rate drop cannot affect AprilTag pose estimation reliability — the two subsystems are physically separate. |
 | Resource headroom | Each coprocessor has full CPU and NPU available for its role — no pipeline contention, no priority fighting between AprilTag grayscale pipelines and color ML inference. |
-| Scalability | Adding a 2nd game piece camera (e.g. 2nd intake side) stays on the game piece coprocessor; the AprilTag side is untouched. The robot code just adds a 2nd `PhotonCamera` in `gamePieceVisionSubsystem`. |
+| Scalability | Adding a 2nd game piece camera (e.g. 2nd intake side) stays on the game piece coprocessor; the AprilTag side is untouched. The robot code just adds a 2nd `PhotonCamera` in `GamePieceVisionSubsystem`. |
 
 **`PhotonCamera` and NT transparency:** `PhotonCamera` instances are identified by camera name, not by IP. Both coprocessors connect to the roboRIO as NetworkTables clients. `PhotonCamera("intake_cam")` resolves through NT regardless of which physical device is running it — no robot code structural change is required to split or merge coprocessors.
 
@@ -222,7 +222,7 @@ PhotonVision UI for each: `http://<IP>:5800`
 
 ### What it does
 
-`gamePieceHuntCommand` autonomously navigates to and collects game pieces detected by the intake-side camera. Four modes are available:
+`GamePieceHuntCommand` autonomously navigates to and collects game pieces detected by the intake-side camera. Four modes are available:
 
 | Mode | `HuntMode` | Behavior |
 |---|---|---|
@@ -231,11 +231,11 @@ PhotonVision UI for each: `http://<IP>:5800`
 | 3 | `NEAREST_CLUSTER` | Navigate to the centroid of the nearest cluster, intake, stop. |
 | 4 | `SEQUENTIAL_CLUSTERS` | Intake nearest cluster, then move to the next, repeat until none. |
 
-Clusters are groups of pieces within `gamePieceConstants.CLUSTER_RADIUS_M` of each other (default 1.5 m). The robot always arrives at a piece with its intake side facing it — PathPlanner delivers it to the computed heading automatically.
+Clusters are groups of pieces within `GamePieceConstants.CLUSTER_RADIUS_M` of each other (default 1.5 m). The robot always arrives at a piece with its intake side facing it — PathPlanner delivers it to the computed heading automatically.
 
 ### How piece positions are computed
 
-PhotonVision provides pixel-level target bearings (`getYaw()`, `getPitch()`). The code converts these to field coordinates using the camera's pose at the **exact moment the frame was captured** — retrieved via `swerveDrive.getPoseAtTime(timestampSecs)`:
+PhotonVision provides pixel-level target bearings (`getYaw()`, `getPitch()`). The code converts these to field coordinates using the camera's pose at the **exact moment the frame was captured** — retrieved via `SwerveDrive.getPoseAtTime(timestampSecs)`:
 
 ```
 verticalAngle = cameraMountPitch − target.getPitch()
@@ -249,7 +249,7 @@ This compensates for the ~20–60ms camera pipeline latency — the robot may ha
 
 ### Pose history ring buffer
 
-`swerveDrive` maintains a 4-entry ring buffer of (timestamp → Pose2d) snapshots, written every loop. At 50Hz this covers ~80ms — enough for typical PhotonVision ML pipeline latency. `getPoseAtTime(t)` linearly interpolates between the two bracketing entries.
+`SwerveDrive` maintains a 4-entry ring buffer of (timestamp → Pose2d) snapshots, written every loop. At 50Hz this covers ~80ms — enough for typical PhotonVision ML pipeline latency. `getPoseAtTime(t)` linearly interpolates between the two bracketing entries.
 
 This buffer is for game piece back-projection **only** — AprilTag latency compensation is already handled internally by WPILib's `SwerveDrivePoseEstimator` and does not need this buffer.
 
@@ -265,16 +265,16 @@ The command is decoupled from any specific intake subsystem. It takes a `Runnabl
 
 ### Health monitoring
 
-During disabled mode, `gamePieceVisionSubsystem.publishHealthStatus()` posts to the dashboard alongside the AprilTag camera health. Pre-match driver check: place a game piece ~1–2 m in front of the intake and confirm "Piece Detected = true" on the Elastic "Vision Health" tab.
+During disabled mode, `GamePieceVisionSubsystem.publishHealthStatus()` posts to the dashboard alongside the AprilTag camera health. Pre-match driver check: place a game piece ~1–2 m in front of the intake and confirm "Piece Detected = true" on the Elastic "Vision Health" tab.
 
 Every loop during a match, four DataLog entries are written: `CameraConnected`, `PieceDetected`, `TrackedPieceCount`, `Debug/MissFrames` — all under `/GamePieceVision/`. These are post-match reviewable in Advantage Scope.
 
 ### Extending to a second intake side
 
 A symmetric dual-intake robot (intake on front and rear) requires these changes:
-1. **`gamePieceConstants`** — add `GAME_PIECE_CAMERA_2_NAME` and `GAME_PIECE_CAMERA_2_TRANSFORM` for the rear intake camera.
-2. **`gamePieceVisionSubsystem`** — add `PhotonCamera intakeCam2`; run the same back-projection loop for both cameras, merging detections into the same `trackedPieces` list (field-relative positions, so both cameras feed the same spatial map).
-3. **`gamePieceHuntCommand`** — replace the fixed heading formula with a `findClosestIntakeHeading()` helper that compares the angular distance from the robot's current heading to both intake directions, picks the nearer one, and uses that as the arrival heading.
+1. **`GamePieceConstants`** — add `GAME_PIECE_CAMERA_2_NAME` and `GAME_PIECE_CAMERA_2_TRANSFORM` for the rear intake camera.
+2. **`GamePieceVisionSubsystem`** — add `PhotonCamera intakeCam2`; run the same back-projection loop for both cameras, merging detections into the same `trackedPieces` list (field-relative positions, so both cameras feed the same spatial map).
+3. **`GamePieceHuntCommand`** — replace the fixed heading formula with a `findClosestIntakeHeading()` helper that compares the angular distance from the robot's current heading to both intake directions, picks the nearer one, and uses that as the arrival heading.
 
 The state machine, clustering logic, and PathPlanner wiring are all intake-agnostic and require no changes.
 
@@ -284,7 +284,7 @@ The state machine, clustering logic, and PathPlanner wiring are all intake-agnos
 
 ### What it does
 
-When the driver holds a designated button, `pathfindCommand` activates. PathPlanner's AD* algorithm calculates a collision-free path from the robot's current position to the target, executes it, then hands control back to the driver when the button is released. The WPILib command scheduler handles the handoff automatically — `driveWithJoysticks` is interrupted when pathfinding starts and resumed when it ends.
+When the driver holds a designated button, `PathfindCommand` activates. PathPlanner's AD* algorithm calculates a collision-free path from the robot's current position to the target, executes it, then hands control back to the driver when the button is released. The WPILib command scheduler handles the handoff automatically — `DriveWithJoysticks` is interrupted when pathfinding starts and resumed when it ends.
 
 ### How it knows where to go
 
@@ -303,40 +303,40 @@ The current implementation uses `pathfindToPose()` — pure AD* on-the-fly pathf
 
 ### What PathPlanner needs from the drivetrain
 
-PathPlanner is configured once at startup in `swerveDrive.configureForAutoBuilder()`. It needs four things wired up:
-- **Where is the robot?** → `swerveDrive.getPose()` (Kalman-filtered pose)
-- **Reset pose** → `swerveDrive.resetPose()` (used at auto start)
-- **How fast is it going?** → `swerveDrive.getRobotRelativeSpeeds()` (encoder readout)
-- **Make it go this fast** → `swerveDrive.driveRobotRelative(ChassisSpeeds)` (the PathPlanner exception to the driveInput-only rule)
+PathPlanner is configured once at startup in `SwerveDrive.configureForAutoBuilder()`. It needs four things wired up:
+- **Where is the robot?** → `SwerveDrive.getPose()` (Kalman-filtered pose)
+- **Reset pose** → `SwerveDrive.resetPose()` (used at auto start)
+- **How fast is it going?** → `SwerveDrive.getRobotRelativeSpeeds()` (encoder readout)
+- **Make it go this fast** → `SwerveDrive.driveRobotRelative(ChassisSpeeds)` (the PathPlanner exception to the DriveInput-only rule)
 
-The last one is the only place in the codebase that bypasses `driveInput`. PathPlanner outputs robot-relative speed commands directly — wrapping them in `driveInput` would require an unnecessary coordinate-frame roundtrip. It's intentional, documented in `CLAUDE.md`, and only ever called by PathPlanner's internals.
+The last one is the only place in the codebase that bypasses `DriveInput`. PathPlanner outputs robot-relative speed commands directly — wrapping them in `DriveInput` would require an unnecessary coordinate-frame roundtrip. It's intentional, documented in `CLAUDE.md`, and only ever called by PathPlanner's internals.
 
 ---
 
-## Mechanism Motor Abstraction (`mechanismUnit`)
+## Mechanism Motor Abstraction (`MechanismUnit`)
 
 ### Why it exists
 
 The drivetrain is CTRE every year. Mechanisms are currently REV (SparkMax/SparkFlex + NEO), but the team is actively transitioning to ThriftyBot Nova over the next two seasons — while keeping REV NEO 550 + UltraPlanetary for small/lightweight mechanisms permanently (no Nova equivalent yet). Without an abstraction layer, every subsystem would contain vendor-specific API calls, and swapping a motor controller on a mechanism would require touching subsystem code everywhere.
 
-With `mechanismUnit`, upgrading a mechanism from NEO to Nova is one line change: the `MotorVendor` in its config. The subsystem is untouched.
+With `MechanismUnit`, upgrading a mechanism from NEO to Nova is one line change: the `MotorVendor` in its config. The subsystem is untouched.
 
 ### The pattern
 
 There is **one motor interface for the whole robot: `MotorIO`** (`lib/hardware/motor/`). Each vendor class (`CTREMotor`, `REVMotor`, `NovaMotor`) implements it for a single controller — configure, command (duty / velocity / position + FF volts), read back, follow, verify. The swerve modules and every mechanism are built on it, so the vendor code exists exactly once.
 
-`mechanismUnit` holds all shared mechanism logic (FF, ramps, encoder sync, travel limits, homing, telemetry) once, on top of a leader `MotorIO` and optional follower `MotorIO`s. `mechanismUnit.create(config)` builds one `MotorIO` per CAN ID with the vendor named in the config. Tests pass `FakeMotorIO`s to the constructor instead, so all of this logic is testable without hardware:
+`MechanismUnit` holds all shared mechanism logic (FF, ramps, encoder sync, travel limits, homing, telemetry) once, on top of a leader `MotorIO` and optional follower `MotorIO`s. `MechanismUnit.create(config)` builds one `MotorIO` per CAN ID with the vendor named in the config. Tests pass `FakeMotorIO`s to the constructor instead, so all of this logic is testable without hardware:
 
 ```java
-mechanismUnit arm = mechanismUnit.create(
-    new mechanismConfig.Builder("Arm",
+MechanismUnit arm = MechanismUnit.create(
+    new MechanismConfig.Builder("Arm",
             new int[]{ 11 },
             MotorVendor.REV_SPARKMAX)
         .withGearRatio(125.0)
         .withPID(new double[]{ 0.3, 0, 0.01, 0, 0.05, 0 })
         .withSetpointDeadband(1.0)   // ±1°
         .withTier2FF(FF.rotatingArm(
-            motorModels.NEO, 125.0,
+            MotorModels.NEO, 125.0,
             3.5, 12.0,               // arm: 3.5 lbs, CG 12 in from pivot
             new double[0], new double[0], new Supplier[0]))
         .withMotionProfile(20, 80, 0)
@@ -346,13 +346,13 @@ mechanismUnit arm = mechanismUnit.create(
 
 ### Follower topology
 
-Followers are configured via `mechanismConfig.Builder`. Two builder methods are available:
+Followers are configured via `MechanismConfig.Builder`. Two builder methods are available:
 
 **`withFollowMode(mode, invertedArray)`** — convenience for simple topologies where all followers use the same mode and all follow the main leader (canIds[0]):
 
 ```java
 // Two motors, both MECHANICAL followers of the leader
-.withFollowMode(motorConstants.FollowMode.MECHANICAL, new boolean[]{ false, true })
+.withFollowMode(MotorConstants.FollowMode.MECHANICAL, new boolean[]{ false, true })
 ```
 
 **`withFollowerConfig(modes[], inverted[], leaderIndices[])`** — full per-follower control. Each follower independently declares its mode and which motor in canIds[] it tracks. This enables mixed-mode topologies and follower-of-follower chains:
@@ -363,14 +363,14 @@ Followers are configured via `mechanismConfig.Builder`. Two builder methods are 
 //   canIds[1]=11 (B — MECHANICAL to A)
 //   canIds[2]=12 (C — ENCODER_SYNC to A, non-rigid coupling on opposite side)
 //   canIds[3]=13 (D — MECHANICAL to C, rigidly coupled to C)
-new mechanismConfig.Builder("Flywheel",
+new MechanismConfig.Builder("Flywheel",
         new int[]{ 10, 11, 12, 13 },
         MotorVendor.REV_SPARKFLEX)
     .withFollowerConfig(
-        new motorConstants.FollowMode[]{
-            motorConstants.FollowMode.MECHANICAL,    // B → A
-            motorConstants.FollowMode.ENCODER_SYNC,  // C → A
-            motorConstants.FollowMode.MECHANICAL },  // D → C
+        new MotorConstants.FollowMode[]{
+            MotorConstants.FollowMode.MECHANICAL,    // B → A
+            MotorConstants.FollowMode.ENCODER_SYNC,  // C → A
+            MotorConstants.FollowMode.MECHANICAL },  // D → C
         new boolean[]{ false, false, false },
         new int[]{ 0, 0, 2 })  // B→canIds[0], C→canIds[0], D→canIds[2]
 ```
@@ -407,7 +407,7 @@ Three tiers, each additive:
 | 2 — lambda in config | Rio (self-contained) | Gravity/spring loads using only this mechanism's own state |
 | 3 — lambda in RobotContainer | Rio (cross-subsystem) | Physics depending on other subsystems — variable-mass elevators, drivetrain coupling, etc. |
 
-Tier-2 and tier-3 are `ffProvider` lambdas: `(positionDeg, velocityRps, accelRpss) → volts`. They're called automatically each cycle and summed before injection.
+Tier-2 and tier-3 are `FFProvider` lambdas: `(positionDeg, velocityRps, accelRpss) → volts`. They're called automatically each cycle and summed before injection.
 
 **All physics-based lambdas are built from motor datasheet constants** via `FF` (`lib/control/ff/FF.java`) factories — no empirical holding-voltage calibration required. The formula used throughout is:
 
@@ -425,19 +425,19 @@ Available factories in `FF` (`lib/control/ff/FF.java`):
 | `multiStageElevator(motor, gearRatio, ...)` | 3 | Multi-stage linear elevator; angle supplied at runtime. Friction offset is deadbanded — holds up-direction bias within ±`FRICTION_DEADBAND_RPS`. |
 | `pivotingElevator(motor, gearRatio, ...)` | 3 | Elevator on a pivoting base + full drivetrain inertia/centripetal. Same signed gravity output and friction deadband as above. |
 
-Motor constants live in `motorModels.java` (sourced from vendor datasheets). Pass the appropriate constant as the first argument:
+Motor constants live in `MotorModels.java` (sourced from vendor datasheets). Pass the appropriate constant as the first argument:
 
 ```java
 // Rotating arm with game piece CG shift — Tier 2
 .withTier2FF(FF.rotatingArm(
-    motorModels.NEO, 100.0,
+    MotorModels.NEO, 100.0,
     3.5 /*armLbs*/, 12.0 /*armCgIn*/,
     new double[]{ 1.5 } /*pieceLbs*/, new double[]{ 8.0 } /*pieceCgIn*/,
     new Supplier[]{ indexer::getPieceCount }))
 
 // Vertical elevator with game pieces — Tier 3 (built in RobotContainer)
 .withTier3FF(FF.multiStageElevator(
-    motorModels.NEO, 20.0, 0.75 /*spoolIn*/,
+    MotorModels.NEO, 20.0, 0.75 /*spoolIn*/,
     8.0 /*carriageLbs*/, new double[]{ 3.0 } /*stageLbs*/,
     0.05 /*frictionUp*/, -0.02 /*frictionDown*/,
     new double[]{ 1.5 }, new Supplier[]{ indexer::getPieceCount },
@@ -458,7 +458,7 @@ Motor constants live in `motorModels.java` (sourced from vendor datasheets). Pas
 
 ### Live PID tuning
 
-All six gains (kP, kI, kD, kS, kV, kA) are published as dashboard tunables under `[MechanismName]/PID/` at construction. Each loop, `mechanismUnit` reads them back and calls `applyPIDToController()` only if a value changed — minimizing CAN traffic.
+All six gains (kP, kI, kD, kS, kV, kA) are published as dashboard tunables under `[MechanismName]/PID/` at construction. Each loop, `MechanismUnit` reads them back and calls `applyPIDToController()` only if a value changed — minimizing CAN traffic.
 
 ### Logging
 
@@ -499,7 +499,7 @@ When you're reading or writing values:
 | Mechanism torque (FF calibration) | lb·in | N·m |
 | Angles | degrees (at interface) | radians |
 
-All conversion functions live in `lib/util/units.java`. Never convert inline — use those functions.
+All conversion functions live in `lib/util/Units.java`. Never convert inline — use those functions.
 
 ---
 
@@ -564,14 +564,14 @@ Both files land on the same USB drive. AdvantageScope opens them simultaneously 
 Drive motor signals (velocity, current, voltage, duty cycle) are logged at **250Hz** for high-fidelity transient capture — wheel slip events and current spikes are visible at this rate. Temperatures are logged at **4Hz** (they change slowly and 250Hz would waste significant CAN bandwidth at full robot scale).
 
 These rates are configured per-subsystem:
-- `swerveConstants.SIGNAL_UPDATE_HZ` — 250Hz
-- `swerveConstants.SIGNAL_UPDATE_HZ_TEMP` — 4Hz
+- `SwerveConstants.SIGNAL_UPDATE_HZ` — 250Hz
+- `SwerveConstants.SIGNAL_UPDATE_HZ_TEMP` — 4Hz
 
 When adding future mechanisms (intake, shooter, climber), add matching constants to that subsystem's constants file. This lets you tune CAN bandwidth per-mechanism independently.
 
 ### CAN bus optimization
 
-`swerveConstants.OPTIMIZE_CAN_UTILIZATION = false` by default. When `false`, all TalonFX signals are broadcast on the CAN bus regardless of whether they are registered — verbose and safe during bring-up. When `true`, `optimizeBusUtilization()` silences all un-registered signals, significantly reducing CAN traffic at full robot scale.
+`SwerveConstants.OPTIMIZE_CAN_UTILIZATION = false` by default. When `false`, all TalonFX signals are broadcast on the CAN bus regardless of whether they are registered — verbose and safe during bring-up. When `true`, `optimizeBusUtilization()` silences all un-registered signals, significantly reducing CAN traffic at full robot scale.
 
 **Flip to `true` per-mechanism only after that mechanism is fully validated on the robot.** Silencing un-registered signals means unexpected data gaps rather than visible errors — not something you want while debugging new hardware.
 
@@ -586,10 +586,10 @@ ShooterCalculator  (pure math — no hardware refs)
       │
       │  ShooterOutput: rpm, hood°, turret°, headingBoundsDeg[2]
       ▼
-shooterAimController  (SubsystemBase — orchestration)
+ShooterAimController  (SubsystemBase — orchestration)
       │
-      ├──► shooterMechanism.setFlywheelRpm() / setHoodDeg() / setTurretDeg()
-      └──► driveWithJoysticks.enableHeadingBound() / enableStaticShotLock() / clearAimMode()
+      ├──► ShooterMechanism.setFlywheelRpm() / setHoodDeg() / setTurretDeg()
+      └──► DriveWithJoysticks.enableHeadingBound() / enableStaticShotLock() / clearAimMode()
 ```
 
 ### `ShooterCalculator`
@@ -606,9 +606,9 @@ Pure-math ballistics calculator. No subsystem imports, no hardware access.
 
 **Heading bounds derivation:** turretAngle = aimFieldDeg − robotHeadingDeg. Rearranging: robotHeadingDeg ∈ [aimFieldDeg − softMax, aimFieldDeg − softMin]. For swerve-as-turret pass softMin = softMax = 0 → bounds collapse to [aimFieldDeg, aimFieldDeg] (tight lock).
 
-### `shooterAimController`
+### `ShooterAimController`
 
-Reads drivetrain state → calls `ShooterCalculator` → pushes setpoints to `shooterMechanism` → sets drive mode on `driveWithJoysticks`. Runs in `periodic()`.
+Reads drivetrain state → calls `ShooterCalculator` → pushes setpoints to `ShooterMechanism` → sets drive mode on `DriveWithJoysticks`. Runs in `periodic()`.
 
 **Aim modes (set by button bindings):**
 - `STATIC_SHOT` — two-phase: Phase 1 rotates robot into heading window (`enableHeadingBound`), Phase 2 X-locks once in bounds (`enableStaticShotLock`). Swerve-as-turret variant uses `enablePointAt` for Phase 1.
@@ -625,20 +625,20 @@ When the robot drifts outside the heading window during on-the-move shooting, th
 | `WAITING_AT_FORWARD_LIMIT` | `softMax` | Overshoot > `deadZone × flipThresholdPct` from forward limit |
 | `WAITING_AT_REVERSE_LIMIT` | `softMin` | Overshoot > `deadZone × flipThresholdPct` from reverse limit |
 
-Dead zone = `360° − (softMax − softMin)`. Default `flipThresholdPct` = 0.5 (break-even midpoint — equally fast to rotate back or forward to re-enter the window). Overshoot is computed wrap-correctly via `units.normalizeAngleDeg(boundEdge − robotHdgDeg)`.
+Dead zone = `360° − (softMax − softMin)`. Default `flipThresholdPct` = 0.5 (break-even midpoint — equally fast to rotate back or forward to re-enter the window). Overshoot is computed wrap-correctly via `Units.normalizeAngleDeg(boundEdge − robotHdgDeg)`.
 
-### `shooterMechanism` — `readyGate`
+### `ShooterMechanism` — `readyGate`
 
 The optional `withReadyGate(BooleanSupplier gate)` builder method ANDs an external condition onto `isReady()`. Wire it to `aimCtrl.getLastResult().isHeadingInBounds()` so the robot won't attempt to fire when the heading is outside the turret window — even if flywheel and hood are at setpoint.
 
-### `shooterConstants`
+### `ShooterConstants`
 
 Keeps the lookup table and geometry in a single visible place for in-season tuning:
 - `LookupEntry[]` LOOKUP_TABLE — all shot profiles (distance → RPM, hood angle, etc.)
 - `PIVOT_OFFSET_X/Y_IN` — shooter pivot position in robot frame (inches)
 - `ROBOT_SPEED_WARNING_THRESHOLD_FT_S` — OTM speed-too-high warning threshold
 
-Turret soft/hard limits are **not** in `shooterConstants` — they live in `mechanismConfig` (passed to `shooterMechanism`) to avoid duplication. `ShooterCalculator` reads them from `mechanismConfig` via the convenience constructor.
+Turret soft/hard limits are **not** in `ShooterConstants` — they live in `MechanismConfig` (passed to `ShooterMechanism`) to avoid duplication. `ShooterCalculator` reads them from `MechanismConfig` via the convenience constructor.
 
 ---
 
@@ -646,17 +646,17 @@ Turret soft/hard limits are **not** in `shooterConstants` — they live in `mech
 
 These are known gaps — in priority order for competition readiness:
 
-1. **Weigh the robot** → update `ROBOT_MASS_LBS` and `ROBOT_MOI_LBIN2` in `pathplannerConstants.java`
-2. **Measure steer offset voltages** → deploy with offsets = 0, read the dashboard, update `swerveConstants.java`
-3. **Confirm CAN IDs** → verify `swerveConstants.java` matches physical wiring
-4. **Measure camera mounting positions** → update `visionConstants.FRONT_CAMERA_TRANSFORM` and `REAR_CAMERA_TRANSFORM`
+1. **Weigh the robot** → update `ROBOT_MASS_LBS` and `ROBOT_MOI_LBIN2` in `PathPlannerConstants.java`
+2. **Measure steer offset voltages** → deploy with offsets = 0, read the dashboard, update `SwerveConstants.java`
+3. **Confirm CAN IDs** → verify `SwerveConstants.java` matches physical wiring
+4. **Measure camera mounting positions** → update `VisionConstants.FRONT_CAMERA_TRANSFORM` and `REAR_CAMERA_TRANSFORM`
 5. **Populate 2026 field targets** → update `FieldTargets.java` when field geometry is published
-6. **Tune PathPlanner PIDs** → `pathplannerConstants.TRANSLATION_PID_kP/kD` and `ROTATION_PID_kP/kD` on actual carpet
-7. **Author PathPlanner final approach paths** → in PathPlanner GUI, then upgrade `pathfindCommand` to `pathfindThenFollowPath()`
-8. **Add alliance zone exclusions** → `pathplannerConstants.ALLIANCE_ZONE_EXCLUSIONS` when 2026 field zones are published
+6. **Tune PathPlanner PIDs** → `PathPlannerConstants.TRANSLATION_PID_kP/kD` and `ROTATION_PID_kP/kD` on actual carpet
+7. **Author PathPlanner final approach paths** → in PathPlanner GUI, then upgrade `PathfindCommand` to `pathfindThenFollowPath()`
+8. **Add alliance zone exclusions** → `PathPlannerConstants.ALLIANCE_ZONE_EXCLUSIONS` when 2026 field zones are published
 9. **Add target selector** → replace hardcoded `"speaker"` in `RobotContainer` with a dashboard chooser or multi-button map
-10. **Update PhotonVision API** → `visionSubsystem.java` uses deprecated `getLatestResult()` and `update()` — update when PhotonVision publishes new API
+10. **Update PhotonVision API** → `VisionSubsystem.java` uses deprecated `getLatestResult()` and `update()` — update when PhotonVision publishes new API
 
 ---
 
-*Last updated: 2026 preseason — Ryan + Claude (Code) | mechanismUnit: per-follower mixed topology (withFollowerConfig), follower-of-follower leader indices; FF library: gyroscopicTurret, springTurret direction-aware, friction deadbanding, signed gravity output; shooterMechanism pre-packaged subsystem; setpointDeadband + isAtSetpoint on mechanismUnit; shooter aim system: ShooterCalculator + shooterAimController + shooterConstants, headingBoundsDeg, TurretBoundState OTM machine, readyGate; IMU changed to Pigeon 2.0; driveWithJoysticks DriveMode enum + HEADING_BOUND + STATIC_SHOT_LOCK modes; driveWithHeadingBound() on swerveDrive; units.normalizeAngleDeg()*
+*Last updated: 2026 preseason — Ryan + Claude (Code) | MechanismUnit: per-follower mixed topology (withFollowerConfig), follower-of-follower leader indices; FF library: gyroscopicTurret, springTurret direction-aware, friction deadbanding, signed gravity output; ShooterMechanism pre-packaged subsystem; setpointDeadband + isAtSetpoint on MechanismUnit; shooter aim system: ShooterCalculator + ShooterAimController + ShooterConstants, headingBoundsDeg, TurretBoundState OTM machine, readyGate; IMU changed to Pigeon 2.0; DriveWithJoysticks DriveMode enum + HEADING_BOUND + STATIC_SHOT_LOCK modes; driveWithHeadingBound() on SwerveDrive; Units.normalizeAngleDeg()*

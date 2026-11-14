@@ -1,10 +1,10 @@
 package frc.lib.control.ff;
 
 /**
- * ffProvider.java
- * PATH: src/main/java/frc/lib/control/ff/ffProvider.java
+ * FFProvider.java
+ * PATH: src/main/java/frc/lib/control/ff/FFProvider.java
  *
- * Functional interface for feed-forward voltage computations in mechanismUnit.
+ * Functional interface for feed-forward voltage computations in MechanismUnit.
  * Used for both tier-2 (self-contained gravity/spring physics) and tier-3
  * (cross-system coupling that requires external subsystem state).
  *
@@ -68,17 +68,17 @@ package frc.lib.control.ff;
  *   }
  *
  * ─── CONVENIENCE FACTORIES ───────────────────────────────────────────────────
- * See mechanismConfig.armFF(), mechanismConfig.elevatorFF(), mechanismConfig.noFF()
+ * See MechanismConfig.armFF(), MechanismConfig.elevatorFF(), MechanismConfig.noFF()
  * for pre-built lambdas covering the most common cases.
  *
  * ─── THREAD SAFETY ───────────────────────────────────────────────────────────
  * Both tier-2 and tier-3 lambdas are called exclusively from the robot periodic
- * thread (inside mechanismUnit.setVelocity() / setPosition()). No synchronization
+ * thread (inside MechanismUnit.setVelocity() / setPosition()). No synchronization
  * is required as long as all callers remain on the same thread — which WPILib
  * CommandScheduler guarantees.
  */
 @FunctionalInterface
-public interface ffProvider {
+public interface FFProvider {
 
     /**
      * Compute a feed-forward voltage addend for the current control cycle.

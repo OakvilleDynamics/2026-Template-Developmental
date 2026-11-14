@@ -19,16 +19,16 @@ import frc.lib.hardware.motor.MotorVendor;
 import frc.lib.util.ConfigVerifyResult;
 
 /**
- * mechanismUnitTest.java
- * PATH: src/test/java/frc/lib/control/mechanismUnitTest.java
+ * MechanismUnitTest.java
+ * PATH: src/test/java/frc/lib/control/MechanismUnitTest.java
  *
- * mechanismUnit logic against FakeMotorIO — unit conversion, FF injection,
+ * MechanismUnit logic against FakeMotorIO — unit conversion, FF injection,
  * follower wiring, encoder sync, travel limits, homing, live PID tuning.
  * No motor hardware or vendor library is touched.
  *
  * Each test uses a unique mechanism name so dashboard keys never collide.
  */
-class mechanismUnitTest {
+class MechanismUnitTest {
 
     private static final double EPS = 1e-9;
     private static int nameCounter = 0;
@@ -42,8 +42,8 @@ class mechanismUnitTest {
         return "TestMech" + (nameCounter++);
     }
 
-    private static mechanismConfig.Builder single() {
-        return new mechanismConfig.Builder(uniqueName(), new int[]{ 1 }, MotorVendor.CTRE_TALONFX);
+    private static MechanismConfig.Builder single() {
+        return new MechanismConfig.Builder(uniqueName(), new int[]{ 1 }, MotorVendor.CTRE_TALONFX);
     }
 
     // ── Commands reach the leader in rotations with FF attached ─────────────────
@@ -51,7 +51,7 @@ class mechanismUnitTest {
     @Test
     void positionIsSentInRotationsWithTier2PlusTier3FF() {
         FakeMotorIO leader = FakeMotorIO.withId(1);
-        mechanismUnit unit = new mechanismUnit(single()
+        MechanismUnit unit = new MechanismUnit(single()
             .withTier2FF((p, v, a) -> 1.5)
             .withTier3FF((p, v, a) -> 0.25)
             .build(), leader);
@@ -67,7 +67,7 @@ class mechanismUnitTest {
     void ffProviderSeesPositionInDegrees() {
         FakeMotorIO leader = FakeMotorIO.withId(1);
         leader.positionRot = 0.5;
-        mechanismUnit unit = new mechanismUnit(single().withTier2FF((p, v, a) -> p).build(), leader);
+        MechanismUnit unit = new MechanismUnit(single().withTier2FF((p, v, a) -> p).build(), leader);
         unit.setVelocity(3.0);
         assertEquals(180.0, leader.lastFFVolts, EPS);
         assertEquals(3.0, leader.lastVelocityRps, EPS);
@@ -77,14 +77,14 @@ class mechanismUnitTest {
     void softwareMotionProfileOnlyWhenControllerLacksOne() {
         FakeMotorIO nova = FakeMotorIO.withId(1);
         nova.hardwareMotionProfile = false;
-        mechanismUnit stepped = new mechanismUnit(single().withMotionProfile(10, 50, 0).build(), nova);
+        MechanismUnit stepped = new MechanismUnit(single().withMotionProfile(10, 50, 0).build(), nova);
         stepped.setVelocity(10.0);
-        assertEquals(50.0 * motorConstants.LOOP_PERIOD_SECS, nova.lastVelocityRps, EPS);
+        assertEquals(50.0 * MotorConstants.LOOP_PERIOD_SECS, nova.lastVelocityRps, EPS);
         stepped.setVelocity(10.0);
-        assertEquals(2 * 50.0 * motorConstants.LOOP_PERIOD_SECS, nova.lastVelocityRps, EPS);
+        assertEquals(2 * 50.0 * MotorConstants.LOOP_PERIOD_SECS, nova.lastVelocityRps, EPS);
 
         FakeMotorIO ctre = FakeMotorIO.withId(2);
-        mechanismUnit direct = new mechanismUnit(single().withMotionProfile(10, 50, 0).build(), ctre);
+        MechanismUnit direct = new MechanismUnit(single().withMotionProfile(10, 50, 0).build(), ctre);
         direct.setVelocity(10.0);
         assertEquals(10.0, ctre.lastVelocityRps, EPS);
     }
@@ -93,10 +93,10 @@ class mechanismUnitTest {
     void stopResetsSoftwarePositionRamp() {
         FakeMotorIO nova = FakeMotorIO.withId(1);
         nova.hardwareMotionProfile = false;
-        mechanismUnit unit = new mechanismUnit(single().withMotionProfile(10, 50, 0).build(), nova);
+        MechanismUnit unit = new MechanismUnit(single().withMotionProfile(10, 50, 0).build(), nova);
         nova.positionRot = 2.0;
         unit.setPosition(0.0);                  // ramp seeds from current position (2.0 rot)
-        assertEquals(2.0 - 50.0 * motorConstants.LOOP_PERIOD_SECS, nova.lastPositionRot, EPS);
+        assertEquals(2.0 - 50.0 * MotorConstants.LOOP_PERIOD_SECS, nova.lastPositionRot, EPS);
         unit.stop();
         assertEquals(FakeMotorIO.Mode.STOPPED, nova.lastMode);
     }
@@ -106,15 +106,15 @@ class mechanismUnitTest {
     @Test
     void mechanicalFollowersFollowTheirDesignatedLeader() {
         FakeMotorIO a = FakeMotorIO.withId(10), b = FakeMotorIO.withId(11), c = FakeMotorIO.withId(12);
-        mechanismConfig cfg = new mechanismConfig.Builder(uniqueName(), new int[]{ 10, 11, 12 }, MotorVendor.CTRE_TALONFX)
+        MechanismConfig cfg = new MechanismConfig.Builder(uniqueName(), new int[]{ 10, 11, 12 }, MotorVendor.CTRE_TALONFX)
             .withFollowerConfig(
-                new motorConstants.FollowMode[]{ motorConstants.FollowMode.MECHANICAL,
-                                                 motorConstants.FollowMode.MECHANICAL },
+                new MotorConstants.FollowMode[]{ MotorConstants.FollowMode.MECHANICAL,
+                                                 MotorConstants.FollowMode.MECHANICAL },
                 new boolean[]{ false, true },
                 new int[]{ 0, 1 })                 // c follows b (follower-of-follower)
             .build();
 
-        new mechanismUnit(cfg, a, b, c);
+        new MechanismUnit(cfg, a, b, c);
 
         assertSame(a, b.followedLeader);
         assertFalse(b.followOpposed);
@@ -127,24 +127,24 @@ class mechanismUnitTest {
     void encoderSyncRejectedOnControllersThatCannotSync() {
         FakeMotorIO leader = FakeMotorIO.withId(1), follower = FakeMotorIO.withId(2);
         follower.encoderSyncSupported = false;      // e.g. Nova
-        mechanismConfig cfg = new mechanismConfig.Builder(uniqueName(), new int[]{ 1, 2 }, MotorVendor.CTRE_TALONFX)
-            .withFollowMode(motorConstants.FollowMode.ENCODER_SYNC, new boolean[]{ false })
+        MechanismConfig cfg = new MechanismConfig.Builder(uniqueName(), new int[]{ 1, 2 }, MotorVendor.CTRE_TALONFX)
+            .withFollowMode(MotorConstants.FollowMode.ENCODER_SYNC, new boolean[]{ false })
             .build();
-        assertThrows(IllegalArgumentException.class, () -> new mechanismUnit(cfg, leader, follower));
+        assertThrows(IllegalArgumentException.class, () -> new MechanismUnit(cfg, leader, follower));
     }
 
     @Test
     void wrongFollowerCountIsRejected() {
-        mechanismConfig cfg = new mechanismConfig.Builder(uniqueName(), new int[]{ 1, 2 }, MotorVendor.CTRE_TALONFX).build();
-        assertThrows(IllegalArgumentException.class, () -> new mechanismUnit(cfg, FakeMotorIO.withId(1)));
+        MechanismConfig cfg = new MechanismConfig.Builder(uniqueName(), new int[]{ 1, 2 }, MotorVendor.CTRE_TALONFX).build();
+        assertThrows(IllegalArgumentException.class, () -> new MechanismUnit(cfg, FakeMotorIO.withId(1)));
     }
 
     @Test
     void encoderSyncCorrectsFollowerOutsideDeadband() {
         FakeMotorIO leader = FakeMotorIO.withId(1), follower = FakeMotorIO.withId(2);
-        mechanismUnit unit = new mechanismUnit(
-            new mechanismConfig.Builder(uniqueName(), new int[]{ 1, 2 }, MotorVendor.CTRE_TALONFX)
-                .withFollowMode(motorConstants.FollowMode.ENCODER_SYNC, new boolean[]{ false })
+        MechanismUnit unit = new MechanismUnit(
+            new MechanismConfig.Builder(uniqueName(), new int[]{ 1, 2 }, MotorVendor.CTRE_TALONFX)
+                .withFollowMode(MotorConstants.FollowMode.ENCODER_SYNC, new boolean[]{ false })
                 .withEncoderSync(0.05, 0.5)
                 .build(),
             leader, follower);
@@ -165,7 +165,7 @@ class mechanismUnitTest {
     @Test
     void travelLimitLatchesAfterStallCyclesThenClearsWhenReversed() {
         FakeMotorIO leader = FakeMotorIO.withId(1);
-        mechanismUnit unit = new mechanismUnit(single()
+        MechanismUnit unit = new MechanismUnit(single()
             .withLeadTravelLimits(30.0, 0.1, Double.NaN, Double.NaN)
             .withStallDetectionCycles(3)
             .build(), leader);
@@ -191,7 +191,7 @@ class mechanismUnitTest {
     @Test
     void transientCurrentSpikeDoesNotLatch() {
         FakeMotorIO leader = FakeMotorIO.withId(1);
-        mechanismUnit unit = new mechanismUnit(single()
+        MechanismUnit unit = new MechanismUnit(single()
             .withLeadTravelLimits(30.0, 0.1, Double.NaN, Double.NaN)
             .withStallDetectionCycles(3)
             .build(), leader);
@@ -211,12 +211,12 @@ class mechanismUnitTest {
     @Test
     void homingDrivesUntilStallThenZeroesEncoder() {
         FakeMotorIO leader = FakeMotorIO.withId(1);
-        mechanismUnit unit = new mechanismUnit(single()
+        MechanismUnit unit = new MechanismUnit(single()
             .withStallDetectionCycles(2)
             .withHomingZeroOffset(-5.0)
             .build(), leader);
 
-        unit.startHoming(mechanismUnit.HomingDirection.NEGATIVE, 0.2, 25.0, 0.05);
+        unit.startHoming(MechanismUnit.HomingDirection.NEGATIVE, 0.2, 25.0, 0.05);
         assertTrue(unit.isHoming());
 
         leader.velocityRps = -1.0;
@@ -243,8 +243,8 @@ class mechanismUnitTest {
     @Test
     void cancelHomingStopsWithoutZeroing() {
         FakeMotorIO leader = FakeMotorIO.withId(1);
-        mechanismUnit unit = new mechanismUnit(single().build(), leader);
-        unit.startHoming(mechanismUnit.HomingDirection.POSITIVE, 0.3, 25.0, 0.05);
+        MechanismUnit unit = new MechanismUnit(single().build(), leader);
+        unit.startHoming(MechanismUnit.HomingDirection.POSITIVE, 0.3, 25.0, 0.05);
         leader.velocityRps = 2.0;
         unit.updateHoming();
         assertEquals(0.3, leader.lastDutyCycle, EPS);
@@ -259,7 +259,7 @@ class mechanismUnitTest {
     @Test
     void isAtSetpointUsesDeadbandInCommandUnits() {
         FakeMotorIO leader = FakeMotorIO.withId(1);
-        mechanismUnit unit = new mechanismUnit(single().withSetpointDeadband(2.0).build(), leader);
+        MechanismUnit unit = new MechanismUnit(single().withSetpointDeadband(2.0).build(), leader);
         unit.setPosition(90.0);
         leader.positionRot = 0.25;
         assertTrue(unit.isAtSetpoint());
@@ -274,7 +274,7 @@ class mechanismUnitTest {
     @Test
     void isAtSetpointFalseWithoutDeadband() {
         FakeMotorIO leader = FakeMotorIO.withId(1);
-        mechanismUnit unit = new mechanismUnit(single().build(), leader);
+        MechanismUnit unit = new MechanismUnit(single().build(), leader);
         unit.setPosition(0.0);
         assertFalse(unit.isAtSetpoint());
     }
@@ -284,8 +284,8 @@ class mechanismUnitTest {
     @Test
     void dashboardGainChangeIsPushedToController() {
         FakeMotorIO leader = FakeMotorIO.withId(1);
-        mechanismConfig cfg = single().withPID(new double[]{ 1, 0, 0, 0, 0, 0 }).build();
-        mechanismUnit unit = new mechanismUnit(cfg, leader);
+        MechanismConfig cfg = single().withPID(new double[]{ 1, 0, 0, 0, 0, 0 }).build();
+        MechanismUnit unit = new MechanismUnit(cfg, leader);
 
         unit.setPosition(0.0);
         assertNull(leader.lastGains, "unchanged gains must not be re-sent");
@@ -298,13 +298,13 @@ class mechanismUnitTest {
     @Test
     void verifyCoversLeaderAndEncoderSyncFollowersOnly() {
         FakeMotorIO a = FakeMotorIO.withId(1), b = FakeMotorIO.withId(2), c = FakeMotorIO.withId(3);
-        mechanismConfig cfg = new mechanismConfig.Builder(uniqueName(), new int[]{ 1, 2, 3 }, MotorVendor.CTRE_TALONFX)
+        MechanismConfig cfg = new MechanismConfig.Builder(uniqueName(), new int[]{ 1, 2, 3 }, MotorVendor.CTRE_TALONFX)
             .withFollowerConfig(
-                new motorConstants.FollowMode[]{ motorConstants.FollowMode.MECHANICAL,
-                                                 motorConstants.FollowMode.ENCODER_SYNC },
+                new MotorConstants.FollowMode[]{ MotorConstants.FollowMode.MECHANICAL,
+                                                 MotorConstants.FollowMode.ENCODER_SYNC },
                 new boolean[]{ false, false }, new int[]{ 0, 0 })
             .build();
-        List<ConfigVerifyResult> results = new mechanismUnit(cfg, a, b, c).verifyConfig();
+        List<ConfigVerifyResult> results = new MechanismUnit(cfg, a, b, c).verifyConfig();
 
         assertEquals(2, results.size());
         assertEquals(cfg.name + " Leader", results.get(0).deviceName);

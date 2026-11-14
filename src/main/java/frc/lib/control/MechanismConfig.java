@@ -3,16 +3,16 @@ package frc.lib.control;
 import java.util.Arrays;
 
 import frc.lib.control.ff.FF;
-import frc.lib.control.ff.ffProvider;
+import frc.lib.control.ff.FFProvider;
 import frc.lib.hardware.motor.MotorIOConfig;
 import frc.lib.hardware.motor.MotorVendor;
 
 /**
- * mechanismConfig.java
- * PATH: src/main/java/frc/lib/control/mechanismConfig.java
+ * MechanismConfig.java
+ * PATH: src/main/java/frc/lib/control/MechanismConfig.java
  *
- * Immutable configuration object for a mechanismUnit. Build one with the
- * inner Builder, then pass it to mechanismUnit.create().
+ * Immutable configuration object for a MechanismUnit. Build one with the
+ * inner Builder, then pass it to MechanismUnit.create().
  *
  * ─── UNIT CONTRACT AT THIS INTERFACE ─────────────────────────────────────────
  *   Position         : degrees  (mechanism shaft, after gear ratio)
@@ -44,10 +44,10 @@ import frc.lib.hardware.motor.MotorVendor;
  *   Tier 1 (on-controller kS/kV/kA): in the pid[] array at indices 3/4/5.
  *   Tier 2 (Rio-computed, self-contained): tier2FF lambda.
  *   Tier 3 (Rio-computed, cross-system): tier3FF lambda.
- *   See ffProvider.java for full documentation and examples.
+ *   See FFProvider.java for full documentation and examples.
  *   Physics-based factories: FF.rotatingArm(), multiStageElevator(),
  *     pivotingElevator(), springTurret(), gyroscopicTurret().
- *   Convenience factory for no-FF case: mechanismConfig.noFF().
+ *   Convenience factory for no-FF case: MechanismConfig.noFF().
  *
  * ─── MOTION PROFILE ──────────────────────────────────────────────────────────
  *   Set motionCruiseVelocityRps > 0 to activate motion profiling.
@@ -57,7 +57,7 @@ import frc.lib.hardware.motor.MotorVendor;
  *   Leave at 0 to use raw closed-loop without profile (velocity control
  *   typically does not need a cruise velocity, only acceleration).
  */
-public final class mechanismConfig {
+public final class MechanismConfig {
 
     // ── Identity ──────────────────────────────────────────────────────────────
 
@@ -83,7 +83,7 @@ public final class mechanismConfig {
      * Use withFollowMode() to set all followers to the same mode,
      * or withFollowerConfig() for per-follower topology.
      */
-    public final motorConstants.FollowMode[] followerModes;
+    public final MotorConstants.FollowMode[] followerModes;
 
     /**
      * Leader index per follower (0-based index into canIds[]).
@@ -177,10 +177,10 @@ public final class mechanismConfig {
      * Tier-2 feed-forward: Rio-computed, self-contained.
      * Receives (positionDeg, velocityRps, accelRpss) — all from this mechanism.
      * Must not capture external subsystem state. Default: noFF() — returns 0.
-     * See ffProvider.java for examples and mechanismConfig.armFF() / elevatorFF()
+     * See FFProvider.java for examples and MechanismConfig.armFF() / elevatorFF()
      * for convenience factories.
      */
-    public final ffProvider tier2FF;
+    public final FFProvider tier2FF;
 
     /**
      * Tier-3 feed-forward: Rio-computed, may capture external subsystem references.
@@ -188,12 +188,12 @@ public final class mechanismConfig {
      * closure at construction time in RobotContainer.
      * Default: noFF() — returns 0.
      */
-    public final ffProvider tier3FF;
+    public final FFProvider tier3FF;
 
     // ── Setpoint tracking ─────────────────────────────────────────────────────
 
     /**
-     * Tolerance used by mechanismUnit.isAtSetpoint().
+     * Tolerance used by MechanismUnit.isAtSetpoint().
      * For position mechanisms: degrees (mechanism shaft).
      * For velocity mechanisms: rotations/second (mechanism shaft).
      * Default: 0.0 (disabled — isAtSetpoint() always returns false until set).
@@ -209,11 +209,11 @@ public final class mechanismConfig {
     // ── Encoder sync (ENCODER_SYNC follow mode only) ──────────────────────────
 
     /** Error threshold before sync correction activates (rotations, mechanism shaft).
-     *  Default: motorConstants.ENCODER_SYNC_DEADBAND_ROT */
+     *  Default: MotorConstants.ENCODER_SYNC_DEADBAND_ROT */
     public final double encoderSyncDeadbandRot;
 
     /** Proportional gain for sync correction (duty cycle per rotation of error).
-     *  Output clamped to [-1.0, 1.0]. Default: motorConstants.ENCODER_SYNC_KP_DEFAULT */
+     *  Output clamped to [-1.0, 1.0]. Default: MotorConstants.ENCODER_SYNC_KP_DEFAULT */
     public final double encoderSyncKp;
 
     // ── End-of-travel stall detection thresholds ──────────────────────────────
@@ -287,7 +287,7 @@ public final class mechanismConfig {
      * {@link FF}: rotatingArm(), multiStageElevator(), pivotingElevator(),
      * springTurret(), gyroscopicTurret().
      */
-    public static ffProvider noFF() {
+    public static FFProvider noFF() {
         return FF.none();
     }
 
@@ -306,7 +306,7 @@ public final class mechanismConfig {
      */
     public MotorIOConfig motorConfig(int index) {
         if (index < 0 || index >= canIds.length)
-            throw new IllegalArgumentException("mechanismConfig '" + name + "': motor index "
+            throw new IllegalArgumentException("MechanismConfig '" + name + "': motor index "
                                                + index + " out of range for " + canIds.length + " motors");
         MotorIOConfig.Builder b = MotorIOConfig.builder(canIds[index], vendors[index])
             .withBrakeOnNeutral(brakeOnNeutral)
@@ -320,7 +320,7 @@ public final class mechanismConfig {
              .withGains(pid)
              .withSoftLimits(softLimitReverseDeg / 360.0, softLimitForwardDeg / 360.0)
              .withMotionProfile(motionCruiseVelocityRps, motionAccelerationRpss, motionJerkRpss3);
-        } else if (followModeOf(index) == motorConstants.FollowMode.ENCODER_SYNC) {
+        } else if (followModeOf(index) == MotorConstants.FollowMode.ENCODER_SYNC) {
             b.withInverted(isFollowerInverted(index));
         }
         return b.build();
@@ -337,9 +337,9 @@ public final class mechanismConfig {
     }
 
     /** Follow mode of motor {@code index} (1..n). NONE when unspecified. */
-    public motorConstants.FollowMode followModeOf(int index) {
+    public MotorConstants.FollowMode followModeOf(int index) {
         return index - 1 < followerModes.length
-            ? followerModes[index - 1] : motorConstants.FollowMode.NONE;
+            ? followerModes[index - 1] : MotorConstants.FollowMode.NONE;
     }
 
     /** Short roster description, e.g. "2× REV SparkMax | CAN [20, 21]". */
@@ -352,7 +352,7 @@ public final class mechanismConfig {
     // Private constructor — use Builder
     // ─────────────────────────────────────────────────────────────────────────
 
-    private mechanismConfig(Builder b) {
+    private MechanismConfig(Builder b) {
         this.name                    = b.name;
         this.canIds                  = b.canIds;
         this.vendors                 = b.vendors;
@@ -442,7 +442,7 @@ public final class mechanismConfig {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Fluent builder for mechanismConfig.
+     * Fluent builder for MechanismConfig.
      *
      * Required: name, canIds, vendors.
      * All other fields have safe defaults appropriate for a single-motor mechanism
@@ -450,7 +450,7 @@ public final class mechanismConfig {
      *
      * Example — single CTRE leader, arm with gravity compensation:
      * <pre>{@code
-     * mechanismConfig cfg = new mechanismConfig.Builder(
+     * MechanismConfig cfg = new MechanismConfig.Builder(
      *         "Shoulder", new int[]{ 15 }, MotorVendor.CTRE_TALONFX)
      *     .withGearRatio(100.0)
      *     .withPID(new double[]{ 0.5, 0, 0.01, 0.15, 0.12, 0 })
@@ -458,20 +458,20 @@ public final class mechanismConfig {
      *     .withSoftLimits(-10.0, 220.0)
      *     .withCurrentLimits(40, 80)
      *     .withTier2FF(FF.rotatingArm(
-     *         motorModels.NEO, 100.0, 3.5, 12.0, new double[0], new double[0], null))
+     *         MotorModels.NEO, 100.0, 3.5, 12.0, new double[0], new double[0], null))
      *     .build();
      * }</pre>
      *
      * Example — two REV SparkMax followers (mechanical), vertical elevator:
      * <pre>{@code
-     * mechanismConfig cfg = new mechanismConfig.Builder(
+     * MechanismConfig cfg = new MechanismConfig.Builder(
      *         "Elevator", new int[]{ 20, 21 }, MotorVendor.REV_SPARKMAX)
-     *     .withFollowMode(motorConstants.FollowMode.MECHANICAL, new boolean[]{ false })
+     *     .withFollowMode(MotorConstants.FollowMode.MECHANICAL, new boolean[]{ false })
      *     .withGearRatio(20.0)
      *     .withPID(new double[]{ 0.1, 0, 0, 0.1, 0, 0 })
      *     .withMotionProfile(40, 80, 0)
      *     .withTier3FF(FF.multiStageElevator(
-     *         motorModels.NEO, 20.0, 0.75, 8.0, new double[0], 0.0, 0.0,
+     *         MotorModels.NEO, 20.0, 0.75, 8.0, new double[0], 0.0, 0.0,
      *         new double[0], null, () -> 90.0))
      *     .build();
      * }</pre>
@@ -485,7 +485,7 @@ public final class mechanismConfig {
 
         // Optional — defaults
         private boolean[] followerInverted             = new boolean[0];
-        private motorConstants.FollowMode[] followerModes        = new motorConstants.FollowMode[0];
+        private MotorConstants.FollowMode[] followerModes        = new MotorConstants.FollowMode[0];
         private int[] followerLeaderIndices            = new int[0];
         private double gearRatio                  = 1.0;
         private boolean inverted                  = false;
@@ -499,12 +499,12 @@ public final class mechanismConfig {
         private double motionCruiseVelocityRps    = 0.0;
         private double motionAccelerationRpss     = 0.0;
         private double motionJerkRpss3            = 0.0;
-        private ffProvider tier2FF                = noFF();
-        private ffProvider tier3FF                = noFF();
+        private FFProvider tier2FF                = noFF();
+        private FFProvider tier3FF                = noFF();
         private double setpointDeadband           = 0.0;
         private boolean brakeOnNeutral            = true;
-        private double encoderSyncDeadbandRot     = motorConstants.ENCODER_SYNC_DEADBAND_ROT;
-        private double encoderSyncKp              = motorConstants.ENCODER_SYNC_KP_DEFAULT;
+        private double encoderSyncDeadbandRot     = MotorConstants.ENCODER_SYNC_DEADBAND_ROT;
+        private double encoderSyncKp              = MotorConstants.ENCODER_SYNC_KP_DEFAULT;
         private double leadLowerCurrentAmps       = Double.NaN;
         private double leadLowerMaxSpeedRps       = Double.NaN;
         private double leadUpperCurrentAmps       = Double.NaN;
@@ -527,16 +527,16 @@ public final class mechanismConfig {
          */
         public Builder(String name, int[] canIds, MotorVendor[] vendors) {
             if (name == null || name.isEmpty())
-                throw new IllegalArgumentException("mechanismConfig: name must not be empty");
+                throw new IllegalArgumentException("MechanismConfig: name must not be empty");
             if (canIds == null || canIds.length == 0)
-                throw new IllegalArgumentException("mechanismConfig: canIds must not be empty");
+                throw new IllegalArgumentException("MechanismConfig: canIds must not be empty");
             if (vendors == null || vendors.length != canIds.length)
                 throw new IllegalArgumentException(
-                    "mechanismConfig: vendors[] must be same length as canIds[]");
+                    "MechanismConfig: vendors[] must be same length as canIds[]");
             for (int i = 1; i < vendors.length; i++) {
                 if (vendors[i] != vendors[0])
                     throw new IllegalArgumentException(
-                        "mechanismConfig '" + name + "': mixed vendors are not supported. "
+                        "MechanismConfig '" + name + "': mixed vendors are not supported. "
                         + "Motor 0 is " + vendors[0] + " but motor " + i + " is " + vendors[i]
                         + ". All motors in a mechanism must use the same vendor.");
             }
@@ -568,10 +568,10 @@ public final class mechanismConfig {
          * @param mode             follow mode applied to every follower
          * @param followerInverted inversion per follower, parallel to canIds[1..n]
          */
-        public Builder withFollowMode(motorConstants.FollowMode mode, boolean[] followerInverted) {
+        public Builder withFollowMode(MotorConstants.FollowMode mode, boolean[] followerInverted) {
             int count = canIds.length - 1;
             this.followerInverted       = followerInverted;
-            this.followerModes          = new motorConstants.FollowMode[count];
+            this.followerModes          = new MotorConstants.FollowMode[count];
             this.followerLeaderIndices  = new int[count];
             for (int i = 0; i < count; i++) {
                 this.followerModes[i]         = mode;
@@ -592,24 +592,24 @@ public final class mechanismConfig {
          * @param leaderIndices      0-based index into canIds[] that each follower tracks.
          *                           0 = main leader. N = canIds[N] (follower-of-follower).
          */
-        public Builder withFollowerConfig(motorConstants.FollowMode[] modes,
+        public Builder withFollowerConfig(MotorConstants.FollowMode[] modes,
                                           boolean[] followerInverted,
                                           int[] leaderIndices) {
             int count = canIds.length - 1;
             if (modes.length != count || followerInverted.length != count
                     || leaderIndices.length != count)
                 throw new IllegalArgumentException(
-                    "mechanismConfig '" + name + "': withFollowerConfig arrays must each have "
+                    "MechanismConfig '" + name + "': withFollowerConfig arrays must each have "
                     + "length canIds.length - 1 (" + count + ").");
             for (int i = 0; i < count; i++) {
                 if (leaderIndices[i] < 0 || leaderIndices[i] >= canIds.length)
                     throw new IllegalArgumentException(
-                        "mechanismConfig '" + name + "': followerLeaderIndices[" + i + "] = "
+                        "MechanismConfig '" + name + "': followerLeaderIndices[" + i + "] = "
                         + leaderIndices[i] + " is out of range for canIds length "
                         + canIds.length + ".");
                 if (leaderIndices[i] == i + 1)
                     throw new IllegalArgumentException(
-                        "mechanismConfig '" + name + "': followerLeaderIndices[" + i
+                        "MechanismConfig '" + name + "': followerLeaderIndices[" + i
                         + "] points to itself (canIds[" + (i + 1) + "]).");
             }
             this.followerModes         = modes;
@@ -637,7 +637,7 @@ public final class mechanismConfig {
         public Builder withPID(double[] pid) {
             if (pid == null || pid.length != 6)
                 throw new IllegalArgumentException(
-                    "mechanismConfig: pid[] must have exactly 6 elements {kP, kI, kD, kS, kV, kA}");
+                    "MechanismConfig: pid[] must have exactly 6 elements {kP, kI, kD, kS, kV, kA}");
             this.pid = pid;
             return this;
         }
@@ -692,9 +692,9 @@ public final class mechanismConfig {
 
         /**
          * Set tier-2 feed-forward lambda (self-contained, no external subsystem refs).
-         * Use mechanismConfig.armFF(), elevatorFF(), or noFF() for common cases.
+         * Use MechanismConfig.armFF(), elevatorFF(), or noFF() for common cases.
          */
-        public Builder withTier2FF(ffProvider provider) {
+        public Builder withTier2FF(FFProvider provider) {
             this.tier2FF = provider;
             return this;
         }
@@ -703,7 +703,7 @@ public final class mechanismConfig {
          * Set tier-3 feed-forward lambda (may close over external subsystem references).
          * Build this lambda in RobotContainer where all subsystem references exist.
          */
-        public Builder withTier3FF(ffProvider provider) {
+        public Builder withTier3FF(FFProvider provider) {
             this.tier3FF = provider;
             return this;
         }
@@ -783,7 +783,7 @@ public final class mechanismConfig {
         public Builder withStallDetectionCycles(int cycles) {
             if (cycles < 1)
                 throw new IllegalArgumentException(
-                    "mechanismConfig '" + name + "': stallDetectionCycles must be >= 1");
+                    "MechanismConfig '" + name + "': stallDetectionCycles must be >= 1");
             this.stallDetectionCycles = cycles;
             return this;
         }
@@ -826,9 +826,9 @@ public final class mechanismConfig {
             return this;
         }
 
-        /** Build and return the immutable mechanismConfig. */
-        public mechanismConfig build() {
-            return new mechanismConfig(this);
+        /** Build and return the immutable MechanismConfig. */
+        public MechanismConfig build() {
+            return new MechanismConfig(this);
         }
     }
 }

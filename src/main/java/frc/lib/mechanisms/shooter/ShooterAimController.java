@@ -2,21 +2,21 @@ package frc.lib.mechanisms.shooter;
 
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
-import frc.lib.swerve.driveOdometryState;
+import frc.lib.swerve.DriveOdometryState;
 import frc.lib.mechanisms.shooter.ShooterCalculator.ShooterOutput;
-import frc.lib.util.units;
+import frc.lib.util.Units;
 
 /**
- * shooterAimController.java
- * PATH: src/main/java/frc/lib/mechanisms/shooter/shooterAimController.java
+ * ShooterAimController.java
+ * PATH: src/main/java/frc/lib/mechanisms/shooter/ShooterAimController.java
  *
  * Orchestration middleware between the drivetrain, ShooterCalculator, and
- * shooterMechanism. Runs every loop as a SubsystemBase.
+ * ShooterMechanism. Runs every loop as a SubsystemBase.
  *
  * ─── RESPONSIBILITIES ─────────────────────────────────────────────────────────
  * 1. Reads robot pose and odometry state from the drivetrain (AimDriveState) each loop.
  * 2. Calls ShooterCalculator with the live state to produce setpoints.
- * 3. Pushes RPM, hood angle, and (if PHYSICAL_TURRET) turret angle to shooterMechanism.
+ * 3. Pushes RPM, hood angle, and (if PHYSICAL_TURRET) turret angle to ShooterMechanism.
  * 4. Directs the driver drive command (AimDriveModes) into the appropriate drive mode:
  *      STATIC_SHOT    → X-lock (physical turret) or aim-then-lock (swerve turret)
  *      ON_THE_MOVE    → heading-bounded driver control
@@ -33,7 +33,7 @@ import frc.lib.util.units;
  * Target selection:
  *   aimController.setTarget("Hub", targetFeetX, targetFeetY);
  *
- * Ready gate (wire into shooterMechanism.Builder):
+ * Ready gate (wire into ShooterMechanism.Builder):
  *   .withReadyGate(() -> aimController.getLastResult().isHeadingInBounds())
  *
  * ─── TURRET MODES ─────────────────────────────────────────────────────────────
@@ -46,11 +46,11 @@ import frc.lib.util.units;
  *                     Static shot: two-phase — robot aims (POINT_AT) then X-locks.
  *
  * ─── UNIT CONVERSIONS ─────────────────────────────────────────────────────────
- * driveOdometryState is SI (m, m/s, m/s², rad, rad/s, rad/s²).
+ * DriveOdometryState is SI (m, m/s, m/s², rad, rad/s, rad/s²).
  * ShooterCalculator expects English (ft, ft/s, ft/s², deg, deg/s, deg/s²).
- * All conversions use units.java methods at the entry point here.
+ * All conversions use Units.java methods at the entry point here.
  */
-public class shooterAimController extends SubsystemBase {
+public class ShooterAimController extends SubsystemBase {
 
     // =========================================================================
     // Enums
@@ -88,7 +88,7 @@ public class shooterAimController extends SubsystemBase {
         /** True when the robot heading is currently outside headingBoundsDeg. */
         public final boolean headingChangeRequired;
 
-        /** True when shooterMechanism.isReady() — all sub-mechanisms at setpoint. */
+        /** True when ShooterMechanism.isReady() — all sub-mechanisms at setpoint. */
         public final boolean shooterReady;
 
         /** Which mode produced this output. */
@@ -107,7 +107,7 @@ public class shooterAimController extends SubsystemBase {
 
         /**
          * Convenience: returns true when the robot heading is within the bounds
-         * output by ShooterCalculator. Use as a ready gate for shooterMechanism.
+         * output by ShooterCalculator. Use as a ready gate for ShooterMechanism.
          * Returns true when IDLE or when no shooter result is available.
          */
         public boolean isHeadingInBounds() {
@@ -126,7 +126,7 @@ public class shooterAimController extends SubsystemBase {
 
     private final ShooterCalculator    calc;
     private final AimDriveState      drive;
-    private final shooterMechanism     shooter;
+    private final ShooterMechanism     shooter;
     private final AimDriveModes      driveCmd;
     private final TurretMode           turretMode;
 
@@ -197,18 +197,18 @@ public class shooterAimController extends SubsystemBase {
 
     /**
      * @param calc              ShooterCalculator instance.
-     * @param drive             drivetrain state (swerveDrive implements AimDriveState).
-     * @param shooter           shooterMechanism subsystem.
-     * @param driveCmd          driver drive command (driveWithJoysticks implements AimDriveModes).
+     * @param drive             drivetrain state (SwerveDrive implements AimDriveState).
+     * @param shooter           ShooterMechanism subsystem.
+     * @param driveCmd          driver drive command (DriveWithJoysticks implements AimDriveModes).
      * @param turretMode        Whether a physical turret motor exists.
      * @param flipThresholdPct  Fraction of dead-zone width at which the turret
      *                          flips from one parked limit to the other during
      *                          ON_THE_MOVE. 0.5 = midpoint (recommended default).
      */
-    public shooterAimController(
+    public ShooterAimController(
             ShooterCalculator  calc,
             AimDriveState      drive,
-            shooterMechanism   shooter,
+            ShooterMechanism   shooter,
             AimDriveModes      driveCmd,
             TurretMode         turretMode,
             double             flipThresholdPct) {
@@ -224,10 +224,10 @@ public class shooterAimController extends SubsystemBase {
     /**
      * Convenience constructor using the recommended 50% flip threshold.
      */
-    public shooterAimController(
+    public ShooterAimController(
             ShooterCalculator  calc,
             AimDriveState      drive,
-            shooterMechanism   shooter,
+            ShooterMechanism   shooter,
             AimDriveModes      driveCmd,
             TurretMode         turretMode) {
         this(calc, drive, shooter, driveCmd, turretMode, 0.5);
@@ -242,7 +242,7 @@ public class shooterAimController extends SubsystemBase {
      * Call once from RobotContainer when the game piece / goal position is known,
      * or call each loop if the target is dynamic.
      *
-     * @param targetType  String key matching shooterConstants.LOOKUP_TABLE rows.
+     * @param targetType  String key matching ShooterConstants.LOOKUP_TABLE rows.
      * @param targetFeetX Field X of target (feet).
      * @param targetFeetY Field Y of target (feet).
      */
@@ -280,7 +280,7 @@ public class shooterAimController extends SubsystemBase {
 
     /**
      * Returns the most recent aim calculation result.
-     * Use for telemetry and as the shooterMechanism ready gate:
+     * Use for telemetry and as the ShooterMechanism ready gate:
      *   .withReadyGate(() -> aimController.getLastResult().isHeadingInBounds())
      */
     public ShooterAimOutput getLastResult() {
@@ -301,33 +301,33 @@ public class shooterAimController extends SubsystemBase {
 
         // --- 1. Read drivetrain state ---
         edu.wpi.first.math.geometry.Pose2d pose = drive.getPose();
-        driveOdometryState odo = drive.getOdometryState();
-        driveOdometryState.bucket b = odo.blendedState;
+        DriveOdometryState odo = drive.getOdometryState();
+        DriveOdometryState.Bucket b = odo.blendedState;
 
-        double robotX_ft  = units.m_feet(pose.getX());
-        double robotY_ft  = units.m_feet(pose.getY());
+        double robotX_ft  = Units.metersToFeet(pose.getX());
+        double robotY_ft  = Units.metersToFeet(pose.getY());
         double robotHdgDeg = pose.getRotation().getDegrees();
 
         // --- 2. Decompose blended state for ShooterCalculator ---
         // Linear velocity: polar (magnitude + heading) → Cartesian field X/Y in ft/s
-        double linVelX_fps = units.mps_ftps(
+        double linVelX_fps = Units.mpsToFtps(
                 b.linearVelocityMagnitude * Math.cos(b.linearVelocityHeading));
-        double linVelY_fps = units.mps_ftps(
+        double linVelY_fps = Units.mpsToFtps(
                 b.linearVelocityMagnitude * Math.sin(b.linearVelocityHeading));
 
         // Linear acceleration: same decomposition
-        double linAccX_fps2 = units.mps2_ftps2(
+        double linAccX_fps2 = Units.mps2ToFtps2(
                 b.linearAccelerationMagnitude * Math.cos(b.linearAccelerationHeading));
-        double linAccY_fps2 = units.mps2_ftps2(
+        double linAccY_fps2 = Units.mps2ToFtps2(
                 b.linearAccelerationMagnitude * Math.sin(b.linearAccelerationHeading));
 
         // Angular velocity and acceleration: rad/s → deg/s
-        double angVel_degs   = units.rad_deg(b.angularVelocity);
-        double angAccel_degs2 = units.rad_deg(b.angularAcceleration);
+        double angVel_degs   = Units.radToDeg(b.angularVelocity);
+        double angAccel_degs2 = Units.radToDeg(b.angularAcceleration);
 
         // Center of rotation: meters → feet
-        double corX_ft = units.m_feet(b.centerOfRotation[0]);
-        double corY_ft = units.m_feet(b.centerOfRotation[1]);
+        double corX_ft = Units.metersToFeet(b.centerOfRotation[0]);
+        double corY_ft = Units.metersToFeet(b.centerOfRotation[1]);
 
         // --- 3. Determine turret state ---
         double turretAngleDeg  = 0.0;
@@ -338,7 +338,7 @@ public class shooterAimController extends SubsystemBase {
             turretAngleDeg = shooter.getTurretPositionDeg();
             // Convert RPS → deg/s (1 RPS = 360 deg/s)
             turretVelDegS  = shooter.getTurretVelocityRps() * 360.0;
-            // Acceleration not currently exposed by shooterMechanism — use 0
+            // Acceleration not currently exposed by ShooterMechanism — use 0
             turretAccDegS2 = 0.0;
         }
         // SWERVE_AS_TURRET: all turret inputs stay at 0 — robot heading IS the aim direction
@@ -365,7 +365,7 @@ public class shooterAimController extends SubsystemBase {
                     turretVelDegS,  turretAccDegS2);
         }
 
-        // --- 5. Push setpoints to shooterMechanism ---
+        // --- 5. Push setpoints to ShooterMechanism ---
         shooter.setFlywheelRpm(result.rpm);
         shooter.setHoodDeg(result.hoodAngle);
         if (turretMode == TurretMode.PHYSICAL_TURRET) {
@@ -434,7 +434,7 @@ public class shooterAimController extends SubsystemBase {
      *
      * In both cases staticShotLocked latches true once Phase 2 is entered so that
      * minor heading drift after the X-lock does not re-trigger Phase 1. The
-     * readyGate on shooterMechanism handles the case where drift causes the turret
+     * readyGate on ShooterMechanism handles the case where drift causes the turret
      * to fall out of range after locking — isReady() will return false and prevent
      * firing until the driver releases and re-engages the button.
      */
@@ -471,7 +471,7 @@ public class shooterAimController extends SubsystemBase {
     // =========================================================================
 
     /**
-     * Determines the actual turret position command to send to shooterMechanism
+     * Determines the actual turret position command to send to ShooterMechanism
      * during ON_THE_MOVE mode when the robot heading may drift outside the valid
      * aiming window.
      *
@@ -530,7 +530,7 @@ public class shooterAimController extends SubsystemBase {
                 // How far CCW past boundsMin has the heading traveled?
                 // normalizeAngleDeg(boundsMin - robotHdgDeg) is positive when heading
                 // is CCW of boundsMin, handles ±180° wrap correctly.
-                double forwardOvershoot = units.normalizeAngleDeg(boundsMin - robotHdgDeg);
+                double forwardOvershoot = Units.normalizeAngleDeg(boundsMin - robotHdgDeg);
                 if (forwardOvershoot > flipThresholdDeg) {
                     // Heading has crossed the midpoint of the dead zone — flip
                     turretBoundState = TurretBoundState.WAITING_AT_REVERSE_LIMIT;
@@ -544,7 +544,7 @@ public class shooterAimController extends SubsystemBase {
                     return result.turretAngleRobotDeg;
                 }
                 // How far CW past boundsMax has the heading traveled?
-                double reverseOvershoot = units.normalizeAngleDeg(robotHdgDeg - boundsMax);
+                double reverseOvershoot = Units.normalizeAngleDeg(robotHdgDeg - boundsMax);
                 if (reverseOvershoot > flipThresholdDeg) {
                     turretBoundState = TurretBoundState.WAITING_AT_FORWARD_LIMIT;
                     return calc.getTurretSoftLimitMaxDeg();

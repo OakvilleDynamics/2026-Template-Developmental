@@ -23,20 +23,20 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import frc.lib.util.Dashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.constants.pathplannerConstants;
-import frc.robot.constants.canIDs;
-import frc.robot.constants.swerveConstants;
-import frc.robot.constants.visionConstants;
+import frc.robot.constants.PathPlannerConstants;
+import frc.robot.constants.CANIDs;
+import frc.robot.constants.SwerveConstants;
+import frc.robot.constants.VisionConstants;
 import frc.lib.util.RobotLogger;
 import frc.lib.mechanisms.shooter.AimDriveState;
-import frc.lib.swerve.driveInput;
-import frc.lib.swerve.driveOdometryState;
-import frc.lib.swerve.swerveModule;
-import frc.lib.util.units;
+import frc.lib.swerve.DriveInput;
+import frc.lib.swerve.DriveOdometryState;
+import frc.lib.swerve.SwerveModule;
+import frc.lib.util.Units;
 
 /**
- * swerveDrive.java
- * PATH: src/main/java/frc/robot/subsystems/swerveDrive/swerveDrive.java
+ * SwerveDrive.java
+ * PATH: src/main/java/frc/robot/subsystems/swerveDrive/SwerveDrive.java
  *
  * Owns the four swerve modules and IMU. The only way to move the robot
  * is through drive(), drivePointAt(), lockWheelsX(), or stop().
@@ -52,10 +52,10 @@ import frc.lib.util.units;
  *
  * ─── GEOMETRY QUERY ──────────────────────────────────────────────────────────
  * getDimension(String key) — "wheel-base", "frame-perimeter", "bumper-perimeter"
- * Returns dimensionResult with .inches[] and .meters[] fields.
+ * Returns DimensionResult with .inches[] and .meters[] fields.
  *
  * ─── ODOMETRY STATE ──────────────────────────────────────────────────────────
- * getOdometryState() — returns driveOdometryState updated every loop.
+ * getOdometryState() — returns DriveOdometryState updated every loop.
  * Three buckets: encoderState, imuState, blendedState.
  *
  * ─── POINT-AT-TARGET ─────────────────────────────────────────────────────────
@@ -65,18 +65,18 @@ import frc.lib.util.units;
  * ─── X-LOCK ──────────────────────────────────────────────────────────────────
  * lockWheelsX() — sets all four modules to X brace pattern, zero drive speed.
  */
-public class swerveDrive extends SubsystemBase implements AimDriveState {
+public class SwerveDrive extends SubsystemBase implements AimDriveState {
 
     // ─────────────────────────────────────────────────────────────────────────
     // Geometry query result — carries both unit systems
     // ─────────────────────────────────────────────────────────────────────────
 
-    public static class dimensionResult {
+    public static class DimensionResult {
         public final double[] inches;
         public final double[] meters;
-        public dimensionResult(double xMeters, double yMeters) {
+        public DimensionResult(double xMeters, double yMeters) {
             this.meters = new double[]{ xMeters, yMeters };
-            this.inches = new double[]{ units.m_inches(xMeters), units.m_inches(yMeters) };
+            this.inches = new double[]{ Units.metersToInches(xMeters), Units.metersToInches(yMeters) };
         }
     }
 
@@ -90,8 +90,8 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
     // ─────────────────────────────────────────────────────────────────────────
     // Hardware
     // ─────────────────────────────────────────────────────────────────────────
-    private final swerveModule[] modules;
-    private final Pigeon2 imu = new Pigeon2(canIDs.PIGEON2);
+    private final SwerveModule[] modules;
+    private final Pigeon2 imu = new Pigeon2(CANIDs.PIGEON2);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Kinematics and pose estimation
@@ -108,7 +108,7 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
     // ─────────────────────────────────────────────────────────────────────────
     // Odometry state (updated every loop, readable anytime)
     // ─────────────────────────────────────────────────────────────────────────
-    private volatile driveOdometryState currentState = driveOdometryState.zero();
+    private volatile DriveOdometryState currentState = DriveOdometryState.zero();
 
     // Derivative tracking
     private double prevLinVelMag = 0, prevLinVelX = 0, prevLinVelY = 0;
@@ -119,7 +119,7 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
     private Translation2d commandedCoR = new Translation2d();
 
     // Blend weight (encoder vs IMU)
-    private double blendAlpha = swerveConstants.ODOMETRY_BLEND_ALPHA;
+    private double blendAlpha = SwerveConstants.ODOMETRY_BLEND_ALPHA;
 
     // PathPlanner availability — see configureForAutoBuilder()
     private boolean pathPlannerAvailable = false;
@@ -155,8 +155,8 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
      * @param wheelDiamInches  Drive wheel diameter in INCHES
      * @param headingPID       double[3] { kP, kI, kD } — heading lock controller
      */
-    public swerveDrive(
-            swerveModule[] modules,
+    public SwerveDrive(
+            SwerveModule[] modules,
             double[] wheelBaseInches,
             double[] frameInches,
             double[] bumperInches,
@@ -166,12 +166,12 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
         this.modules = modules;
 
         // Convert all geometry to meters on entry
-        this.wheelBaseM       = new double[]{ units.inches_m(wheelBaseInches[0]),
-                                              units.inches_m(wheelBaseInches[1]) };
-        this.framePerimeterM  = new double[]{ units.inches_m(frameInches[0]),
-                                              units.inches_m(frameInches[1]) };
-        this.bumperPerimeterM = new double[]{ units.inches_m(bumperInches[0]),
-                                              units.inches_m(bumperInches[1]) };
+        this.wheelBaseM       = new double[]{ Units.inchesToMeters(wheelBaseInches[0]),
+                                              Units.inchesToMeters(wheelBaseInches[1]) };
+        this.framePerimeterM  = new double[]{ Units.inchesToMeters(frameInches[0]),
+                                              Units.inchesToMeters(frameInches[1]) };
+        this.bumperPerimeterM = new double[]{ Units.inchesToMeters(bumperInches[0]),
+                                              Units.inchesToMeters(bumperInches[1]) };
 
         // Module positions derived from wheel base (center = 0,0)
         Translation2d flPos = new Translation2d( wheelBaseM[0] / 2.0,  wheelBaseM[1] / 2.0);
@@ -186,19 +186,19 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
             getModulePositions(),
             new Pose2d(),
             MatBuilder.fill(Nat.N3(), Nat.N1(),
-                swerveConstants.ODOMETRY_STD_DEV_X,
-                swerveConstants.ODOMETRY_STD_DEV_Y,
-                swerveConstants.ODOMETRY_STD_DEV_THETA),
+                SwerveConstants.ODOMETRY_STD_DEV_X,
+                SwerveConstants.ODOMETRY_STD_DEV_Y,
+                SwerveConstants.ODOMETRY_STD_DEV_THETA),
             MatBuilder.fill(Nat.N3(), Nat.N1(),
-                visionConstants.VISION_STD_DEV_X,
-                visionConstants.VISION_STD_DEV_Y,
-                visionConstants.VISION_STD_DEV_THETA)
+                VisionConstants.VISION_STD_DEV_X,
+                VisionConstants.VISION_STD_DEV_Y,
+                VisionConstants.VISION_STD_DEV_THETA)
         );
 
         // Heading PID — continuous input handles 0/2π wrap cleanly
         this.headingPID = new PIDController(headingPID[0], headingPID[1], headingPID[2]);
         this.headingPID.enableContinuousInput(-Math.PI, Math.PI);
-        this.headingPID.setTolerance(units.deg_rad(1.0));
+        this.headingPID.setTolerance(Units.degToRad(1.0));
 
         headingKpTunable  = Dashboard.tunable("Drive/HeadingPID/kP", headingPID[0]);
         headingKiTunable  = Dashboard.tunable("Drive/HeadingPID/kI", headingPID[1]);
@@ -250,9 +250,9 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
 
     /**
      * Normal driver-controlled drive.
-     * Accepts a driveInput built with ft/s values by driveWithJoysticks.
+     * Accepts a DriveInput built with ft/s values by DriveWithJoysticks.
      */
-    public void drive(driveInput input) {
+    public void drive(DriveInput input) {
         headingLockActive = false;
         commandedCoR = input.getCenterOfRotation();
         ChassisSpeeds fieldRelative = ChassisSpeeds.fromFieldRelativeSpeeds(
@@ -264,14 +264,14 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
     /**
      * Point-at-target drive.
      * Driver controls translation; heading PID controls omega.
-     * The omega field of driveInput is ignored.
+     * The omega field of DriveInput is ignored.
      *
      * @param input           Driver translation (vx/vy used; omega ignored)
      * @param targetFeetX     Field target X in FEET
      * @param targetFeetY     Field target Y in FEET
      * @param offsetDegrees   Heading offset in DEGREES (0 = robot front faces target)
      */
-    public void drivePointAt(driveInput input, double targetFeetX, double targetFeetY,
+    public void drivePointAt(DriveInput input, double targetFeetX, double targetFeetY,
                               double offsetDegrees) {
         drivePointAt(input, targetFeetX, targetFeetY, offsetDegrees, null);
     }
@@ -283,24 +283,24 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
      *                          Pass null to use current odometry pose.
      *                          Wire in PhotonVision pose here when ready.
      */
-    public void drivePointAt(driveInput input, double targetFeetX, double targetFeetY,
+    public void drivePointAt(DriveInput input, double targetFeetX, double targetFeetY,
                               double offsetDegrees, Pose2d futureStatePoseM) {
         headingLockActive = true;
         commandedCoR = input.getCenterOfRotation();
 
-        double targetXm = units.fieldFeet_m(targetFeetX);
-        double targetYm = units.fieldFeet_m(targetFeetY);
+        double targetXm = Units.fieldFeetToMeters(targetFeetX);
+        double targetYm = Units.fieldFeetToMeters(targetFeetY);
 
         Pose2d referencePose = (futureStatePoseM != null) ? futureStatePoseM : getPose();
 
         double dx = targetXm - referencePose.getX();
         double dy = targetYm - referencePose.getY();
-        double desiredHeadingRad = Math.atan2(dy, dx) + units.deg_rad(offsetDegrees);
+        double desiredHeadingRad = Math.atan2(dy, dx) + Units.degToRad(offsetDegrees);
 
         double omegaCorrection = headingPID.calculate(getYaw().getRadians(), desiredHeadingRad);
         omegaCorrection = MathUtil.clamp(omegaCorrection,
-            -swerveConstants.HEADING_PID_MAX_OMEGA,
-             swerveConstants.HEADING_PID_MAX_OMEGA);
+            -SwerveConstants.HEADING_PID_MAX_OMEGA,
+             SwerveConstants.HEADING_PID_MAX_OMEGA);
 
         ChassisSpeeds fieldRelative = ChassisSpeeds.fromFieldRelativeSpeeds(
             input.getVxMps(), input.getVyMps(), omegaCorrection, getYaw()
@@ -309,8 +309,8 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
 
         Dashboard.log("Drive/PointAt/Target X (ft)",     targetFeetX);
         Dashboard.log("Drive/PointAt/Target Y (ft)",     targetFeetY);
-        Dashboard.log("Drive/PointAt/Desired Hdg (deg)", units.rad_deg(desiredHeadingRad));
-        Dashboard.log("Drive/PointAt/Hdg Error (deg)",   units.rad_deg(headingPID.getError()));
+        Dashboard.log("Drive/PointAt/Desired Hdg (deg)", Units.radToDeg(desiredHeadingRad));
+        Dashboard.log("Drive/PointAt/Hdg Error (deg)",   Units.radToDeg(headingPID.getError()));
         Dashboard.log("Drive/PointAt/At Heading",       headingPID.atSetpoint());
     }
 
@@ -334,11 +334,11 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
      * @param maxAbsHeadingDeg   Upper heading bound (degrees, field frame).
      */
     public void driveWithHeadingBound(
-            driveInput input,
+            DriveInput input,
             double minAbsHeadingDeg,
             double maxAbsHeadingDeg) {
 
-        double currentHeadingDeg = units.rad_deg(getYaw().getRadians());
+        double currentHeadingDeg = Units.radToDeg(getYaw().getRadians());
 
         if (currentHeadingDeg < minAbsHeadingDeg || currentHeadingDeg > maxAbsHeadingDeg) {
             // Outside bounds — PID-hold to the nearer bound
@@ -348,12 +348,12 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
             double clampedDeg = currentHeadingDeg < minAbsHeadingDeg
                     ? minAbsHeadingDeg
                     : maxAbsHeadingDeg;
-            double desiredRad = units.deg_rad(clampedDeg);
+            double desiredRad = Units.degToRad(clampedDeg);
 
             double omegaCorrection = headingPID.calculate(getYaw().getRadians(), desiredRad);
             omegaCorrection = MathUtil.clamp(omegaCorrection,
-                    -swerveConstants.HEADING_PID_MAX_OMEGA,
-                     swerveConstants.HEADING_PID_MAX_OMEGA);
+                    -SwerveConstants.HEADING_PID_MAX_OMEGA,
+                     SwerveConstants.HEADING_PID_MAX_OMEGA);
 
             ChassisSpeeds fieldRelative = ChassisSpeeds.fromFieldRelativeSpeeds(
                     input.getVxMps(), input.getVyMps(), omegaCorrection, getYaw());
@@ -376,7 +376,7 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
     /**
      * X-lock defense — sets all four modules to 45° X brace pattern.
      * No drive speed. Robot resists being pushed from any direction.
-     * Called by xLockCommand every loop while defense button is held.
+     * Called by XLockCommand every loop while defense button is held.
      *
      * Wheel angles (robot-relative, 0° = robot front):
      *   FL:  45°    FR: -45°
@@ -394,7 +394,7 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
 
     /** Stops all modules — holds current steer angle, sets drive speed to zero */
     public void stop() {
-        drive(driveInput.stopped());
+        drive(DriveInput.stopped());
     }
 
     /**
@@ -402,8 +402,8 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
      * Called exclusively by PathPlanner via the AutoBuilder lambda — not by driver commands.
      * Unlike drive(), no field-relative yaw rotation is applied; speeds go straight to modules.
      *
-     * Note: this is an intentional exception to the driveInput-only command pattern.
-     * PathPlanner outputs robot-relative speeds directly; routing through driveInput would
+     * Note: this is an intentional exception to the DriveInput-only command pattern.
+     * PathPlanner outputs robot-relative speeds directly; routing through DriveInput would
      * require a coordinate-frame roundtrip for no benefit. See CLAUDE.md.
      *
      * @param speeds Robot-relative ChassisSpeeds from PathPlanner
@@ -424,10 +424,10 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
 
     /**
      * Configures PathPlanner's AutoBuilder using this subsystem's own geometry and state.
-     * Call once from RobotContainer after swerveDrive is constructed, before any path commands.
+     * Call once from RobotContainer after SwerveDrive is constructed, before any path commands.
      *
      * Module positions are recomputed from wheelBaseM — same math as the constructor.
-     * All PathPlanner dependencies are contained within swerveDrive; RobotContainer
+     * All PathPlanner dependencies are contained within SwerveDrive; RobotContainer
      * remains unaware of PathPlanner internals.
      */
     public void configureForAutoBuilder() {
@@ -442,17 +442,17 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
             Translation2d brPos = new Translation2d(-wheelBaseM[0] / 2.0, -wheelBaseM[1] / 2.0);
 
             ModuleConfig moduleConfig = new ModuleConfig(
-                units.inches_m(swerveConstants.WHEEL_DIAMETER_INCHES / 2.0),
-                pathplannerConstants.MAX_PATH_VEL_MPS,
-                pathplannerConstants.WHEEL_COF,
+                Units.inchesToMeters(SwerveConstants.WHEEL_DIAMETER_INCHES / 2.0),
+                PathPlannerConstants.MAX_PATH_VEL_MPS,
+                PathPlannerConstants.WHEEL_COF,
                 DCMotor.getKrakenX60(1),
-                pathplannerConstants.DRIVE_CURRENT_LIMIT_AMPS,
+                PathPlannerConstants.DRIVE_CURRENT_LIMIT_AMPS,
                 1
             );
 
             RobotConfig robotConfig = new RobotConfig(
-                pathplannerConstants.ROBOT_MASS_KG,
-                pathplannerConstants.ROBOT_MOI_KGM2,
+                PathPlannerConstants.ROBOT_MASS_KG,
+                PathPlannerConstants.ROBOT_MOI_KGM2,
                 moduleConfig,
                 flPos, frPos, blPos, brPos
             );
@@ -463,12 +463,12 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
                 this::getRobotRelativeSpeeds,
                 this::driveRobotRelative,
                 new PPHolonomicDriveController(
-                    new PIDConstants(pathplannerConstants.TRANSLATION_PID_kP,
-                                     pathplannerConstants.TRANSLATION_PID_kI,
-                                     pathplannerConstants.TRANSLATION_PID_kD),
-                    new PIDConstants(pathplannerConstants.ROTATION_PID_kP,
-                                     pathplannerConstants.ROTATION_PID_kI,
-                                     pathplannerConstants.ROTATION_PID_kD)
+                    new PIDConstants(PathPlannerConstants.TRANSLATION_PID_kP,
+                                     PathPlannerConstants.TRANSLATION_PID_kI,
+                                     PathPlannerConstants.TRANSLATION_PID_kD),
+                    new PIDConstants(PathPlannerConstants.ROTATION_PID_kP,
+                                     PathPlannerConstants.ROTATION_PID_kI,
+                                     PathPlannerConstants.ROTATION_PID_kD)
                 ),
                 robotConfig,
                 () -> DriverStation.getAlliance()
@@ -495,15 +495,15 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
 
     /**
      * @param key  "wheel-base" | "frame-perimeter" | "bumper-perimeter"
-     * @return dimensionResult with .inches[]{x,y} and .meters[]{x,y}, or null.
+     * @return DimensionResult with .inches[]{x,y} and .meters[]{x,y}, or null.
      */
-    public dimensionResult getDimension(String key) {
+    public DimensionResult getDimension(String key) {
         switch (key) {
-            case "wheel-base":       return new dimensionResult(wheelBaseM[0],       wheelBaseM[1]);
-            case "frame-perimeter":  return new dimensionResult(framePerimeterM[0],  framePerimeterM[1]);
-            case "bumper-perimeter": return new dimensionResult(bumperPerimeterM[0], bumperPerimeterM[1]);
+            case "wheel-base":       return new DimensionResult(wheelBaseM[0],       wheelBaseM[1]);
+            case "frame-perimeter":  return new DimensionResult(framePerimeterM[0],  framePerimeterM[1]);
+            case "bumper-perimeter": return new DimensionResult(bumperPerimeterM[0], bumperPerimeterM[1]);
             default:
-                System.err.println("swerveDrive.getDimension: unknown key '" + key + "'");
+                System.err.println("SwerveDrive.getDimension: unknown key '" + key + "'");
                 return null;
         }
     }
@@ -513,7 +513,7 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
     // ─────────────────────────────────────────────────────────────────────────
 
     /** Returns the full odometry state from last loop. Safe to call from anywhere. */
-    public driveOdometryState getOdometryState() { return currentState; }
+    public DriveOdometryState getOdometryState() { return currentState; }
 
     public Pose2d    getPose()              { return poseEstimator.getEstimatedPosition(); }
     public Rotation2d getYaw() {
@@ -529,7 +529,7 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
      * requested timestamp. Falls back to the chronologically nearest stored entry
      * if the timestamp is outside the buffered window (~80 ms at 50 Hz).
      *
-     * Used by gamePieceVisionSubsystem to back-project game piece detections to
+     * Used by GamePieceVisionSubsystem to back-project game piece detections to
      * field coordinates at the exact moment the camera frame was captured.
      *
      * @param timestampSecs  FPGA timestamp of the camera frame (seconds)
@@ -593,15 +593,15 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
      * @param tagCount        Number of AprilTags used to produce this estimate
      */
     public void addVisionMeasurement(Pose2d pose, double timestampSecs, int tagCount) {
-        int idx = Math.min(tagCount - 1, visionConstants.VISION_STD_DEV_TAG_SCALE.length - 1);
-        double scale = visionConstants.VISION_STD_DEV_TAG_SCALE[idx];
+        int idx = Math.min(tagCount - 1, VisionConstants.VISION_STD_DEV_TAG_SCALE.length - 1);
+        double scale = VisionConstants.VISION_STD_DEV_TAG_SCALE[idx];
         poseEstimator.addVisionMeasurement(
             pose,
             timestampSecs,
             MatBuilder.fill(Nat.N3(), Nat.N1(),
-                visionConstants.VISION_STD_DEV_X     * scale,
-                visionConstants.VISION_STD_DEV_Y     * scale,
-                visionConstants.VISION_STD_DEV_THETA * scale)
+                VisionConstants.VISION_STD_DEV_X     * scale,
+                VisionConstants.VISION_STD_DEV_Y     * scale,
+                VisionConstants.VISION_STD_DEV_THETA * scale)
         );
     }
 
@@ -614,7 +614,7 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
     private void commandModules(ChassisSpeeds speeds, Translation2d cor) {
         lastCommandedSpeeds = speeds;
         SwerveModuleState[] desired = kinematics.toSwerveModuleStates(speeds, cor);
-        SwerveDriveKinematics.desaturateWheelSpeeds(desired, swerveConstants.MAX_DRIVE_SPEED_MPS);
+        SwerveDriveKinematics.desaturateWheelSpeeds(desired, SwerveConstants.MAX_DRIVE_SPEED_MPS);
         for (int i = 0; i < modules.length; i++) {
             desired[i].optimize(modules[i].getState().angle);
             modules[i].setDesiredState(desired[i]);
@@ -637,7 +637,7 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
     // Odometry state computation
     // ─────────────────────────────────────────────────────────────────────────
 
-    private driveOdometryState computeOdometryState(double dt) {
+    private DriveOdometryState computeOdometryState(double dt) {
         ChassisSpeeds enc    = kinematics.toChassisSpeeds(getModuleStates());
         double encVx         = enc.vxMetersPerSecond;
         double encVy         = enc.vyMetersPerSecond;
@@ -657,7 +657,7 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
         double corAx  = (corVx - prevCorVelX) / dt;
         double corAy  = (corVy - prevCorVelY) / dt;
 
-        driveOdometryState.bucket encBucket = new driveOdometryState.bucket(
+        DriveOdometryState.Bucket encBucket = new DriveOdometryState.Bucket(
             encLinVelMag, encLinVelHdg, encLinAccel, encLinAccelHdg,
             encAngVel, encAngAccel,
             new double[]{corX, corY}, new double[]{corVx, corVy}, new double[]{corAx, corAy}
@@ -675,14 +675,14 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
         double imuLinVelMag   = Math.hypot(imuLinVelX, imuLinVelY);
         double imuLinVelHdg   = Math.atan2(imuLinVelY, imuLinVelX);
 
-        driveOdometryState.bucket imuBucket = new driveOdometryState.bucket(
+        DriveOdometryState.Bucket imuBucket = new DriveOdometryState.Bucket(
             imuLinVelMag, imuLinVelHdg, imuLinAccelMag, imuLinAccelHdg,
             imuAngVelRad, imuAngAccel,
             new double[]{corX, corY}, new double[]{corVx, corVy}, new double[]{corAx, corAy}
         );
 
         double a = blendAlpha;
-        driveOdometryState.bucket blended = new driveOdometryState.bucket(
+        DriveOdometryState.Bucket blended = new DriveOdometryState.Bucket(
             a * encLinVelMag  + (1-a) * imuLinVelMag,
             blendAngle(encLinVelHdg, imuLinVelHdg, a),
             a * encLinAccel   + (1-a) * imuLinAccelMag,
@@ -696,7 +696,7 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
         prevAngVel    = encAngVel;    prevImuAngVel = imuAngVelRad;
         prevCorX = corX; prevCorY = corY; prevCorVelX = corVx; prevCorVelY = corVy;
 
-        return new driveOdometryState(encBucket, imuBucket, blended, Timer.getTimestamp());
+        return new DriveOdometryState(encBucket, imuBucket, blended, Timer.getTimestamp());
     }
 
     private double blendAngle(double a1, double a2, double alpha) {
@@ -711,34 +711,34 @@ public class swerveDrive extends SubsystemBase implements AimDriveState {
     // ─────────────────────────────────────────────────────────────────────────
 
     private void publishGeometry() {
-        Dashboard.log("Drive/Geometry/WheelBase X (in)",  units.m_inches(wheelBaseM[0]));
-        Dashboard.log("Drive/Geometry/WheelBase Y (in)",  units.m_inches(wheelBaseM[1]));
-        Dashboard.log("Drive/Geometry/Frame X (in)",      units.m_inches(framePerimeterM[0]));
-        Dashboard.log("Drive/Geometry/Frame Y (in)",      units.m_inches(framePerimeterM[1]));
-        Dashboard.log("Drive/Geometry/Bumper X (in)",     units.m_inches(bumperPerimeterM[0]));
-        Dashboard.log("Drive/Geometry/Bumper Y (in)",     units.m_inches(bumperPerimeterM[1]));
+        Dashboard.log("Drive/Geometry/WheelBase X (in)",  Units.metersToInches(wheelBaseM[0]));
+        Dashboard.log("Drive/Geometry/WheelBase Y (in)",  Units.metersToInches(wheelBaseM[1]));
+        Dashboard.log("Drive/Geometry/Frame X (in)",      Units.metersToInches(framePerimeterM[0]));
+        Dashboard.log("Drive/Geometry/Frame Y (in)",      Units.metersToInches(framePerimeterM[1]));
+        Dashboard.log("Drive/Geometry/Bumper X (in)",     Units.metersToInches(bumperPerimeterM[0]));
+        Dashboard.log("Drive/Geometry/Bumper Y (in)",     Units.metersToInches(bumperPerimeterM[1]));
         Dashboard.log("Drive/Geometry/WheelBase X (m)",   wheelBaseM[0]);
         Dashboard.log("Drive/Geometry/WheelBase Y (m)",   wheelBaseM[1]);
     }
 
     private void publishTelemetry() {
         Pose2d pose = getPose();
-        Dashboard.log("Drive/Pose X (ft)",   units.m_feet(pose.getX()));
-        Dashboard.log("Drive/Pose Y (ft)",   units.m_feet(pose.getY()));
+        Dashboard.log("Drive/Pose X (ft)",   Units.metersToFeet(pose.getX()));
+        Dashboard.log("Drive/Pose Y (ft)",   Units.metersToFeet(pose.getY()));
         Dashboard.log("Drive/Pose X (m)",    pose.getX());
         Dashboard.log("Drive/Pose Y (m)",    pose.getY());
         Dashboard.log("Drive/Heading (deg)", getYaw().getDegrees());
 
-        driveOdometryState s = currentState;
+        DriveOdometryState s = currentState;
         Dashboard.log("Drive/Blended/LinVel (ft-s)",
-            units.mps_ftps(s.blendedState.linearVelocityMagnitude));
+            Units.mpsToFtps(s.blendedState.linearVelocityMagnitude));
         Dashboard.log("Drive/Blended/AngVel (rad-s)", s.blendedState.angularVelocity);
         Dashboard.log("Drive/Blended/CoR X (in)",
-            units.m_inches(s.blendedState.centerOfRotation[0]));
+            Units.metersToInches(s.blendedState.centerOfRotation[0]));
         Dashboard.log("Drive/Blended/CoR Y (in)",
-            units.m_inches(s.blendedState.centerOfRotation[1]));
+            Units.metersToInches(s.blendedState.centerOfRotation[1]));
 
-        for (swerveModule m : modules) m.publishTelemetry();
+        for (SwerveModule m : modules) m.publishTelemetry();
 
         // ── DataLog ───────────────────────────────────────────────────────────
         RobotLogger.drivePoseX.append(pose.getX());

@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Set;
 
 import frc.lib.mechanisms.shooter.ShotProfile.LookupEntry;
-import frc.lib.control.mechanismConfig;
+import frc.lib.control.MechanismConfig;
 
 /**
  * ShooterCalculator.java
@@ -36,13 +36,13 @@ import frc.lib.control.mechanismConfig;
  *
  * ─── OUTPUT ──────────────────────────────────────────────────────────────────
  * ShooterOutput contains:
- *   rpm, hoodAngle         — feed directly to shooterMechanism
+ *   rpm, hoodAngle         — feed directly to ShooterMechanism
  *   turretAngleRobotDeg    — commanded turret angle (robot-relative)
  *   shooterHeadingFieldDeg — absolute field heading from pivot to target
  *   shooterHeadingRobotDeg — same, robot-relative
  *   headingBoundsDeg       — [min, max] absolute robot headings that keep the
  *                            turret within its soft stops; used by
- *                            shooterAimController to bound drive heading
+ *                            ShooterAimController to bound drive heading
  *   warnings               — set of ShooterWarning flags
  */
 public class ShooterCalculator {
@@ -61,12 +61,12 @@ public class ShooterCalculator {
 
     /**
      * Convenience constructor — reads turret soft limits directly from the turret's
-     * mechanismConfig so the values stay in one place.
+     * MechanismConfig so the values stay in one place.
      *
-     * mechanismConfig.softLimitReverseDeg → soft min (most-negative allowed angle)
-     * mechanismConfig.softLimitForwardDeg → soft max (most-positive allowed angle)
+     * MechanismConfig.softLimitReverseDeg → soft min (most-negative allowed angle)
+     * MechanismConfig.softLimitForwardDeg → soft max (most-positive allowed angle)
      *
-     * Hard limits are set equal to the soft limits since mechanismConfig has no
+     * Hard limits are set equal to the soft limits since MechanismConfig has no
      * separate hard-stop field — motor-controller hard limits are enforced in hardware,
      * not here. The TURRET_ANGLE_EXCEEDS_LIMITS warning will therefore fire at the
      * same threshold as the soft limits.
@@ -78,13 +78,13 @@ public class ShooterCalculator {
      * @param profile                 Shot table, pivot geometry, speed warning threshold.
      * @param controlLoopHz           Control loop rate (Hz).
      * @param maxFlightTimeIterations Maximum ToF refinement iterations for OnTheMove.
-     * @param turretConfig            mechanismConfig of the turret sub-mechanism.
+     * @param turretConfig            MechanismConfig of the turret sub-mechanism.
      */
     public ShooterCalculator(
             ShotProfile profile,
             double controlLoopHz,
             int    maxFlightTimeIterations,
-            mechanismConfig turretConfig) {
+            MechanismConfig turretConfig) {
         this(profile, controlLoopHz, maxFlightTimeIterations,
              turretConfig.softLimitReverseDeg,
              turretConfig.softLimitForwardDeg,
@@ -93,7 +93,7 @@ public class ShooterCalculator {
     }
 
     /**
-     * Full constructor — use when turret limits are not backed by a mechanismConfig
+     * Full constructor — use when turret limits are not backed by a MechanismConfig
      * (e.g. SWERVE_AS_TURRET, or unit tests).
      *
      * @param profile                  Shot table, pivot geometry, speed warning threshold.
@@ -157,10 +157,10 @@ public class ShooterCalculator {
 
     public static class ShooterOutput {
 
-        /** Hood angle (degrees). Feed to shooterMechanism.setHoodDeg(). */
+        /** Hood angle (degrees). Feed to ShooterMechanism.setHoodDeg(). */
         public final double hoodAngle;
 
-        /** Flywheel speed (RPM). Feed to shooterMechanism.setFlywheelRpm(). */
+        /** Flywheel speed (RPM). Feed to ShooterMechanism.setFlywheelRpm(). */
         public final double rpm;
 
         /** Which calculation path produced this output. */
@@ -205,7 +205,7 @@ public class ShooterCalculator {
          *   bounds[0] = normalize(aimFieldDeg − softLimitMax)  ← min robot heading
          *   bounds[1] = normalize(aimFieldDeg − softLimitMin)  ← max robot heading
          *
-         * Pass these to driveWithJoysticks.enableHeadingBound() so the driver
+         * Pass these to DriveWithJoysticks.enableHeadingBound() so the driver
          * retains translation freedom while heading stays within the valid window.
          *
          * For swerve-as-turret (softMin == softMax == 0°) the bounds collapse to
@@ -283,7 +283,7 @@ public class ShooterCalculator {
 
     // =========================================================================
     // Soft limit accessors
-    // Used by shooterAimController to command the turret to its wait positions
+    // Used by ShooterAimController to command the turret to its wait positions
     // when the target heading falls outside the reachable window.
     // =========================================================================
 
