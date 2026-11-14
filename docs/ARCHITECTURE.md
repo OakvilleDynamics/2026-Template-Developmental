@@ -14,7 +14,7 @@ A guide to how the robot code is organized, what each piece does, and how they c
 The robot is a **swerve drive** controlled by two flight sticks. It tracks its position on the field using a combination of **wheel encoders** and **AprilTag cameras**, fused together by a **Kalman filter**. A driver can press a button to trigger **autonomous pathfinding** — either to a fixed scoring target or to the nearest detected game piece on the field.
 
 ```
-Driver sticks ──► DriveWithJoysticks ──► DriveInput ──► SwerveDrive ──► 4× SwerveModule
+Driver inputs ──► TeleopDrive ─────────► DriveInput ──► SwerveDrive ──► 4× SwerveModule
                                                               ▲
 PathPlanner ──────────────────────────────────────────────────┘
   ▲                                                           ▲
@@ -62,9 +62,14 @@ src/main/java/frc/robot/
 ├── Constants.java          ← Minimal operator constants
 │
 ├── commands/               ← Things the robot does (driver commands)
-│   ├── DriveWithJoysticks  ← Default: read sticks, drive robot
+│   ├── TeleopDrive         ← Default: read driver inputs, drive robot
 │   ├── XLockCommand        ← Defense: lock wheels in X pattern
 │   └── Autos.java          ← Autonomous routines (stub for now)
+│
+├── controls/               ← Driver controller layouts
+│   ├── DriverInputs        ← Interface TeleopDrive reads (forward, left, rotate, CoR)
+│   ├── FlightStickInputs   ← Two flight sticks
+│   └── XboxInputs          ← One Xbox-style controller
 │
 ├── constants/              ← All tunable numbers in one place
 │   ├── SwerveConstants         ← CAN IDs, gear ratios, speed limits, PID defaults
@@ -106,13 +111,13 @@ src/main/java/frc/robot/
 
 ### How driving works
 
-The driver moves the left stick to translate (move forward/back/strafe) and twists the right stick to rotate. These inputs go into `DriveWithJoysticks`, which reads the joystick axes, applies deadband and input shaping, then builds a `DriveInput` object and hands it to `SwerveDrive`.
+The driver moves the left stick to translate (move forward/back/strafe) and twists the right stick to rotate (or, on an Xbox-style controller, moves the right stick left/right). A `DriverInputs` class turns the controller's raw axes into forward / left / rotate values, so `TeleopDrive` never knows which controller is attached. `TeleopDrive` applies deadband and input shaping, then builds a `DriveInput` object and hands it to `SwerveDrive`. Pick the controller with `DRIVER_CONTROLLER` in `RobotContainer`.
 
 **Field-relative control** means "push stick forward" always moves the robot toward the far field wall — regardless of which way the robot is facing. The code rotates joystick inputs by the robot's current heading before sending them to the wheels.
 
-**Dynamic center of rotation** — the right stick X/Y axis shifts the pivot point of rotation anywhere within the robot's bumper footprint. Centered stick = pivot in place. Full deflection = pivot at a bumper corner. This lets the driver swing around a game piece or defense target.
+**Dynamic center of rotation** (flight sticks only) — the right stick X/Y axis shifts the pivot point of rotation anywhere within the robot's bumper footprint. Centered stick = pivot in place. Full deflection = pivot at a bumper corner. This lets the driver swing around a game piece or defense target.
 
-**Drive modes** (`DriveWithJoysticks.DriveMode`): `NORMAL` (default), `POINT_AT` (heading PID locks to field point), `HEADING_BOUND` (heading PID clamps to window when outside, driver omega passes through when inside), `STATIC_SHOT_LOCK` (X-brace, no translation). `ShooterAimController` drives these transitions — see Shooter Aim System section.
+**Drive modes** (`TeleopDrive.DriveMode`): `NORMAL` (default), `POINT_AT` (heading PID locks to field point), `HEADING_BOUND` (heading PID clamps to window when outside, driver omega passes through when inside), `STATIC_SHOT_LOCK` (X-brace, no translation). `ShooterAimController` drives these transitions — see Shooter Aim System section.
 
 ### `DriveInput` — the one interface rule
 
@@ -284,7 +289,7 @@ The state machine, clustering logic, and PathPlanner wiring are all intake-agnos
 
 ### What it does
 
-When the driver holds a designated button, `PathfindCommand` activates. PathPlanner's AD* algorithm calculates a collision-free path from the robot's current position to the target, executes it, then hands control back to the driver when the button is released. The WPILib command scheduler handles the handoff automatically — `DriveWithJoysticks` is interrupted when pathfinding starts and resumed when it ends.
+When the driver holds a designated button, `PathfindCommand` activates. PathPlanner's AD* algorithm calculates a collision-free path from the robot's current position to the target, executes it, then hands control back to the driver when the button is released. The WPILib command scheduler handles the handoff automatically — `TeleopDrive` is interrupted when pathfinding starts and resumed when it ends.
 
 ### How it knows where to go
 
@@ -589,7 +594,7 @@ ShooterCalculator  (pure math — no hardware refs)
 ShooterAimController  (SubsystemBase — orchestration)
       │
       ├──► ShooterMechanism.setFlywheelRpm() / setHoodDeg() / setTurretDeg()
-      └──► DriveWithJoysticks.enableHeadingBound() / enableStaticShotLock() / clearAimMode()
+      └──► TeleopDrive.enableHeadingBound() / enableStaticShotLock() / clearAimMode()
 ```
 
 ### `ShooterCalculator`
@@ -608,7 +613,7 @@ Pure-math ballistics calculator. No subsystem imports, no hardware access.
 
 ### `ShooterAimController`
 
-Reads drivetrain state → calls `ShooterCalculator` → pushes setpoints to `ShooterMechanism` → sets drive mode on `DriveWithJoysticks`. Runs in `periodic()`.
+Reads drivetrain state → calls `ShooterCalculator` → pushes setpoints to `ShooterMechanism` → sets drive mode on `TeleopDrive`. Runs in `periodic()`.
 
 **Aim modes (set by button bindings):**
 - `STATIC_SHOT` — two-phase: Phase 1 rotates robot into heading window (`enableHeadingBound`), Phase 2 X-locks once in bounds (`enableStaticShotLock`). Swerve-as-turret variant uses `enablePointAt` for Phase 1.
@@ -659,4 +664,4 @@ These are known gaps — in priority order for competition readiness:
 
 ---
 
-*Last updated: 2026 preseason — Ryan + Claude (Code) | MechanismUnit: per-follower mixed topology (withFollowerConfig), follower-of-follower leader indices; FF library: gyroscopicTurret, springTurret direction-aware, friction deadbanding, signed gravity output; ShooterMechanism pre-packaged subsystem; setpointDeadband + isAtSetpoint on MechanismUnit; shooter aim system: ShooterCalculator + ShooterAimController + ShooterConstants, headingBoundsDeg, TurretBoundState OTM machine, readyGate; IMU changed to Pigeon 2.0; DriveWithJoysticks DriveMode enum + HEADING_BOUND + STATIC_SHOT_LOCK modes; driveWithHeadingBound() on SwerveDrive; Units.normalizeAngleDeg()*
+*Last updated: 2026 preseason — Ryan + Claude (Code) | MechanismUnit: per-follower mixed topology (withFollowerConfig), follower-of-follower leader indices; FF library: gyroscopicTurret, springTurret direction-aware, friction deadbanding, signed gravity output; ShooterMechanism pre-packaged subsystem; setpointDeadband + isAtSetpoint on MechanismUnit; shooter aim system: ShooterCalculator + ShooterAimController + ShooterConstants, headingBoundsDeg, TurretBoundState OTM machine, readyGate; IMU changed to Pigeon 2.0; TeleopDrive DriveMode enum + HEADING_BOUND + STATIC_SHOT_LOCK modes; driveWithHeadingBound() on SwerveDrive; Units.normalizeAngleDeg()*

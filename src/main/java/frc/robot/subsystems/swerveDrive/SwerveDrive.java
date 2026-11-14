@@ -250,7 +250,7 @@ public class SwerveDrive extends SubsystemBase implements AimDriveState {
 
     /**
      * Normal driver-controlled drive.
-     * Accepts a DriveInput built with ft/s values by DriveWithJoysticks.
+     * Accepts a DriveInput built with ft/s values by TeleopDrive.
      */
     public void drive(DriveInput input) {
         headingLockActive = false;

@@ -22,11 +22,11 @@ import java.util.function.Supplier;
  * PATH: src/main/java/frc/robot/pathplanning/PathfindCommand.java
  *
  * On-the-fly pathfinding to a field target pose using PathPlanner's AD* algorithm.
- * Requires SwerveDrive — interrupts DriveWithJoysticks on schedule, restores it on end.
+ * Requires SwerveDrive — interrupts TeleopDrive on schedule, restores it on end.
  *
  * ─── USAGE ───────────────────────────────────────────────────────────────────
  * Bind with .whileTrue() in RobotContainer. Button release ends the command and
- * the scheduler automatically resumes DriveWithJoysticks as the default command.
+ * the scheduler automatically resumes TeleopDrive as the default command.
  *
  * ─── TWO-PHASE NAVIGATION ────────────────────────────────────────────────────
  * Currently uses pathfindToPose() — AD* on-the-fly pathfinding only.

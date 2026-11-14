@@ -27,7 +27,7 @@ import frc.lib.util.Units;
  * (0, 0) = robot geometric center — robot pivots in place
  * Positive X = toward robot front
  * Positive Y = toward robot left
- * Bounded to bumper corners by DriveWithJoysticks before being passed here
+ * Bounded to bumper corners by TeleopDrive before being passed here
  */
 public class DriveInput {
 

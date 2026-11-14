@@ -5,7 +5,7 @@ package frc.lib.mechanisms.shooter;
  * PATH: src/main/java/frc/lib/mechanisms/shooter/AimDriveModes.java
  *
  * The drive-mode controls ShooterAimController needs from the robot's driver
- * drive command. Implemented by frc.robot.commands.DriveWithJoysticks; any other
+ * drive command. Implemented by frc.robot.commands.TeleopDrive; any other
  * robot can implement it on its own drive command to reuse the aim controller.
  *
  * Angles in degrees (field-absolute), field coordinates in feet.

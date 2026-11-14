@@ -100,9 +100,14 @@ src/main/java/frc/robot/
 ├── Constants.java                          (minimal — OperatorConstants only)
 │
 ├── commands/
-│   ├── DriveWithJoysticks.java
+│   ├── TeleopDrive.java
 │   ├── XLockCommand.java
 │   └── Autos.java
+│
+├── controls/                               ← driver controller layouts
+│   ├── DriverInputs.java                   ← interface TeleopDrive reads
+│   ├── FlightStickInputs.java              ← two Extreme 3D Pros
+│   └── XboxInputs.java                     ← one Xbox-style controller
 │
 ├── constants/
 │   ├── SwerveConstants.java
@@ -357,9 +362,17 @@ Guard: `tan(verticalAngle) ≤ 0` → skip (piece above camera horizon).
 
 ## Commands
 
-### `DriveWithJoysticks`
+### `TeleopDrive`
 
-Default drive command on `SwerveDrive`. Left stick = field-relative translation (ft/s). Right stick twist = rotation (rad/s). Right stick X/Y = dynamic center of rotation (bounded to bumper corners).
+Default drive command on `SwerveDrive`. Reads driver axes through the `DriverInputs` interface, so it never knows which controller is attached: `forward()`/`left()` = field-relative translation (ft/s), `rotate()` = rotation (rad/s), `corForward()`/`corLeft()` = dynamic center of rotation (bounded to bumper corners).
+
+**Controller layouts** (`frc.robot.controls`, selected by `DRIVER_CONTROLLER` in `RobotContainer`):
+| Class | Controller | Mapping |
+|---|---|---|
+| `FlightStickInputs` | Two Logitech Extreme 3D Pros (USB 0, 1) | Left stick translates; right twist rotates; right X/Y moves CoR; right-stick buttons bound in `RobotContainer` |
+| `XboxInputs` | One Xbox-style controller (USB 0) | Left stick translates; right stick X rotates; no CoR; no button bindings yet |
+
+To add a controller, implement `DriverInputs` (axes in [−1, 1], +forward / +left / +CCW) and add a case to `DRIVER_CONTROLLER`.
 
 **Drive mode enum** (`DriveMode`):
 | Mode | Trigger | Behavior |
@@ -382,7 +395,7 @@ X-brace defense. Commands all four modules to 45° X pattern, zero drive speed. 
 
 ### `PathfindCommand`
 
-On-the-fly AD* pathfinding to a field target using PathPlanner. Requires `SwerveDrive` — preempts `DriveWithJoysticks` via scheduler, restores it on end. Vision staleness is checked at initialize and raised as a dashboard Alert (command still runs on odometry if stale). Currently uses `pathfindToPose()`. TODO: upgrade to `pathfindThenFollowPath()` once `.path` files are authored in PathPlanner GUI.
+On-the-fly AD* pathfinding to a field target using PathPlanner. Requires `SwerveDrive` — preempts `TeleopDrive` via scheduler, restores it on end. Vision staleness is checked at initialize and raised as a dashboard Alert (command still runs on odometry if stale). Currently uses `pathfindToPose()`. TODO: upgrade to `pathfindThenFollowPath()` once `.path` files are authored in PathPlanner GUI.
 
 ### `GamePieceHuntCommand`
 
@@ -400,7 +413,7 @@ Vision-guided autonomous game piece collection. Four modes via `HuntMode` enum:
 - **PATHFINDING:** Polls inner pathfinder via `!pathfinder.isScheduled()`. On arrival: calls `intakeTrigger.run()`, transitions to INTAKING.
 - **INTAKING:** Waits for `intakeComplete.getAsBoolean()` or `INTAKE_TIMEOUT_SECS`. Sequential modes loop back to FINDING; single-target modes transition to DONE.
 
-**Intake decoupling:** Constructor takes `Runnable intakeTrigger` and `BooleanSupplier intakeComplete` — no intake subsystem import. Wire in `RobotContainer` once intake subsystem exists. `addRequirements(drive)` preempts `DriveWithJoysticks`.
+**Intake decoupling:** Constructor takes `Runnable intakeTrigger` and `BooleanSupplier intakeComplete` — no intake subsystem import. Wire in `RobotContainer` once intake subsystem exists. `addRequirements(drive)` preempts `TeleopDrive`.
 
 ### `Autos.java`
 
@@ -449,7 +462,7 @@ Three-layer architecture separating math, hardware, and orchestration:
 |---|---|---|
 | Math | `lib/mechanisms/shooter/ShooterCalculator.java` + `ShotProfile.java` | Pure-math ballistics. No hardware refs. StaticShot + OnTheMove modes with iterative ToF refinement. Outputs `ShooterOutput` including `headingBoundsDeg[2]`. |
 | Hardware | `lib/mechanisms/shooter/ShooterMechanism.java` | Flywheel + optional turret + optional hood. Manages motor setpoints, PID, feed-forward. Exposes `isReady()` (optionally gated by `readyGate`). |
-| Orchestration | `lib/mechanisms/shooter/ShooterAimController.java` | SubsystemBase. Reads drivetrain state via `AimDriveState` (SwerveDrive), calls `ShooterCalculator`, pushes setpoints to `ShooterMechanism`, sets drive mode via `AimDriveModes` (DriveWithJoysticks). |
+| Orchestration | `lib/mechanisms/shooter/ShooterAimController.java` | SubsystemBase. Reads drivetrain state via `AimDriveState` (SwerveDrive), calls `ShooterCalculator`, pushes setpoints to `ShooterMechanism`, sets drive mode via `AimDriveModes` (TeleopDrive). |
 | Constants | `constants/ShooterConstants.java` | Lookup table (`LookupEntry[]`), pivot geometry, speed warning threshold. Turret soft/hard limits live in `MechanismConfig` to avoid duplication. |
 
 ### `ShooterCalculator`

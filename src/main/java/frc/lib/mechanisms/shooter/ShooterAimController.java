@@ -199,7 +199,7 @@ public class ShooterAimController extends SubsystemBase {
      * @param calc              ShooterCalculator instance.
      * @param drive             drivetrain state (SwerveDrive implements AimDriveState).
      * @param shooter           ShooterMechanism subsystem.
-     * @param driveCmd          driver drive command (DriveWithJoysticks implements AimDriveModes).
+     * @param driveCmd          driver drive command (TeleopDrive implements AimDriveModes).
      * @param turretMode        Whether a physical turret motor exists.
      * @param flipThresholdPct  Fraction of dead-zone width at which the turret
      *                          flips from one parked limit to the other during

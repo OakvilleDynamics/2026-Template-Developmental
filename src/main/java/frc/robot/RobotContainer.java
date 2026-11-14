@@ -2,15 +2,19 @@ package frc.robot;
 
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 
 import frc.robot.constants.CANIDs;
 import frc.robot.constants.PortIDs;
-import frc.robot.commands.DriveWithJoysticks;
+import frc.robot.commands.TeleopDrive;
 import frc.robot.commands.XLockCommand;
 import frc.robot.constants.SwerveConstants;
+import frc.robot.controls.DriverInputs;
+import frc.robot.controls.FlightStickInputs;
+import frc.robot.controls.XboxInputs;
 import frc.robot.pathplanning.FieldTargets;
 import frc.robot.pathplanning.GamePieceHuntCommand;
 import frc.robot.pathplanning.GamePieceHuntCommand.HuntMode;
@@ -108,27 +112,34 @@ public class RobotContainer {
     // Controllers
     //==========================================================================
 
-    private final Joystick leftStick  = new Joystick(0);
-    private final Joystick rightStick = new Joystick(1);
+    /** Which controller layout the driver uses. */
+    private enum DriverController {
+        /** Two Logitech Extreme 3D Pro flight sticks on USB ports 0 and 1. */
+        FLIGHT_STICKS,
+        /**
+         * One Xbox-style controller on USB port 0: left stick drives, right
+         * stick X rotates. Driving only — no button bindings yet.
+         */
+        XBOX
+    }
 
-    private final JoystickButton lockToTargetButton  = new JoystickButton(rightStick, 2);
-    private final JoystickButton xLockButton         = new JoystickButton(rightStick, 3);
-    private final JoystickButton pathfindButton      = new JoystickButton(rightStick, 4);
+    /** Change this to switch the driver's controller layout. */
+    private static final DriverController DRIVER_CONTROLLER = DriverController.FLIGHT_STICKS;
 
-    // Game piece hunt — TODO: remap to final 2026 driver layout
-    private final JoystickButton huntNearestButton   = new JoystickButton(rightStick, 5);
-    private final JoystickButton huntSequentialButton = new JoystickButton(rightStick, 6);
-    private final JoystickButton huntClusterButton   = new JoystickButton(rightStick, 7);
-    private final JoystickButton huntSeqClusterButton = new JoystickButton(rightStick, 8);
+    // Driver Station USB ports
+    private static final int LEFT_STICK_PORT  = 0;
+    private static final int RIGHT_STICK_PORT = 1;
+    private static final int XBOX_PORT        = 0;
 
     //==========================================================================
     // Subsystems, commands, calibration tab
     //==========================================================================
 
     private final SwerveDrive              drive;
+    private final DriverInputs             driverInputs;
     private final VisionSubsystem          vision;
     private final GamePieceVisionSubsystem gamePieceVision;
-    private final DriveWithJoysticks       driveCommand;
+    private final TeleopDrive              driveCommand;
     private final XLockCommand             xLock;
     private final PathfindCommand          pathfind;
     private final AprilTagFieldCalTab      calTab;
@@ -189,9 +200,12 @@ public class RobotContainer {
         // Calibration tab receives only VisionSubsystem — single interface
         calTab = new AprilTagFieldCalTab(vision);
 
-        driveCommand = new DriveWithJoysticks(
-            drive, leftStick, rightStick, COR_MAX_X_IN, COR_MAX_Y_IN
-        );
+        driverInputs = switch (DRIVER_CONTROLLER) {
+            case FLIGHT_STICKS -> new FlightStickInputs(
+                new Joystick(LEFT_STICK_PORT), new Joystick(RIGHT_STICK_PORT));
+            case XBOX -> new XboxInputs(new XboxController(XBOX_PORT));
+        };
+        driveCommand = new TeleopDrive(drive, driverInputs, COR_MAX_X_IN, COR_MAX_Y_IN);
         xLock = new XLockCommand(drive);
 
         drive.configureForAutoBuilder();
@@ -255,6 +269,21 @@ public class RobotContainer {
     }
 
     private void configureButtonBindings() {
+        // TODO: add Xbox button bindings; for now the Xbox layout only drives.
+        if (!(driverInputs instanceof FlightStickInputs sticks)) return;
+
+        Joystick rightStick = sticks.rightStick();
+
+        JoystickButton lockToTargetButton   = new JoystickButton(rightStick, 2);
+        JoystickButton xLockButton          = new JoystickButton(rightStick, 3);
+        JoystickButton pathfindButton       = new JoystickButton(rightStick, 4);
+
+        // Game piece hunt — TODO: remap to final 2026 driver layout
+        JoystickButton huntNearestButton    = new JoystickButton(rightStick, 5);
+        JoystickButton huntSequentialButton = new JoystickButton(rightStick, 6);
+        JoystickButton huntClusterButton    = new JoystickButton(rightStick, 7);
+        JoystickButton huntSeqClusterButton = new JoystickButton(rightStick, 8);
+
         lockToTargetButton.whileTrue(Commands.startEnd(
             () -> driveCommand.enablePointAt(TARGET_FEET_X, TARGET_FEET_Y, TARGET_OFFSET_DEG),
             () -> driveCommand.disablePointAt()

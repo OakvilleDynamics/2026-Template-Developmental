@@ -2,34 +2,34 @@ package frc.robot.commands;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.constants.SwerveConstants;
+import frc.robot.controls.DriverInputs;
 import frc.lib.swerve.DriveInput;
 import frc.robot.subsystems.swerveDrive.SwerveDrive;
 import frc.lib.mechanisms.shooter.AimDriveModes;
 import frc.lib.util.Units;
 
 /**
- * DriveWithJoysticks.java
- * PATH: src/main/java/frc/robot/commands/DriveWithJoysticks.java
+ * TeleopDrive.java
+ * PATH: src/main/java/frc/robot/commands/TeleopDrive.java
  *
  * Default drive command. Runs continuously while no other command requires
  * the SwerveDrive subsystem.
  *
- * ─── CONTROL MAPPING (Logitech Extreme 3D Pro) ───────────────────────────────
+ * ─── DRIVER INPUT ────────────────────────────────────────────────────────────
+ * Reads the driver's axes through DriverInputs, so this command does not know
+ * which controller is attached. Controller mappings live in frc.robot.controls:
+ *   FlightStickInputs — two Logitech Extreme 3D Pros (with CoR control)
+ *   XboxInputs        — one Xbox-style controller (no CoR control)
  *
- * LEFT STICK:
- *   Axis 1 (Y, inverted) → vx  — forward/back, field-relative (ft/s)
- *   Axis 0 (X)           → vy  — left/right strafe, field-relative (ft/s)
- *
- * RIGHT STICK:
- *   Axis 2 (twist)       → omega — robot rotation rate (rad/s)
- *   Axis 1 (Y, inverted) → CoR X — center of rotation forward/back (robot-relative)
- *   Axis 0 (X)           → CoR Y — center of rotation left/right (robot-relative)
+ *   forward() → vx    — forward/back, field-relative (ft/s)
+ *   left()    → vy    — left/right strafe, field-relative (ft/s)
+ *   rotate()  → omega — robot rotation rate (rad/s)
+ *   corForward() / corLeft() → center of rotation (robot-relative)
  *
  * ─── CENTER OF ROTATION ──────────────────────────────────────────────────────
- * Right stick X/Y maps linearly to CoR bounds (bumper half-dimensions).
+ * corForward()/corLeft() map linearly to CoR bounds (bumper half-dimensions).
  * Full deflection = CoR at bumper corner in that direction.
  * Stick within deadband = CoR at robot center (0,0) = pivot in place.
  * CoR is always robot-relative — independent of field heading.
@@ -42,24 +42,19 @@ import frc.lib.util.Units;
  * STATIC_SHOT_LOCK — wheels X-braced, no translation; for stationary shooting
  *
  * The ShooterAimController sets the active mode each loop via the enable/clear
- * methods. This is the external driver-input pipeline — joystick values are read
+ * methods. This is the external driver-input pipeline — driver inputs are read
  * every execute() but the output path is governed by the externally-set mode.
  *
  * ─── INPUT SHAPING ───────────────────────────────────────────────────────────
  * squareInput() squares magnitude while preserving sign.
  * Gives finer low-speed control without losing full power at full deflection.
  */
-public class DriveWithJoysticks extends Command implements AimDriveModes {
-
-    // ── Logitech Extreme 3D Pro axis indices ──────────────────────────────────
-    private static final int AXIS_X     = 0;  // stick left/right
-    private static final int AXIS_Y     = 1;  // stick forward/back (inverted)
-    private static final int AXIS_TWIST = 2;  // twist rotation
+public class TeleopDrive extends Command implements AimDriveModes {
 
     // ── Dependencies ──────────────────────────────────────────────────────────
     private final SwerveDrive drive;
-    private final Joystick    leftStick;
-    private final Joystick    rightStick;
+
+    private final DriverInputs inputs;
 
     // ── CoR bounds (meters, converted from inches in constructor) ─────────────
     private final double corMaxX;
@@ -97,24 +92,21 @@ public class DriveWithJoysticks extends Command implements AimDriveModes {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * @param drive       SwerveDrive subsystem
-     * @param leftStick   Left flight stick — translation input
-     * @param rightStick  Right flight stick — rotation, CoR, and button input
-     * @param corMaxXIn   CoR forward/back bound in INCHES (use bumper half-length)
-     * @param corMaxYIn   CoR left/right bound in INCHES (use bumper half-width)
+     * @param drive      SwerveDrive subsystem
+     * @param inputs     Driver axes from the selected controller layout
+     * @param corMaxXIn  CoR forward/back bound in INCHES (use bumper half-length)
+     * @param corMaxYIn  CoR left/right bound in INCHES (use bumper half-width)
      */
-    public DriveWithJoysticks(
+    public TeleopDrive(
             SwerveDrive drive,
-            Joystick leftStick,
-            Joystick rightStick,
+            DriverInputs inputs,
             double corMaxXIn,
             double corMaxYIn) {
 
-        this.drive      = drive;
-        this.leftStick  = leftStick;
-        this.rightStick = rightStick;
-        this.corMaxX    = Units.inchesToMeters(corMaxXIn);
-        this.corMaxY    = Units.inchesToMeters(corMaxYIn);
+        this.drive   = drive;
+        this.inputs  = inputs;
+        this.corMaxX = Units.inchesToMeters(corMaxXIn);
+        this.corMaxY = Units.inchesToMeters(corMaxYIn);
 
         addRequirements(drive);
     }
@@ -186,27 +178,17 @@ public class DriveWithJoysticks extends Command implements AimDriveModes {
     @Override
     public void execute() {
 
-        // ── Left stick: translation (field-relative) ──────────────────────────
-        double lY = applyDeadband(leftStick.getRawAxis(AXIS_Y));
-        double lX = applyDeadband(leftStick.getRawAxis(AXIS_X));
+        // ── Translation (field-relative) ──────────────────────────────────────
+        double vxFtps = squareInput(applyDeadband(inputs.forward())) * SwerveConstants.MAX_DRIVE_SPEED_FPS;
+        double vyFtps = squareInput(applyDeadband(inputs.left()))    * SwerveConstants.MAX_DRIVE_SPEED_FPS;
 
-        // Y axis inverted: push forward = negative raw → positive vx (field forward)
-        double vxFtps =  squareInput(-lY) * SwerveConstants.MAX_DRIVE_SPEED_FPS;
-        double vyFtps = -squareInput( lX) * SwerveConstants.MAX_DRIVE_SPEED_FPS;
+        // ── Rotation ──────────────────────────────────────────────────────────
+        double omega = squareInput(applyDeadband(inputs.rotate())) * SwerveConstants.MAX_ANGULAR_SPEED_RPS;
 
-        // ── Right stick twist: rotation ───────────────────────────────────────
-        double twist = applyDeadband(rightStick.getRawAxis(AXIS_TWIST));
-        double omega = -squareInput(twist) * SwerveConstants.MAX_ANGULAR_SPEED_RPS;
-
-        // ── Right stick X/Y: center of rotation ───────────────────────────────
-        // Push stick forward  → CoR moves toward robot front (+X)
-        // Push stick right    → CoR moves toward robot right (-Y)
-        // Stick centered      → CoR = (0,0) = robot center = pivot in place
-        double rY = applyDeadband(rightStick.getRawAxis(AXIS_Y));
-        double rX = applyDeadband(rightStick.getRawAxis(AXIS_X));
-
-        double corXm = MathUtil.clamp(-rY * corMaxX, -corMaxX, corMaxX);
-        double corYm = MathUtil.clamp(-rX * corMaxY, -corMaxY, corMaxY);
+        // ── Center of rotation (linear, no squaring) ──────────────────────────
+        // Inputs centered → CoR = (0,0) = robot center = pivot in place
+        double corXm = MathUtil.clamp(applyDeadband(inputs.corForward()) * corMaxX, -corMaxX, corMaxX);
+        double corYm = MathUtil.clamp(applyDeadband(inputs.corLeft())    * corMaxY, -corMaxY, corMaxY);
 
         Translation2d centerOfRotation = new Translation2d(corXm, corYm);
 

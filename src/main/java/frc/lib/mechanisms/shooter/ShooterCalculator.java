@@ -205,7 +205,7 @@ public class ShooterCalculator {
          *   bounds[0] = normalize(aimFieldDeg − softLimitMax)  ← min robot heading
          *   bounds[1] = normalize(aimFieldDeg − softLimitMin)  ← max robot heading
          *
-         * Pass these to DriveWithJoysticks.enableHeadingBound() so the driver
+         * Pass these to TeleopDrive.enableHeadingBound() so the driver
          * retains translation freedom while heading stays within the valid window.
          *
          * For swerve-as-turret (softMin == softMax == 0°) the bounds collapse to

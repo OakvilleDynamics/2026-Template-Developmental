@@ -62,7 +62,7 @@ import java.util.function.BooleanSupplier;
  * Wire these in RobotContainer once the intake subsystem exists.
  *
  * ─── REQUIREMENTS ────────────────────────────────────────────────────────────
- * Requires SwerveDrive — preempts DriveWithJoysticks while active.
+ * Requires SwerveDrive — preempts TeleopDrive while active.
  * GamePieceVisionSubsystem is read-only (not declared as a requirement).
  */
 public class GamePieceHuntCommand extends Command {
