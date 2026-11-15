@@ -4,8 +4,8 @@ package frc.lib.hardware.motor;
  * MotorVendor.java
  * PATH: src/main/java/frc/lib/hardware/motor/MotorVendor.java
  *
- * Motor controller vendor. Selects which MotorIO implementation
- * MotorIO.create() returns — changing this value is the only code change
+ * Motor controller vendor. Selects which IMotorIO implementation
+ * IMotorIO.create() returns — changing this value is the only code change
  * needed to move a mechanism or swerve module to a different controller.
  *
  *   CTRE_TALONFX    — Kraken X60, Kraken X44, Minion (via TalonFX)

@@ -18,9 +18,9 @@ import edu.wpi.first.wpilibj.Joystick;
  *   Axis 0 (X)     → center of rotation left/right
  *
  * Raw stick Y is negative when pushed forward and X/twist are positive to the
- * right, so every axis is negated to match the DriverInputs convention.
+ * right, so every axis is negated to match the IDriverInputs convention.
  */
-public class FlightStickInputs implements DriverInputs {
+public class FlightStickInputs implements IDriverInputs {
 
     // ── Logitech Extreme 3D Pro axis indices ──────────────────────────────────
     private static final int AXIS_X     = 0;  // stick left/right

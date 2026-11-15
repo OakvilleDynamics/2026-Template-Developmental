@@ -54,29 +54,29 @@ src/main/java/frc/lib/
 │   ├── Units.java                          ← all unit conversions + normalizeAngleDeg()
 │   ├── Dashboard.java                      ← ALL dashboard output (log / tunable / toggle)
 │   ├── RobotLogger.java
-│   ├── ConfigVerifier.java / ConfigVerifiable.java / ConfigVerifyResult.java
+│   ├── ConfigVerifier.java / IConfigVerifiable.java / ConfigVerifyResult.java
 │
 ├── hardware/                               ← the ONLY place vendor APIs appear
 │   ├── motor/
-│   │   ├── MotorIO.java                    ← one interface for every motor controller
+│   │   ├── IMotorIO.java                    ← one interface for every motor controller
 │   │   ├── MotorIOConfig.java              ← immutable per-controller settings (Builder)
 │   │   ├── MotorVendor.java                ← CTRE_TALONFX | REV_SPARKMAX | REV_SPARKFLEX | THRIFTYBOT_NOVA
 │   │   ├── CTREMotor.java / REVMotor.java / NovaMotor.java
 │   │   └── MotorModels.java                ← motor datasheet constants (kT, stall, free speed)
 │   └── encoder/
-│       ├── AbsoluteEncoderIO.java
+│       ├── IAbsoluteEncoderIO.java
 │       └── ThriftyAnalogEncoder.java / CTRECANcoderEncoder.java / REVThroughBoreEncoder.java
 │
 ├── control/
-│   ├── MechanismUnit.java                  ← leader + followers on MotorIO; FF, ramps, sync, limits, homing
+│   ├── MechanismUnit.java                  ← leader + followers on IMotorIO; FF, ramps, sync, limits, homing
 │   ├── MechanismConfig.java                ← mechanism-level config; derives one MotorIOConfig per motor
 │   ├── MotorConstants.java                 ← FollowMode, loop period, sync defaults
 │   └── ff/
-│       ├── FFProvider.java
+│       ├── IFFProvider.java
 │       └── FF.java                         ← physics FF factories (was MechanismUnit.FF)
 │
 ├── swerve/
-│   ├── SwerveModule.java                   ← takes MotorIO drive/steer + AbsoluteEncoderIO
+│   ├── SwerveModule.java                   ← takes IMotorIO drive/steer + IAbsoluteEncoderIO
 │   ├── SwerveHardware.java                 ← motor/encoder TYPE → MotorIOConfig / encoder
 │   ├── DriveInput.java
 │   └── DriveOdometryState.java
@@ -86,8 +86,8 @@ src/main/java/frc/lib/
     │   ├── ShooterMechanism.java           ← flywheel + optional turret + optional hood; withReadyGate()
     │   ├── ShooterCalculator.java          ← pure-math ballistics; takes a ShotProfile
     │   ├── ShotProfile.java                ← lookup table + pivot geometry + speed warning
-    │   ├── ShooterAimController.java       ← orchestration; talks to AimDriveState / AimDriveModes
-    │   └── AimDriveState.java / AimDriveModes.java
+    │   ├── ShooterAimController.java       ← orchestration; talks to IAimDriveState / IAimDriveModes
+    │   └── IAimDriveState.java / IAimDriveModes.java
     └── elevator/
         └── ElevatorMechanism.java
 
@@ -105,7 +105,7 @@ src/main/java/frc/robot/
 │   └── Autos.java
 │
 ├── controls/                               ← driver controller layouts
-│   ├── DriverInputs.java                   ← interface TeleopDrive reads
+│   ├── IDriverInputs.java                   ← interface TeleopDrive reads
 │   ├── FlightStickInputs.java              ← two Extreme 3D Pros
 │   └── XboxInputs.java                     ← one Xbox-style controller
 │
@@ -125,7 +125,7 @@ src/main/java/frc/robot/
 │
 ├── subsystems/
 │   ├── swerveDrive/
-│   │   └── SwerveDrive.java                (implements AimDriveState; 4-entry pose history ring buffer)
+│   │   └── SwerveDrive.java                (implements IAimDriveState; 4-entry pose history ring buffer)
 │   └── vision/
 │       ├── VisionSubsystem.java
 │       ├── RobotPoseEstimate.java
@@ -168,17 +168,17 @@ User-facing and configuration values are in English units (ft/s, inches, lbs, lb
 
 Defined once in `RobotContainer`. Propagates through the constructor chain to `VisionSubsystem` → `AprilTagFieldCal` → PhotonPoseEstimators. Never hardcode field geometry elsewhere.
 
-### 5. Every motor is a `MotorIO` — nothing above `lib/hardware/` touches vendor APIs
+### 5. Every motor is a `IMotorIO` — nothing above `lib/hardware/` touches vendor APIs
 
-Swerve drive, swerve steer, and every mechanism motor go through the single `MotorIO` interface (`lib/hardware/motor/`). The `MotorVendor` in a `MotorIOConfig` / `MechanismConfig` selects `CTREMotor`, `REVMotor`, or `NovaMotor` — swapping any motor to another vendor is a one-value change. Mechanisms instantiate via `MechanismUnit.create(MechanismConfig)`; swerve modules via `SwerveHardware` + `MotorIO.create()` (see `RobotContainer.buildModule()`). Vendor-only features are reached by casting `MechanismUnit.getLeader()` to the concrete class.
+Swerve drive, swerve steer, and every mechanism motor go through the single `IMotorIO` interface (`lib/hardware/motor/`). The `MotorVendor` in a `MotorIOConfig` / `MechanismConfig` selects `CTREMotor`, `REVMotor`, or `NovaMotor` — swapping any motor to another vendor is a one-value change. Mechanisms instantiate via `MechanismUnit.create(MechanismConfig)`; swerve modules via `SwerveHardware` + `IMotorIO.create()` (see `RobotContainer.buildModule()`). Vendor-only features are reached by casting `MechanismUnit.getLeader()` to the concrete class.
 
-`MotorIO.verifyConfig()` re-applies the motor's FULL configuration before reading it back, so `ConfigVerifier.runAll()` never resets gear ratio, gains, or soft limits to factory defaults.
+`IMotorIO.verifyConfig()` re-applies the motor's FULL configuration before reading it back, so `ConfigVerifier.runAll()` never resets gear ratio, gains, or soft limits to factory defaults.
 
 Feed-forward voltages are computed from first principles using `FF` factories (`lib/control/ff/FF.java`) and motor constants from `MotorModels.java`. Do not use empirical `kG` calibration constants — use the physics-based factories which derive voltages from `stallTorqueNm` and `gearRatio`.
 
 Available factories: `springTurret` (piecewise-linear spring compensation — single calibration table, reverse rotation auto-negates torques, 0V outside calibrated range, deadbanded direction switching), `rotatingArm` (gravity with variable game-piece CG, signed cos output across 0°–180°), `gyroscopicTurret` (Tier 3, compensates flywheel angular momentum resistance to turret rotation — τ = I × ω_flywheel × ω_turret, pairs additively with springTurret), `multiStageElevator` (Tier 3, friction offset deadbanded), `pivotingElevator` (Tier 3, gravity + drivetrain inertia + centripetal, friction offset deadbanded). All unit conversions route through `Units.java` — no inline constants in the FF class.
 
-`MechanismConfig` supports per-follower topology via `withFollowerConfig(modes[], inverted[], leaderIndices[])`. Each follower independently declares MECHANICAL or ENCODER_SYNC mode and which motor in `canIds[]` it tracks — enabling mixed-mode and follower-of-follower chains (e.g. a 4-motor flywheel where two independent sides each have a local mechanical follower). `withFollowMode()` remains available as a convenience for simple same-mode topologies. Nova supports MECHANICAL only (`MechanismUnit` throws at construction if a follower's `MotorIO.supportsEncoderSync()` is false). All motors in one mechanism share a vendor — `new MechanismConfig.Builder(name, canIds, MotorVendor.X)` sets it once. Copy a config with `toBuilder()` (never rebuild field-by-field).
+`MechanismConfig` supports per-follower topology via `withFollowerConfig(modes[], inverted[], leaderIndices[])`. Each follower independently declares MECHANICAL or ENCODER_SYNC mode and which motor in `canIds[]` it tracks — enabling mixed-mode and follower-of-follower chains (e.g. a 4-motor flywheel where two independent sides each have a local mechanical follower). `withFollowMode()` remains available as a convenience for simple same-mode topologies. Nova supports MECHANICAL only (`MechanismUnit` throws at construction if a follower's `IMotorIO.supportsEncoderSync()` is false). All motors in one mechanism share a vendor — `new MechanismConfig.Builder(name, canIds, MotorVendor.X)` sets it once. Copy a config with `toBuilder()` (never rebuild field-by-field).
 
 `MechanismUnit.isAtSetpoint()` compares actual position/velocity against the last commanded setpoint using `config.setpointDeadband`. Requires `withSetpointDeadband()` to be set in the config — warns to DS at construction and on first call otherwise.
 
@@ -210,7 +210,7 @@ send during a match vs. while tuning) belongs.
 
 | Pattern | Convention | Examples |
 |---|---|---|
-| Classes, interfaces, records, enums (and their files) | `UpperCamelCase`; acronyms stay uppercase | `SwerveDrive`, `DriveInput`, `CANIDs`, `FFProvider` |
+| Classes, interfaces, records, enums (and their files) | `UpperCamelCase`; acronyms stay uppercase | `SwerveDrive`, `DriveInput`, `CANIDs`, `IFFProvider` |
 | Proper-noun-prefixed classes | Follow proper noun | `AprilTagFieldCal`, `PhotonCamera` |
 | Constants | `UPPER_SNAKE_CASE` | `MAX_DRIVE_SPEED_MPS`, `WHEEL_COF` |
 | Methods and variables | `lowerCamelCase` | `getPose()`, `addVisionMeasurement()` |
@@ -364,7 +364,7 @@ Guard: `tan(verticalAngle) ≤ 0` → skip (piece above camera horizon).
 
 ### `TeleopDrive`
 
-Default drive command on `SwerveDrive`. Reads driver axes through the `DriverInputs` interface, so it never knows which controller is attached: `forward()`/`left()` = field-relative translation (ft/s), `rotate()` = rotation (rad/s), `corForward()`/`corLeft()` = dynamic center of rotation (bounded to bumper corners).
+Default drive command on `SwerveDrive`. Reads driver axes through the `IDriverInputs` interface, so it never knows which controller is attached: `forward()`/`left()` = field-relative translation (ft/s), `rotate()` = rotation (rad/s), `corForward()`/`corLeft()` = dynamic center of rotation (bounded to bumper corners).
 
 **Controller layouts** (`frc.robot.controls`, selected by `DRIVER_CONTROLLER` in `RobotContainer`):
 | Class | Controller | Mapping |
@@ -372,7 +372,7 @@ Default drive command on `SwerveDrive`. Reads driver axes through the `DriverInp
 | `FlightStickInputs` | Two Logitech Extreme 3D Pros (USB 0, 1) | Left stick translates; right twist rotates; right X/Y moves CoR; right-stick buttons bound in `RobotContainer` |
 | `XboxInputs` | One Xbox-style controller (USB 0) | Left stick translates; right stick X rotates; no CoR; no button bindings yet |
 
-To add a controller, implement `DriverInputs` (axes in [−1, 1], +forward / +left / +CCW) and add a case to `DRIVER_CONTROLLER`.
+To add a controller, implement `IDriverInputs` (axes in [−1, 1], +forward / +left / +CCW) and add a case to `DRIVER_CONTROLLER`.
 
 **Drive mode enum** (`DriveMode`):
 | Mode | Trigger | Behavior |
@@ -462,7 +462,7 @@ Three-layer architecture separating math, hardware, and orchestration:
 |---|---|---|
 | Math | `lib/mechanisms/shooter/ShooterCalculator.java` + `ShotProfile.java` | Pure-math ballistics. No hardware refs. StaticShot + OnTheMove modes with iterative ToF refinement. Outputs `ShooterOutput` including `headingBoundsDeg[2]`. |
 | Hardware | `lib/mechanisms/shooter/ShooterMechanism.java` | Flywheel + optional turret + optional hood. Manages motor setpoints, PID, feed-forward. Exposes `isReady()` (optionally gated by `readyGate`). |
-| Orchestration | `lib/mechanisms/shooter/ShooterAimController.java` | SubsystemBase. Reads drivetrain state via `AimDriveState` (SwerveDrive), calls `ShooterCalculator`, pushes setpoints to `ShooterMechanism`, sets drive mode via `AimDriveModes` (TeleopDrive). |
+| Orchestration | `lib/mechanisms/shooter/ShooterAimController.java` | SubsystemBase. Reads drivetrain state via `IAimDriveState` (SwerveDrive), calls `ShooterCalculator`, pushes setpoints to `ShooterMechanism`, sets drive mode via `IAimDriveModes` (TeleopDrive). |
 | Constants | `constants/ShooterConstants.java` | Lookup table (`LookupEntry[]`), pivot geometry, speed warning threshold. Turret soft/hard limits live in `MechanismConfig` to avoid duplication. |
 
 ### `ShooterCalculator`

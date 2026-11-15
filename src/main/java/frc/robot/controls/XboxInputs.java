@@ -18,9 +18,9 @@ import edu.wpi.first.wpilibj.XboxController;
  * No center-of-rotation control — the robot always pivots about its center.
  *
  * Raw stick Y is negative when pushed forward and X is positive to the right,
- * so every axis is negated to match the DriverInputs convention.
+ * so every axis is negated to match the IDriverInputs convention.
  */
-public class XboxInputs implements DriverInputs {
+public class XboxInputs implements IDriverInputs {
 
     private final XboxController controller;
 

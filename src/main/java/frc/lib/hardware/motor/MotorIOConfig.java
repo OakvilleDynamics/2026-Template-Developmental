@@ -5,9 +5,9 @@ package frc.lib.hardware.motor;
  * PATH: src/main/java/frc/lib/hardware/motor/MotorIOConfig.java
  *
  * Immutable hardware settings for ONE motor controller. Build with
- * MotorIOConfig.builder(canId, vendor), then pass to MotorIO.create().
+ * MotorIOConfig.builder(canId, vendor), then pass to IMotorIO.create().
  *
- * Everything a vendor implementation needs is in this object — no MotorIO
+ * Everything a vendor implementation needs is in this object — no IMotorIO
  * implementation reads robot constants. That is what lets a mechanism be copied
  * into another robot project without dragging this robot's constants along.
  *
@@ -21,7 +21,7 @@ package frc.lib.hardware.motor;
  * ─── GEAR RATIO CONVENTION ───────────────────────────────────────────────────
  *   gearRatio = motor rotations per mechanism shaft rotation (10:1 reduction → 10.0).
  *   Matches Phoenix 6 SensorToMechanismRatio. Applied per vendor so every
- *   MotorIO reads and commands in mechanism-shaft units.
+ *   IMotorIO reads and commands in mechanism-shaft units.
  *
  * ─── VENDOR SUPPORT NOTES ────────────────────────────────────────────────────
  *   statorCurrentLimitAmps : CTRE only (REV/Nova use the supply limit)

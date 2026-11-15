@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-import frc.lib.control.ff.FFProvider;
+import frc.lib.control.ff.IFFProvider;
 import frc.lib.hardware.motor.MotorIOConfig;
 import frc.lib.hardware.motor.MotorVendor;
 
@@ -83,7 +83,7 @@ class MechanismConfigTest {
     void toBuilderPreservesEveryField() {
         // Regression: ElevatorMechanism used to rebuild configs by hand and silently
         // dropped travel limits, homing offset, Nova motor type, and CAN signal rates.
-        FFProvider t2 = (p, v, a) -> 1.0;
+        IFFProvider t2 = (p, v, a) -> 1.0;
         MechanismConfig src = threeMotorElevator()
             .withTier2FF(t2)
             .withLeadTravelLimits(30, 0.1, 40, 0.2)
@@ -96,7 +96,7 @@ class MechanismConfigTest {
             .withEncoderSync(0.02, 0.9)
             .build();
 
-        FFProvider t3 = (p, v, a) -> 2.0;
+        IFFProvider t3 = (p, v, a) -> 2.0;
         MechanismConfig copy = src.toBuilder().withTier3FF(t3).build();
 
         assertSame(t2, copy.tier2FF);

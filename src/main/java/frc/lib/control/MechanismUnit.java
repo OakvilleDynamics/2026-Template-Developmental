@@ -8,8 +8,8 @@ import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import frc.lib.util.Dashboard;
 
-import frc.lib.hardware.motor.MotorIO;
-import frc.lib.util.ConfigVerifiable;
+import frc.lib.hardware.motor.IMotorIO;
+import frc.lib.util.IConfigVerifiable;
 import frc.lib.util.ConfigVerifyResult;
 
 /**
@@ -17,13 +17,13 @@ import frc.lib.util.ConfigVerifyResult;
  * PATH: src/main/java/frc/lib/control/MechanismUnit.java
  *
  * One mechanism's motor group (leader + optional followers) with all shared
- * control logic. Built on MotorIO, so it contains no vendor code — the vendor
+ * control logic. Built on IMotorIO, so it contains no vendor code — the vendor
  * for every motor comes from the MechanismConfig.
  *
  * Instantiate via factory:
  *   MechanismUnit arm = MechanismUnit.create(config);
  *
- * Or with pre-built MotorIOs (unit tests use FakeMotorIO this way):
+ * Or with pre-built IMotorIOs (unit tests use FakeMotorIO this way):
  *   MechanismUnit arm = new MechanismUnit(config, leaderIO, followerIO);
  *
  * Vendor-only features (CTRE torque control, Nova PID slot 1, ...) are reached
@@ -35,7 +35,7 @@ import frc.lib.util.ConfigVerifyResult;
  *   • Finite-difference acceleration estimation (dv/dt)
  *   • Software duty cycle ramp (fallback when hardware ramp unavailable)
  *   • Software motion-profile step limiter (controllers without MotionMagic/MAXMotion)
- *   • PID live-tuning loop (dashboard read-back → MotorIO.applyGains)
+ *   • PID live-tuning loop (dashboard read-back → IMotorIO.applyGains)
  *   • ENCODER_SYNC follower correction (position error → duty cycle output)
  *   • Current-based end-of-travel detection and homing
  *   • DataLog entry lifecycle (per-instance, not static)
@@ -50,7 +50,7 @@ import frc.lib.util.ConfigVerifyResult;
  *   (CommandScheduler.run() context). No synchronization is performed.
  *   The tier-2/3 FF lambdas and all state fields assume single-threaded access.
  */
-public class MechanismUnit implements ConfigVerifiable {
+public class MechanismUnit implements IConfigVerifiable {
 
     // ── Homing direction (public — used in startHoming() calls) ───────────────
 
@@ -67,9 +67,9 @@ public class MechanismUnit implements ConfigVerifiable {
 
     // ── Config + hardware ─────────────────────────────────────────────────────
     protected final MechanismConfig config;
-    private   final MotorIO         leader;
+    private   final IMotorIO         leader;
     /** followers[i] drives canIds[i + 1]. */
-    private   final MotorIO[]       followers;
+    private   final IMotorIO[]       followers;
 
     // ── Live PID gains (read back from the dashboard each loop) ─────────────
     protected double kP, kI, kD, kS, kV, kA;
@@ -160,14 +160,14 @@ public class MechanismUnit implements ConfigVerifiable {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Create a MechanismUnit for the given config, constructing one MotorIO per
+     * Create a MechanismUnit for the given config, constructing one IMotorIO per
      * CAN ID with the vendor named in the config.
      */
     public static MechanismUnit create(MechanismConfig config) {
-        MotorIO   leader    = MotorIO.create(config.motorConfig(0));
-        MotorIO[] followers = new MotorIO[config.canIds.length - 1];
+        IMotorIO   leader    = IMotorIO.create(config.motorConfig(0));
+        IMotorIO[] followers = new IMotorIO[config.canIds.length - 1];
         for (int i = 0; i < followers.length; i++) {
-            followers[i] = MotorIO.create(config.motorConfig(i + 1));
+            followers[i] = IMotorIO.create(config.motorConfig(i + 1));
         }
         return new MechanismUnit(config, leader, followers);
     }
@@ -178,16 +178,16 @@ public class MechanismUnit implements ConfigVerifiable {
 
     /**
      * @param config    mechanism config
-     * @param leader    MotorIO for canIds[0]
-     * @param followers MotorIOs for canIds[1..n], in order
+     * @param leader    IMotorIO for canIds[0]
+     * @param followers IMotorIOs for canIds[1..n], in order
      * @throws IllegalArgumentException if the follower count does not match the
      *         config, or an ENCODER_SYNC follower uses a controller that cannot sync
      */
-    public MechanismUnit(MechanismConfig config, MotorIO leader, MotorIO... followers) {
+    public MechanismUnit(MechanismConfig config, IMotorIO leader, IMotorIO... followers) {
         if (followers.length != config.canIds.length - 1)
             throw new IllegalArgumentException(
                 "MechanismUnit '" + config.name + "': expected " + (config.canIds.length - 1)
-                + " follower MotorIOs, got " + followers.length);
+                + " follower IMotorIOs, got " + followers.length);
 
         this.config     = config;
         this.leader     = leader;
@@ -247,8 +247,8 @@ public class MechanismUnit implements ConfigVerifiable {
         }
     }
 
-    /** MotorIO for canIds[index] (0 = leader). */
-    private MotorIO motorAt(int index) {
+    /** IMotorIO for canIds[index] (0 = leader). */
+    private IMotorIO motorAt(int index) {
         return index == 0 ? leader : followers[index - 1];
     }
 
@@ -471,10 +471,10 @@ public class MechanismUnit implements ConfigVerifiable {
     public final MechanismConfig getConfig() { return config; }
 
     /**
-     * The leader MotorIO. Cast to CTREMotor / REVMotor / NovaMotor for
+     * The leader IMotorIO. Cast to CTREMotor / REVMotor / NovaMotor for
      * vendor-only features. Prefer the MechanismUnit API where possible.
      */
-    public final MotorIO getLeader() { return leader; }
+    public final IMotorIO getLeader() { return leader; }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Shared internal logic
@@ -663,7 +663,7 @@ public class MechanismUnit implements ConfigVerifiable {
         double effUpperCurrent = Double.isNaN(config.followerUpperCurrentAmps) ? config.leadUpperCurrentAmps : config.followerUpperCurrentAmps;
         double effUpperSpeed   = Double.isNaN(config.followerUpperMaxSpeedRps)  ? config.leadUpperMaxSpeedRps  : config.followerUpperMaxSpeedRps;
 
-        MotorIO syncFollower   = followers[encoderSyncFollowerIndex - 1];
+        IMotorIO syncFollower   = followers[encoderSyncFollowerIndex - 1];
         double followerCurrent = syncFollower.getStallDetectionCurrentAmps();
         double followerAbsVel  = Math.abs(syncFollower.getVelocityRps());
 
@@ -859,7 +859,7 @@ public class MechanismUnit implements ConfigVerifiable {
 
         // ── Follower side (ENCODER_SYNC only) ─────────────────────────────────
         if (encoderSyncFollowerIndex > 0 && !followerHomed) {
-            MotorIO syncFollower    = followers[encoderSyncFollowerIndex - 1];
+            IMotorIO syncFollower    = followers[encoderSyncFollowerIndex - 1];
             double followerCurrent  = syncFollower.getStallDetectionCurrentAmps();
             double followerAbsVel   = Math.abs(syncFollower.getVelocityRps());
             boolean followerStalled = followerCurrent >= homingFollowerCurrentAmps
@@ -928,7 +928,7 @@ public class MechanismUnit implements ConfigVerifiable {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // ConfigVerifiable
+    // IConfigVerifiable
     // ─────────────────────────────────────────────────────────────────────────
 
     /**

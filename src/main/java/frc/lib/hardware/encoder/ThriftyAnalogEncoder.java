@@ -6,14 +6,14 @@ import edu.wpi.first.wpilibj.AnalogInput;
  * ThriftyAnalogEncoder.java
  * PATH: src/main/java/frc/lib/hardware/encoder/ThriftyAnalogEncoder.java
  *
- * AbsoluteEncoderIO for the Thrifty absolute analog encoder (0–3.3 V output).
+ * IAbsoluteEncoderIO for the Thrifty absolute analog encoder (0–3.3 V output).
  * Wired to a roboRIO analog port.
  *
  * The mounting-angle offset (the voltage read at the zero direction) is
  * subtracted and the result is normalized to [0, fullScaleVolts) before
  * converting to radians, so zero radians always corresponds to the zero direction.
  */
-public class ThriftyAnalogEncoder implements AbsoluteEncoderIO {
+public class ThriftyAnalogEncoder implements IAbsoluteEncoderIO {
 
     /** Thrifty encoder full-scale output voltage. */
     public static final double DEFAULT_FULL_SCALE_VOLTS = 3.3;

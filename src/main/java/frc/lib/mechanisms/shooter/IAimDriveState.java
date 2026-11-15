@@ -5,13 +5,13 @@ import edu.wpi.first.math.geometry.Pose2d;
 import frc.lib.swerve.DriveOdometryState;
 
 /**
- * AimDriveState.java
- * PATH: src/main/java/frc/lib/mechanisms/shooter/AimDriveState.java
+ * IAimDriveState.java
+ * PATH: src/main/java/frc/lib/mechanisms/shooter/IAimDriveState.java
  *
  * The drivetrain state ShooterAimController reads each loop. Implemented by
  * frc.robot.subsystems.swerveDrive.SwerveDrive; tests implement it with fixed values.
  */
-public interface AimDriveState {
+public interface IAimDriveState {
 
     /** Fused field pose (meters, WPILib convention). */
     Pose2d getPose();

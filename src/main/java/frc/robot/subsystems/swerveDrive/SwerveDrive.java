@@ -28,7 +28,7 @@ import frc.robot.constants.CANIDs;
 import frc.robot.constants.SwerveConstants;
 import frc.robot.constants.VisionConstants;
 import frc.lib.util.RobotLogger;
-import frc.lib.mechanisms.shooter.AimDriveState;
+import frc.lib.mechanisms.shooter.IAimDriveState;
 import frc.lib.swerve.DriveInput;
 import frc.lib.swerve.DriveOdometryState;
 import frc.lib.swerve.SwerveModule;
@@ -65,7 +65,7 @@ import frc.lib.util.Units;
  * ─── X-LOCK ──────────────────────────────────────────────────────────────────
  * lockWheelsX() — sets all four modules to X brace pattern, zero drive speed.
  */
-public class SwerveDrive extends SubsystemBase implements AimDriveState {
+public class SwerveDrive extends SubsystemBase implements IAimDriveState {
 
     // ─────────────────────────────────────────────────────────────────────────
     // Geometry query result — carries both unit systems

@@ -4,10 +4,10 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.constants.SwerveConstants;
-import frc.robot.controls.DriverInputs;
+import frc.robot.controls.IDriverInputs;
 import frc.lib.swerve.DriveInput;
 import frc.robot.subsystems.swerveDrive.SwerveDrive;
-import frc.lib.mechanisms.shooter.AimDriveModes;
+import frc.lib.mechanisms.shooter.IAimDriveModes;
 import frc.lib.util.Units;
 
 /**
@@ -18,7 +18,7 @@ import frc.lib.util.Units;
  * the SwerveDrive subsystem.
  *
  * ─── DRIVER INPUT ────────────────────────────────────────────────────────────
- * Reads the driver's axes through DriverInputs, so this command does not know
+ * Reads the driver's axes through IDriverInputs, so this command does not know
  * which controller is attached. Controller mappings live in frc.robot.controls:
  *   FlightStickInputs — two Logitech Extreme 3D Pros (with CoR control)
  *   XboxInputs        — one Xbox-style controller (no CoR control)
@@ -49,12 +49,12 @@ import frc.lib.util.Units;
  * squareInput() squares magnitude while preserving sign.
  * Gives finer low-speed control without losing full power at full deflection.
  */
-public class TeleopDrive extends Command implements AimDriveModes {
+public class TeleopDrive extends Command implements IAimDriveModes {
 
     // ── Dependencies ──────────────────────────────────────────────────────────
     private final SwerveDrive drive;
 
-    private final DriverInputs inputs;
+    private final IDriverInputs inputs;
 
     // ── CoR bounds (meters, converted from inches in constructor) ─────────────
     private final double corMaxX;
@@ -99,7 +99,7 @@ public class TeleopDrive extends Command implements AimDriveModes {
      */
     public TeleopDrive(
             SwerveDrive drive,
-            DriverInputs inputs,
+            IDriverInputs inputs,
             double corMaxXIn,
             double corMaxYIn) {
 

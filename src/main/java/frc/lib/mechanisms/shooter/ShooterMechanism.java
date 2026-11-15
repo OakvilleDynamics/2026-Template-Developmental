@@ -5,7 +5,7 @@ import java.util.function.BooleanSupplier;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
-import frc.lib.util.ConfigVerifiable;
+import frc.lib.util.IConfigVerifiable;
 import frc.lib.util.ConfigVerifyResult;
 import frc.lib.control.MechanismConfig;
 import frc.lib.control.MechanismUnit;
@@ -52,7 +52,7 @@ import frc.lib.control.MechanismUnit;
  * RobotContainer before passing the config to the Builder, since RobotContainer
  * is where both flywheel and turret references co-exist.
  */
-public class ShooterMechanism extends SubsystemBase implements ConfigVerifiable {
+public class ShooterMechanism extends SubsystemBase implements IConfigVerifiable {
 
     // ── Sub-mechanisms ────────────────────────────────────────────────────────
     private final MechanismUnit flywheel;
@@ -215,7 +215,7 @@ public class ShooterMechanism extends SubsystemBase implements ConfigVerifiable 
     public double getHoodVelocityRps()         { return hood != null ? hood.getVelocityRps()  : 0.0; }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // ConfigVerifiable implementation
+    // IConfigVerifiable implementation
     // ─────────────────────────────────────────────────────────────────────────
 
     /**

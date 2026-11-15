@@ -43,7 +43,7 @@ import edu.wpi.first.wpilibj.DriverStation;
  */
 public final class ConfigVerifier {
 
-    private static final List<ConfigVerifiable> registry = new ArrayList<>();
+    private static final List<IConfigVerifiable> registry = new ArrayList<>();
 
     private ConfigVerifier() {}
 
@@ -51,10 +51,10 @@ public final class ConfigVerifier {
      * Register a device or mechanism group for startup verification.
      * Call once per device after construction, before runAll().
      *
-     * @param device any ConfigVerifiable — SwerveModule, MechanismUnit subclass,
+     * @param device any IConfigVerifiable — SwerveModule, MechanismUnit subclass,
      *               ShooterMechanism, ElevatorMechanism, etc.
      */
-    public static void register(ConfigVerifiable device) {
+    public static void register(IConfigVerifiable device) {
         registry.add(device);
     }
 
@@ -71,7 +71,7 @@ public final class ConfigVerifier {
         }
 
         List<ConfigVerifyResult> allResults = new ArrayList<>();
-        for (ConfigVerifiable device : registry) {
+        for (IConfigVerifiable device : registry) {
             allResults.addAll(device.verifyConfig());
         }
 

@@ -1,10 +1,10 @@
 package frc.lib.swerve;
 
-import frc.lib.hardware.encoder.AbsoluteEncoderIO;
+import frc.lib.hardware.encoder.IAbsoluteEncoderIO;
 import frc.lib.hardware.encoder.CTRECANcoderEncoder;
 import frc.lib.hardware.encoder.REVThroughBoreEncoder;
 import frc.lib.hardware.encoder.ThriftyAnalogEncoder;
-import frc.lib.hardware.motor.MotorIO;
+import frc.lib.hardware.motor.IMotorIO;
 import frc.lib.hardware.motor.MotorIOConfig;
 import frc.lib.hardware.motor.MotorVendor;
 
@@ -13,14 +13,14 @@ import frc.lib.hardware.motor.MotorVendor;
  * PATH: src/main/java/frc/lib/swerve/SwerveHardware.java
  *
  * Swerve hardware catalog: maps a motor/encoder TYPE to the MotorIOConfig and
- * AbsoluteEncoderIO that drive it. The per-type current limits, inversion
+ * IAbsoluteEncoderIO that drive it. The per-type current limits, inversion
  * conventions, and ramp rates live here once, so swapping module hardware is a
  * one-value change to the type selected in the robot's SwerveConstants.
  *
  * Returns MotorIOConfig.Builders so the caller can add robot-level settings
  * (e.g. CAN signal rates) before building.
  *
- *   MotorIO drive = MotorIO.create(SwerveHardware
+ *   IMotorIO drive = IMotorIO.create(SwerveHardware
  *       .driveMotorConfig(DriveMotorType.KRAKEN_X60, 1, true, drivePID, 6.75)
  *       .withCanSignals(250, 4, false)
  *       .build());
@@ -117,15 +117,15 @@ public final class SwerveHardware {
      * Build the module's absolute steer encoder.
      *
      * @param type          encoder type
-     * @param steerMotor    the module's steer MotorIO (REV_THROUGH_BORE reads through it)
+     * @param steerMotor    the module's steer IMotorIO (REV_THROUGH_BORE reads through it)
      * @param analogPort    roboRIO analog port (THRIFTY_ANALOG only)
      * @param cancoderCanId CANcoder CAN ID (CTRE_CANCODER only)
      * @param offsetVolts   Thrifty voltage when the wheel points forward (THRIFTY_ANALOG)
      * @param offsetRot     rotation offset when the wheel points forward (CANCODER, THROUGH_BORE)
      * @throws IllegalArgumentException REV_THROUGH_BORE with a non-REV steer motor
      */
-    public static AbsoluteEncoderIO buildEncoder(
-            AbsoluteEncoderType type, MotorIO steerMotor,
+    public static IAbsoluteEncoderIO buildEncoder(
+            AbsoluteEncoderType type, IMotorIO steerMotor,
             int analogPort, int cancoderCanId, double offsetVolts, double offsetRot) {
         switch (type) {
             case THRIFTY_ANALOG:   return new ThriftyAnalogEncoder(analogPort, offsetVolts);

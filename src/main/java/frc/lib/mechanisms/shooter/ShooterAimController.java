@@ -14,10 +14,10 @@ import frc.lib.util.Units;
  * ShooterMechanism. Runs every loop as a SubsystemBase.
  *
  * ─── RESPONSIBILITIES ─────────────────────────────────────────────────────────
- * 1. Reads robot pose and odometry state from the drivetrain (AimDriveState) each loop.
+ * 1. Reads robot pose and odometry state from the drivetrain (IAimDriveState) each loop.
  * 2. Calls ShooterCalculator with the live state to produce setpoints.
  * 3. Pushes RPM, hood angle, and (if PHYSICAL_TURRET) turret angle to ShooterMechanism.
- * 4. Directs the driver drive command (AimDriveModes) into the appropriate drive mode:
+ * 4. Directs the driver drive command (IAimDriveModes) into the appropriate drive mode:
  *      STATIC_SHOT    → X-lock (physical turret) or aim-then-lock (swerve turret)
  *      ON_THE_MOVE    → heading-bounded driver control
  *      IDLE           → full driver control (no override)
@@ -125,9 +125,9 @@ public class ShooterAimController extends SubsystemBase {
     // =========================================================================
 
     private final ShooterCalculator    calc;
-    private final AimDriveState      drive;
+    private final IAimDriveState      drive;
     private final ShooterMechanism     shooter;
-    private final AimDriveModes      driveCmd;
+    private final IAimDriveModes      driveCmd;
     private final TurretMode           turretMode;
 
     // =========================================================================
@@ -197,9 +197,9 @@ public class ShooterAimController extends SubsystemBase {
 
     /**
      * @param calc              ShooterCalculator instance.
-     * @param drive             drivetrain state (SwerveDrive implements AimDriveState).
+     * @param drive             drivetrain state (SwerveDrive implements IAimDriveState).
      * @param shooter           ShooterMechanism subsystem.
-     * @param driveCmd          driver drive command (TeleopDrive implements AimDriveModes).
+     * @param driveCmd          driver drive command (TeleopDrive implements IAimDriveModes).
      * @param turretMode        Whether a physical turret motor exists.
      * @param flipThresholdPct  Fraction of dead-zone width at which the turret
      *                          flips from one parked limit to the other during
@@ -207,9 +207,9 @@ public class ShooterAimController extends SubsystemBase {
      */
     public ShooterAimController(
             ShooterCalculator  calc,
-            AimDriveState      drive,
+            IAimDriveState      drive,
             ShooterMechanism   shooter,
-            AimDriveModes      driveCmd,
+            IAimDriveModes      driveCmd,
             TurretMode         turretMode,
             double             flipThresholdPct) {
 
@@ -226,9 +226,9 @@ public class ShooterAimController extends SubsystemBase {
      */
     public ShooterAimController(
             ShooterCalculator  calc,
-            AimDriveState      drive,
+            IAimDriveState      drive,
             ShooterMechanism   shooter,
-            AimDriveModes      driveCmd,
+            IAimDriveModes      driveCmd,
             TurretMode         turretMode) {
         this(calc, drive, shooter, driveCmd, turretMode, 0.5);
     }

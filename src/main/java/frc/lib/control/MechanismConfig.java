@@ -3,7 +3,7 @@ package frc.lib.control;
 import java.util.Arrays;
 
 import frc.lib.control.ff.FF;
-import frc.lib.control.ff.FFProvider;
+import frc.lib.control.ff.IFFProvider;
 import frc.lib.hardware.motor.MotorIOConfig;
 import frc.lib.hardware.motor.MotorVendor;
 
@@ -44,7 +44,7 @@ import frc.lib.hardware.motor.MotorVendor;
  *   Tier 1 (on-controller kS/kV/kA): in the pid[] array at indices 3/4/5.
  *   Tier 2 (Rio-computed, self-contained): tier2FF lambda.
  *   Tier 3 (Rio-computed, cross-system): tier3FF lambda.
- *   See FFProvider.java for full documentation and examples.
+ *   See IFFProvider.java for full documentation and examples.
  *   Physics-based factories: FF.rotatingArm(), multiStageElevator(),
  *     pivotingElevator(), springTurret(), gyroscopicTurret().
  *   Convenience factory for no-FF case: MechanismConfig.noFF().
@@ -177,10 +177,10 @@ public final class MechanismConfig {
      * Tier-2 feed-forward: Rio-computed, self-contained.
      * Receives (positionDeg, velocityRps, accelRpss) — all from this mechanism.
      * Must not capture external subsystem state. Default: noFF() — returns 0.
-     * See FFProvider.java for examples and MechanismConfig.armFF() / elevatorFF()
+     * See IFFProvider.java for examples and MechanismConfig.armFF() / elevatorFF()
      * for convenience factories.
      */
-    public final FFProvider tier2FF;
+    public final IFFProvider tier2FF;
 
     /**
      * Tier-3 feed-forward: Rio-computed, may capture external subsystem references.
@@ -188,7 +188,7 @@ public final class MechanismConfig {
      * closure at construction time in RobotContainer.
      * Default: noFF() — returns 0.
      */
-    public final FFProvider tier3FF;
+    public final IFFProvider tier3FF;
 
     // ── Setpoint tracking ─────────────────────────────────────────────────────
 
@@ -287,7 +287,7 @@ public final class MechanismConfig {
      * {@link FF}: rotatingArm(), multiStageElevator(), pivotingElevator(),
      * springTurret(), gyroscopicTurret().
      */
-    public static FFProvider noFF() {
+    public static IFFProvider noFF() {
         return FF.none();
     }
 
@@ -302,7 +302,7 @@ public final class MechanismConfig {
      * limits, neutral mode and CAN signal rates with their own CAN ID, and no
      * gains, soft limits, or motion profile — those only matter on the controller
      * running the closed loop. Only ENCODER_SYNC followers get an inversion
-     * setting; a MECHANICAL follower's direction comes from MotorIO.follow().
+     * setting; a MECHANICAL follower's direction comes from IMotorIO.follow().
      */
     public MotorIOConfig motorConfig(int index) {
         if (index < 0 || index >= canIds.length)
@@ -499,8 +499,8 @@ public final class MechanismConfig {
         private double motionCruiseVelocityRps    = 0.0;
         private double motionAccelerationRpss     = 0.0;
         private double motionJerkRpss3            = 0.0;
-        private FFProvider tier2FF                = noFF();
-        private FFProvider tier3FF                = noFF();
+        private IFFProvider tier2FF                = noFF();
+        private IFFProvider tier3FF                = noFF();
         private double setpointDeadband           = 0.0;
         private boolean brakeOnNeutral            = true;
         private double encoderSyncDeadbandRot     = MotorConstants.ENCODER_SYNC_DEADBAND_ROT;
@@ -694,7 +694,7 @@ public final class MechanismConfig {
          * Set tier-2 feed-forward lambda (self-contained, no external subsystem refs).
          * Use MechanismConfig.armFF(), elevatorFF(), or noFF() for common cases.
          */
-        public Builder withTier2FF(FFProvider provider) {
+        public Builder withTier2FF(IFFProvider provider) {
             this.tier2FF = provider;
             return this;
         }
@@ -703,7 +703,7 @@ public final class MechanismConfig {
          * Set tier-3 feed-forward lambda (may close over external subsystem references).
          * Build this lambda in RobotContainer where all subsystem references exist.
          */
-        public Builder withTier3FF(FFProvider provider) {
+        public Builder withTier3FF(IFFProvider provider) {
             this.tier3FF = provider;
             return this;
         }

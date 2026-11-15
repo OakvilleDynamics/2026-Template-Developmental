@@ -8,7 +8,7 @@ import frc.lib.util.ConfigVerifyResult;
  * FakeMotorIO.java
  * PATH: src/test/java/frc/lib/hardware/motor/FakeMotorIO.java
  *
- * In-memory MotorIO for unit tests — no HAL, no CAN, no vendor library.
+ * In-memory IMotorIO for unit tests — no HAL, no CAN, no vendor library.
  *
  * Records every command (last duty cycle / velocity / position / FF volts,
  * follow target, encoder resets, gain updates). Feedback values (position,
@@ -21,7 +21,7 @@ import frc.lib.util.ConfigVerifyResult;
  * Capabilities (hardware motion profile, encoder-sync support) are settable so
  * tests can exercise both the CTRE/REV-style and Nova-style code paths.
  */
-public class FakeMotorIO implements MotorIO {
+public class FakeMotorIO implements IMotorIO {
 
     private final MotorIOConfig config;
 
@@ -47,7 +47,7 @@ public class FakeMotorIO implements MotorIO {
     public double  lastVelocityRps     = Double.NaN;
     public double  lastPositionRot     = Double.NaN;
     public double  lastFFVolts         = Double.NaN;
-    public MotorIO followedLeader;
+    public IMotorIO followedLeader;
     public boolean followOpposed;
     public double  lastEncoderReset    = Double.NaN;
     public double[] lastGains;
@@ -86,7 +86,7 @@ public class FakeMotorIO implements MotorIO {
     }
 
     @Override
-    public void follow(MotorIO leader, boolean opposeLeader) {
+    public void follow(IMotorIO leader, boolean opposeLeader) {
         followedLeader = leader; followOpposed = opposeLeader;
     }
 

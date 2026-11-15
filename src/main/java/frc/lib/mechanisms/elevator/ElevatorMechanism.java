@@ -6,10 +6,10 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import frc.lib.swerve.DriveOdometryState;
-import frc.lib.util.ConfigVerifiable;
+import frc.lib.util.IConfigVerifiable;
 import frc.lib.util.ConfigVerifyResult;
 import frc.lib.control.ff.FF;
-import frc.lib.control.ff.FFProvider;
+import frc.lib.control.ff.IFFProvider;
 import frc.lib.control.MechanismConfig;
 import frc.lib.control.MechanismUnit;
 import frc.lib.hardware.motor.MotorModels;
@@ -79,7 +79,7 @@ import frc.lib.util.Units;
  * automatically by CommandScheduler each loop. No additional per-loop calls needed;
  * encoder sync, FF, PID tuning, and telemetry are all automatic inside set*().
  */
-public class ElevatorMechanism extends SubsystemBase implements ConfigVerifiable {
+public class ElevatorMechanism extends SubsystemBase implements IConfigVerifiable {
 
     // ── Sub-mechanisms ────────────────────────────────────────────────────────
     private final MechanismUnit elevator;
@@ -242,7 +242,7 @@ public class ElevatorMechanism extends SubsystemBase implements ConfigVerifiable
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // ConfigVerifiable implementation
+    // IConfigVerifiable implementation
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
@@ -305,7 +305,7 @@ public class ElevatorMechanism extends SubsystemBase implements ConfigVerifiable
         // Users set friction via kS in the PID array (Tier 1) or via a tier2FF lambda.
         // Tier-3 here covers only gravity + drivetrain inertia + centripetal.
 
-        FFProvider physicsFF = (positionDeg, velocityRps, accelRpss) -> {
+        IFFProvider physicsFF = (positionDeg, velocityRps, accelRpss) -> {
             double totalKg = carriageKg;
             for (double s : stageKg) totalKg += s;
             for (int i = 0; i < pieceKg.length; i++)
@@ -340,8 +340,8 @@ public class ElevatorMechanism extends SubsystemBase implements ConfigVerifiable
         };
 
         // Compose with any existing tier3FF so user-provided FF is preserved
-        FFProvider existing = b.elevatorConfig.tier3FF;
-        FFProvider combined = (pos, vel, accel) ->
+        IFFProvider existing = b.elevatorConfig.tier3FF;
+        IFFProvider combined = (pos, vel, accel) ->
             physicsFF.compute(pos, vel, accel) + existing.compute(pos, vel, accel);
 
         return rebuildWithTier3FF(b.elevatorConfig, combined);
@@ -354,7 +354,7 @@ public class ElevatorMechanism extends SubsystemBase implements ConfigVerifiable
      * Physics: FF.pivotingElevator — gravity + drivetrain inertia + centripetal.
      */
     private static MechanismConfig applyPivotFF(Builder b) {
-        FFProvider physicsFF = FF.pivotingElevator(
+        IFFProvider physicsFF = FF.pivotingElevator(
             b.pivotMotorModel, b.pivotConfig.gearRatio,
             b.cgDistanceFromPivotIn, b.cgOffsetFromRobotCenterIn,
             b.carriageLbs, b.stageMassesLbs,
@@ -362,8 +362,8 @@ public class ElevatorMechanism extends SubsystemBase implements ConfigVerifiable
             b.gamePieceTypesLbs, b.pieceCountSuppliers,
             b.odometrySupplier, b.headingSupplier);
 
-        FFProvider existing = b.pivotConfig.tier3FF;
-        FFProvider combined = (pos, vel, accel) ->
+        IFFProvider existing = b.pivotConfig.tier3FF;
+        IFFProvider combined = (pos, vel, accel) ->
             physicsFF.compute(pos, vel, accel) + existing.compute(pos, vel, accel);
 
         return rebuildWithTier3FF(b.pivotConfig, combined);
@@ -373,7 +373,7 @@ public class ElevatorMechanism extends SubsystemBase implements ConfigVerifiable
      * Copy a MechanismConfig with a replacement tier3FF, preserving every other
      * field (travel limits, homing, Nova motor type, CAN signals included).
      */
-    private static MechanismConfig rebuildWithTier3FF(MechanismConfig src, FFProvider ff) {
+    private static MechanismConfig rebuildWithTier3FF(MechanismConfig src, IFFProvider ff) {
         return src.toBuilder().withTier3FF(ff).build();
     }
 

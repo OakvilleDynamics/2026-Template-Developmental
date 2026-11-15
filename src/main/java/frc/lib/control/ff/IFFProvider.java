@@ -1,8 +1,8 @@
 package frc.lib.control.ff;
 
 /**
- * FFProvider.java
- * PATH: src/main/java/frc/lib/control/ff/FFProvider.java
+ * IFFProvider.java
+ * PATH: src/main/java/frc/lib/control/ff/IFFProvider.java
  *
  * Functional interface for feed-forward voltage computations in MechanismUnit.
  * Used for both tier-2 (self-contained gravity/spring physics) and tier-3
@@ -78,7 +78,7 @@ package frc.lib.control.ff;
  * CommandScheduler guarantees.
  */
 @FunctionalInterface
-public interface FFProvider {
+public interface IFFProvider {
 
     /**
      * Compute a feed-forward voltage addend for the current control cycle.

@@ -12,7 +12,7 @@ import frc.robot.constants.PortIDs;
 import frc.robot.commands.TeleopDrive;
 import frc.robot.commands.XLockCommand;
 import frc.robot.constants.SwerveConstants;
-import frc.robot.controls.DriverInputs;
+import frc.robot.controls.IDriverInputs;
 import frc.robot.controls.FlightStickInputs;
 import frc.robot.controls.XboxInputs;
 import frc.robot.pathplanning.FieldTargets;
@@ -20,8 +20,8 @@ import frc.robot.pathplanning.GamePieceHuntCommand;
 import frc.robot.pathplanning.GamePieceHuntCommand.HuntMode;
 import frc.robot.pathplanning.PathfindCommand;
 import frc.robot.subsystems.swerveDrive.SwerveDrive;
-import frc.lib.hardware.encoder.AbsoluteEncoderIO;
-import frc.lib.hardware.motor.MotorIO;
+import frc.lib.hardware.encoder.IAbsoluteEncoderIO;
+import frc.lib.hardware.motor.IMotorIO;
 import frc.lib.swerve.SwerveHardware;
 import frc.lib.swerve.SwerveModule;
 import frc.lib.util.ConfigVerifier;
@@ -136,7 +136,7 @@ public class RobotContainer {
     //==========================================================================
 
     private final SwerveDrive              drive;
-    private final DriverInputs             driverInputs;
+    private final IDriverInputs             driverInputs;
     private final VisionSubsystem          vision;
     private final GamePieceVisionSubsystem gamePieceVision;
     private final TeleopDrive              driveCommand;
@@ -242,21 +242,21 @@ public class RobotContainer {
             double offsetVolts, double offsetRot,
             boolean driveInverted, double[] drivePID, double[] steerPID) {
 
-        MotorIO driveMotor = MotorIO.create(SwerveHardware
+        IMotorIO driveMotor = IMotorIO.create(SwerveHardware
             .driveMotorConfig(SwerveConstants.DRIVE_MOTOR_TYPE, driveCanId, driveInverted,
                               drivePID, SwerveConstants.DRIVE_GEAR_RATIO)
             .withCanSignals(SwerveConstants.SIGNAL_UPDATE_HZ, SwerveConstants.SIGNAL_UPDATE_HZ_TEMP,
                             SwerveConstants.OPTIMIZE_CAN_UTILIZATION)
             .build());
 
-        MotorIO steerMotor = MotorIO.create(SwerveHardware
+        IMotorIO steerMotor = IMotorIO.create(SwerveHardware
             .steerMotorConfig(SwerveConstants.STEER_MOTOR_TYPE, steerCanId,
                               steerPID, SwerveConstants.STEER_GEAR_RATIO)
             .withCanSignals(SwerveConstants.SIGNAL_UPDATE_HZ, SwerveConstants.SIGNAL_UPDATE_HZ_TEMP,
                             SwerveConstants.OPTIMIZE_CAN_UTILIZATION)
             .build());
 
-        AbsoluteEncoderIO absEncoder = SwerveHardware.buildEncoder(
+        IAbsoluteEncoderIO absEncoder = SwerveHardware.buildEncoder(
             SwerveConstants.ABS_ENCODER_TYPE, steerMotor,
             analogPort, cancoderCanId, offsetVolts, offsetRot);
 

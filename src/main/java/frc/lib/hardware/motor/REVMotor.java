@@ -29,7 +29,7 @@ import frc.lib.util.ConfigVerifyResult;
  * REVMotor.java
  * PATH: src/main/java/frc/lib/hardware/motor/REVMotor.java
  *
- * MotorIO for REV SparkMax (NEO, NEO 550) and SparkFlex (NEO Vortex), REVLib 2026.
+ * IMotorIO for REV SparkMax (NEO, NEO 550) and SparkFlex (NEO Vortex), REVLib 2026.
  * The vendor value selects the controller: REV_SPARKMAX or REV_SPARKFLEX.
  *
  * ─── GEAR RATIO ──────────────────────────────────────────────────────────────
@@ -55,7 +55,7 @@ import frc.lib.util.ConfigVerifyResult;
  * ─── THROUGH BORE ENCODER ────────────────────────────────────────────────────
  * getSpark() exposes the controller so REVThroughBoreEncoder can share it.
  */
-public class REVMotor implements MotorIO {
+public class REVMotor implements IMotorIO {
 
     private final MotorIOConfig             config;
     private final boolean                   isFlex;
@@ -142,7 +142,7 @@ public class REVMotor implements MotorIO {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // MotorIO — commands
+    // IMotorIO — commands
     // ─────────────────────────────────────────────────────────────────────────
 
     @Override
@@ -173,7 +173,7 @@ public class REVMotor implements MotorIO {
     }
 
     @Override
-    public void follow(MotorIO leader, boolean opposeLeader) {
+    public void follow(IMotorIO leader, boolean opposeLeader) {
         if (!(leader instanceof REVMotor revLeader))
             throw new IllegalArgumentException("REVMotor CAN " + config.canId
                 + ": can only hardware-follow another REV controller, not " + leader.getConfig());
@@ -200,7 +200,7 @@ public class REVMotor implements MotorIO {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // MotorIO — feedback
+    // IMotorIO — feedback
     // ─────────────────────────────────────────────────────────────────────────
 
     @Override public double getPositionRot()        { return spark.getEncoder().getPosition(); }

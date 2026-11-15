@@ -1,8 +1,8 @@
 package frc.lib.mechanisms.shooter;
 
 /**
- * AimDriveModes.java
- * PATH: src/main/java/frc/lib/mechanisms/shooter/AimDriveModes.java
+ * IAimDriveModes.java
+ * PATH: src/main/java/frc/lib/mechanisms/shooter/IAimDriveModes.java
  *
  * The drive-mode controls ShooterAimController needs from the robot's driver
  * drive command. Implemented by frc.robot.commands.TeleopDrive; any other
@@ -10,7 +10,7 @@ package frc.lib.mechanisms.shooter;
  *
  * Angles in degrees (field-absolute), field coordinates in feet.
  */
-public interface AimDriveModes {
+public interface IAimDriveModes {
 
     /** Driver translates; heading PID locks onto a field point. */
     void enablePointAt(double targetFeetX, double targetFeetY, double offsetDeg);

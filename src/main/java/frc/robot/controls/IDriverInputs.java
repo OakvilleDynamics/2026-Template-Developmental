@@ -1,8 +1,8 @@
 package frc.robot.controls;
 
 /**
- * DriverInputs.java
- * PATH: src/main/java/frc/robot/controls/DriverInputs.java
+ * IDriverInputs.java
+ * PATH: src/main/java/frc/robot/controls/IDriverInputs.java
  *
  * The driver's drive axes, independent of which controller produces them.
  * TeleopDrive reads only this interface, so swapping controllers never touches
@@ -17,7 +17,7 @@ package frc.robot.controls;
  *   corForward() +1 = center of rotation at the front bumper
  *   corLeft()    +1 = center of rotation at the left bumper
  */
-public interface DriverInputs {
+public interface IDriverInputs {
 
     /** Translation forward/back. +1 = full forward. */
     double forward();

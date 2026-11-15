@@ -16,7 +16,7 @@ import frc.lib.util.ConfigVerifyResult;
  * NovaMotor.java
  * PATH: src/main/java/frc/lib/hardware/motor/NovaMotor.java
  *
- * MotorIO for the ThriftyBot Nova controller (NEO, Minion, Pulsar, brushed).
+ * IMotorIO for the ThriftyBot Nova controller (NEO, Minion, Pulsar, brushed).
  *
  * ─── GEAR RATIO — MANUAL SCALING ─────────────────────────────────────────────
  * Nova has no conversion-factor API. Setpoints are multiplied by gearRatio
@@ -39,7 +39,7 @@ import frc.lib.util.ConfigVerifyResult;
  * software (use physical mounting). ENCODER_SYNC is not supported — independent
  * encoder readback on a following Nova is not reliable.
  */
-public class NovaMotor implements MotorIO {
+public class NovaMotor implements IMotorIO {
 
     private static final String VENDOR = MotorVendor.THRIFTYBOT_NOVA.displayName;
 
@@ -86,7 +86,7 @@ public class NovaMotor implements MotorIO {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // MotorIO — commands
+    // IMotorIO — commands
     // ─────────────────────────────────────────────────────────────────────────
 
     @Override
@@ -129,7 +129,7 @@ public class NovaMotor implements MotorIO {
     }
 
     @Override
-    public void follow(MotorIO leader, boolean opposeLeader) {
+    public void follow(IMotorIO leader, boolean opposeLeader) {
         if (opposeLeader) {
             DriverStation.reportWarning("[NovaMotor] CAN " + config.canId
                 + ": inverted follow requested, but Nova's follow() API does not support "
@@ -151,7 +151,7 @@ public class NovaMotor implements MotorIO {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // MotorIO — feedback
+    // IMotorIO — feedback
     // ─────────────────────────────────────────────────────────────────────────
 
     @Override public double getPositionRot()        { return motor.getPosition() / gearRatio; }
@@ -170,7 +170,7 @@ public class NovaMotor implements MotorIO {
     @Override public boolean supportsEncoderSync()      { return false; }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Nova-only extras — reach by casting MotorIO to NovaMotor
+    // Nova-only extras — reach by casting IMotorIO to NovaMotor
     // ─────────────────────────────────────────────────────────────────────────
 
     /** Switch the active PID slot (SLOT0 is configured from MotorIOConfig). */
@@ -183,7 +183,7 @@ public class NovaMotor implements MotorIO {
         motor.pid1.setP(p).setI(i).setD(d).setFF(ff);
     }
 
-    /** Direct access to the ThriftyNova. Advanced use only — prefer the MotorIO API. */
+    /** Direct access to the ThriftyNova. Advanced use only — prefer the IMotorIO API. */
     public ThriftyNova getNova() {
         return motor;
     }

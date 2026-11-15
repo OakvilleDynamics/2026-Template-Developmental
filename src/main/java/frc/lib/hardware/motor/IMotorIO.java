@@ -3,13 +3,13 @@ package frc.lib.hardware.motor;
 import frc.lib.util.ConfigVerifyResult;
 
 /**
- * MotorIO.java
- * PATH: src/main/java/frc/lib/hardware/motor/MotorIO.java
+ * IMotorIO.java
+ * PATH: src/main/java/frc/lib/hardware/motor/IMotorIO.java
  *
  * The single vendor-agnostic interface for ONE motor controller. Every motor on
- * the robot — swerve drive, swerve steer, and every mechanism motor — is a MotorIO.
+ * the robot — swerve drive, swerve steer, and every mechanism motor — is a IMotorIO.
  *
- *   MotorIO motor = MotorIO.create(MotorIOConfig.builder(12, MotorVendor.REV_SPARKMAX)
+ *   IMotorIO motor = IMotorIO.create(MotorIOConfig.builder(12, MotorVendor.REV_SPARKMAX)
  *       .withGearRatio(25.0)
  *       .build());
  *
@@ -26,7 +26,7 @@ import frc.lib.util.ConfigVerifyResult;
  *   Mechanism shaft rotations and rotations/second (gear ratio applied inside).
  *   Feed-forward addends in volts.
  */
-public interface MotorIO {
+public interface IMotorIO {
 
     /** Config apply retries used by every verifyConfig() implementation. */
     int VERIFY_RETRIES  = 5;
@@ -36,14 +36,14 @@ public interface MotorIO {
     /**
      * Create the vendor implementation selected by {@code config.vendor}.
      */
-    static MotorIO create(MotorIOConfig config) {
+    static IMotorIO create(MotorIOConfig config) {
         switch (config.vendor) {
             case CTRE_TALONFX:    return new CTREMotor(config);
             case REV_SPARKMAX:
             case REV_SPARKFLEX:   return new REVMotor(config);
             case THRIFTYBOT_NOVA: return new NovaMotor(config);
             default:
-                throw new IllegalArgumentException("MotorIO: unknown vendor " + config.vendor);
+                throw new IllegalArgumentException("IMotorIO: unknown vendor " + config.vendor);
         }
     }
 
@@ -80,7 +80,7 @@ public interface MotorIO {
      * @param leader       controller to follow
      * @param opposeLeader true = spin opposite to the leader
      */
-    void follow(MotorIO leader, boolean opposeLeader);
+    void follow(IMotorIO leader, boolean opposeLeader);
 
     /** Overwrite the integrated encoder reading (mechanism shaft rotations). */
     void setEncoderPosition(double positionRot);

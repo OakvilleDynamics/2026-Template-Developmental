@@ -41,13 +41,13 @@ src/main/java/frc/lib/
 │
 ├── util/                   ← units, Dashboard, RobotLogger, ConfigVerifier
 ├── hardware/
-│   ├── motor/              ← MotorIO interface + CTREMotor / REVMotor / NovaMotor, MotorIOConfig, MotorModels
-│   └── encoder/            ← AbsoluteEncoderIO + Thrifty analog / CANcoder / Through Bore
+│   ├── motor/              ← IMotorIO interface + CTREMotor / REVMotor / NovaMotor, MotorIOConfig, MotorModels
+│   └── encoder/            ← IAbsoluteEncoderIO + Thrifty analog / CANcoder / Through Bore
 ├── control/
-│   ├── MechanismUnit       ← One mechanism's motor group on MotorIO (FF, ramps, sync, limits, homing)
+│   ├── MechanismUnit       ← One mechanism's motor group on IMotorIO (FF, ramps, sync, limits, homing)
 │   ├── MechanismConfig     ← Immutable config (Builder); derives one MotorIOConfig per motor
 │   ├── MotorConstants      ← FollowMode enum + loop/sync constants
-│   └── ff/                 ← FFProvider + FF physics factories
+│   └── ff/                 ← IFFProvider + FF physics factories
 ├── swerve/                 ← SwerveModule, SwerveHardware (type → motor config), DriveInput, DriveOdometryState
 └── mechanisms/             ← One folder per mechanism, each self-contained
     ├── shooter/            ← ShooterMechanism, ShooterCalculator, ShotProfile, ShooterAimController
@@ -67,7 +67,7 @@ src/main/java/frc/robot/
 │   └── Autos.java          ← Autonomous routines (stub for now)
 │
 ├── controls/               ← Driver controller layouts
-│   ├── DriverInputs        ← Interface TeleopDrive reads (forward, left, rotate, CoR)
+│   ├── IDriverInputs       ← Interface TeleopDrive reads (forward, left, rotate, CoR)
 │   ├── FlightStickInputs   ← Two flight sticks
 │   └── XboxInputs          ← One Xbox-style controller
 │
@@ -111,7 +111,7 @@ src/main/java/frc/robot/
 
 ### How driving works
 
-The driver moves the left stick to translate (move forward/back/strafe) and twists the right stick to rotate (or, on an Xbox-style controller, moves the right stick left/right). A `DriverInputs` class turns the controller's raw axes into forward / left / rotate values, so `TeleopDrive` never knows which controller is attached. `TeleopDrive` applies deadband and input shaping, then builds a `DriveInput` object and hands it to `SwerveDrive`. Pick the controller with `DRIVER_CONTROLLER` in `RobotContainer`.
+The driver moves the left stick to translate (move forward/back/strafe) and twists the right stick to rotate (or, on an Xbox-style controller, moves the right stick left/right). An `IDriverInputs` class turns the controller's raw axes into forward / left / rotate values, so `TeleopDrive` never knows which controller is attached. `TeleopDrive` applies deadband and input shaping, then builds a `DriveInput` object and hands it to `SwerveDrive`. Pick the controller with `DRIVER_CONTROLLER` in `RobotContainer`.
 
 **Field-relative control** means "push stick forward" always moves the robot toward the far field wall — regardless of which way the robot is facing. The code rotates joystick inputs by the robot's current heading before sending them to the wheels.
 
@@ -328,9 +328,9 @@ With `MechanismUnit`, upgrading a mechanism from NEO to Nova is one line change:
 
 ### The pattern
 
-There is **one motor interface for the whole robot: `MotorIO`** (`lib/hardware/motor/`). Each vendor class (`CTREMotor`, `REVMotor`, `NovaMotor`) implements it for a single controller — configure, command (duty / velocity / position + FF volts), read back, follow, verify. The swerve modules and every mechanism are built on it, so the vendor code exists exactly once.
+There is **one motor interface for the whole robot: `IMotorIO`** (`lib/hardware/motor/`). Each vendor class (`CTREMotor`, `REVMotor`, `NovaMotor`) implements it for a single controller — configure, command (duty / velocity / position + FF volts), read back, follow, verify. The swerve modules and every mechanism are built on it, so the vendor code exists exactly once.
 
-`MechanismUnit` holds all shared mechanism logic (FF, ramps, encoder sync, travel limits, homing, telemetry) once, on top of a leader `MotorIO` and optional follower `MotorIO`s. `MechanismUnit.create(config)` builds one `MotorIO` per CAN ID with the vendor named in the config. Tests pass `FakeMotorIO`s to the constructor instead, so all of this logic is testable without hardware:
+`MechanismUnit` holds all shared mechanism logic (FF, ramps, encoder sync, travel limits, homing, telemetry) once, on top of a leader `IMotorIO` and optional follower `IMotorIO`s. `MechanismUnit.create(config)` builds one `IMotorIO` per CAN ID with the vendor named in the config. Tests pass `FakeMotorIO`s to the constructor instead, so all of this logic is testable without hardware:
 
 ```java
 MechanismUnit arm = MechanismUnit.create(
@@ -412,7 +412,7 @@ Three tiers, each additive:
 | 2 — lambda in config | Rio (self-contained) | Gravity/spring loads using only this mechanism's own state |
 | 3 — lambda in RobotContainer | Rio (cross-subsystem) | Physics depending on other subsystems — variable-mass elevators, drivetrain coupling, etc. |
 
-Tier-2 and tier-3 are `FFProvider` lambdas: `(positionDeg, velocityRps, accelRpss) → volts`. They're called automatically each cycle and summed before injection.
+Tier-2 and tier-3 are `IFFProvider` lambdas: `(positionDeg, velocityRps, accelRpss) → volts`. They're called automatically each cycle and summed before injection.
 
 **All physics-based lambdas are built from motor datasheet constants** via `FF` (`lib/control/ff/FF.java`) factories — no empirical holding-voltage calibration required. The formula used throughout is:
 

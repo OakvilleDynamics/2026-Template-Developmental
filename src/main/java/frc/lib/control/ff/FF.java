@@ -10,7 +10,7 @@ import frc.lib.util.Units;
  * FF.java
  * PATH: src/main/java/frc/lib/control/ff/FF.java
  *
- * Static factory library for physics-based FFProvider lambdas.
+ * Static factory library for physics-based IFFProvider lambdas.
  * (Formerly MechanismUnit.FF — pulled out so it can be unit-tested and reused
  * without constructing any motor hardware.)
  *
@@ -30,7 +30,7 @@ import frc.lib.util.Units;
  * ─── UNITS AT THE INTERFACE ──────────────────────────────────────────────────
  * Masses    : lbs  (converted to kg internally)
  * Distances : inches  (converted to meters internally)
- * Angles    : degrees  (matches FFProvider positionDeg convention)
+ * Angles    : degrees  (matches IFFProvider positionDeg convention)
  * Returns   : volts
  *
  * ─── TIER PLACEMENT ──────────────────────────────────────────────────────────
@@ -55,7 +55,7 @@ public final class FF {
     private FF() {}
 
     /** Provider that always returns zero — flat mechanisms or no Rio-side FF. */
-    public static FFProvider none() {
+    public static IFFProvider none() {
         return (pos, vel, accel) -> 0.0;
     }
 
@@ -104,7 +104,7 @@ public final class FF {
      * @param points    Calibration pairs: double[][]{ {angleDeg, torqueLbIn}, ... }
      *                  Minimum 2 points, sorted ascending by angle.
      */
-    public static FFProvider springTurret(MotorModels.MotorModel motor, double gearRatio,
+    public static IFFProvider springTurret(MotorModels.MotorModel motor, double gearRatio,
                                           double[][] points) {
         if (points == null || points.length < 2)
             throw new IllegalArgumentException(
@@ -173,7 +173,7 @@ public final class FF {
      *                            Each supplier returns the integer count currently held.
      */
     @SuppressWarnings("unchecked") // new Supplier[0] safe — only read as Supplier<Integer>
-    public static FFProvider rotatingArm(
+    public static IFFProvider rotatingArm(
             MotorModels.MotorModel motor,
             double gearRatio,
             double armMassLbs,
@@ -250,7 +250,7 @@ public final class FF {
      * @param flywheelMoiLbIn2         flywheel moment of inertia (lb·in²) — static, measured once
      * @param flywheelVelocityRpsSupplier  supplies flywheel shaft RPS each cycle
      */
-    public static FFProvider gyroscopicTurret(
+    public static IFFProvider gyroscopicTurret(
             MotorModels.MotorModel turretMotor,
             double turretGearRatio,
             double flywheelMoiLbIn2,
@@ -302,7 +302,7 @@ public final class FF {
      *                                   90° = vertical, 0° = horizontal.
      */
     @SuppressWarnings("unchecked") // new Supplier[0] safe — only read as Supplier<Integer>
-    public static FFProvider multiStageElevator(
+    public static IFFProvider multiStageElevator(
             MotorModels.MotorModel motor,
             double gearRatio,
             double spoolRadiusIn,
@@ -390,7 +390,7 @@ public final class FF {
      * @param robotHeadingSupplier       supplies robot heading (radians, field-relative, CCW+)
      */
     @SuppressWarnings("unchecked") // new Supplier[0] safe — only read as Supplier<Integer>
-    public static FFProvider pivotingElevator(
+    public static IFFProvider pivotingElevator(
             MotorModels.MotorModel motor,
             double gearRatio,
             double cgDistanceFromPivotIn,

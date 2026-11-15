@@ -43,14 +43,14 @@ class FFTest {
 
     @Test
     void rotatingArmFullLoadAtHorizontal() {
-        FFProvider ff = FF.rotatingArm(NEO, 100.0, 4.0, 10.0, null, null, null);
+        IFFProvider ff = FF.rotatingArm(NEO, 100.0, 4.0, 10.0, null, null, null);
         double torque = Units.lbsToKg(4.0) * Units.inchesToMeters(10.0) * G;
         assertEquals(volts(torque, 100.0), ff.compute(0.0, 0.0, 0.0), EPS);
     }
 
     @Test
     void rotatingArmZeroAtVerticalAndNegativePastVertical() {
-        FFProvider ff = FF.rotatingArm(NEO, 100.0, 4.0, 10.0, null, null, null);
+        IFFProvider ff = FF.rotatingArm(NEO, 100.0, 4.0, 10.0, null, null, null);
         assertEquals(0.0, ff.compute(90.0, 0.0, 0.0), 1e-12);
         assertTrue(ff.compute(135.0, 0.0, 0.0) < 0.0, "past vertical, gravity pulls the other way");
         assertEquals(-ff.compute(0.0, 0, 0), ff.compute(180.0, 0, 0), EPS);
@@ -60,7 +60,7 @@ class FFTest {
     @SuppressWarnings("unchecked")
     void rotatingArmAddsHeldGamePieces() {
         int[] count = { 0 };
-        FFProvider ff = FF.rotatingArm(NEO, 50.0, 2.0, 8.0,
+        IFFProvider ff = FF.rotatingArm(NEO, 50.0, 2.0, 8.0,
             new double[]{ 1.5 }, new double[]{ 20.0 }, new Supplier[]{ () -> count[0] });
         double empty = ff.compute(0.0, 0, 0);
         count[0] = 2;
@@ -81,13 +81,13 @@ class FFTest {
 
     @Test
     void springTurretInterpolatesBetweenPoints() {
-        FFProvider ff = FF.springTurret(NEO, 10.0, new double[][]{ { 0, 0 }, { 100, 20 } });
+        IFFProvider ff = FF.springTurret(NEO, 10.0, new double[][]{ { 0, 0 }, { 100, 20 } });
         assertEquals(volts(Units.lbInToNm(10.0), 10.0), ff.compute(50.0, 0.0, 0.0), EPS);
     }
 
     @Test
     void springTurretNegatesInReverseAndHoldsForwardInDeadband() {
-        FFProvider ff = FF.springTurret(NEO, 10.0, new double[][]{ { 0, 10 }, { 100, 10 } });
+        IFFProvider ff = FF.springTurret(NEO, 10.0, new double[][]{ { 0, 10 }, { 100, 10 } });
         double fwd = ff.compute(50.0, 1.0, 0.0);
         assertEquals(-fwd, ff.compute(50.0, -1.0, 0.0), EPS);
         // Within ±FRICTION_DEADBAND_RPS → forward convention (no sign jitter while holding)
@@ -96,7 +96,7 @@ class FFTest {
 
     @Test
     void springTurretZeroOutsideCalibratedRange() {
-        FFProvider ff = FF.springTurret(NEO, 10.0, new double[][]{ { 0, 10 }, { 100, 10 } });
+        IFFProvider ff = FF.springTurret(NEO, 10.0, new double[][]{ { 0, 10 }, { 100, 10 } });
         assertEquals(0.0, ff.compute(-1.0, 0, 0), EPS);
         assertEquals(0.0, ff.compute(101.0, 0, 0), EPS);
     }
@@ -114,7 +114,7 @@ class FFTest {
     @Test
     void gyroscopicTurretScalesWithBothSpeedsAndFlipsSign() {
         double[] flywheelRps = { 50.0 };
-        FFProvider ff = FF.gyroscopicTurret(NEO, 20.0, 10.0, () -> flywheelRps[0]);
+        IFFProvider ff = FF.gyroscopicTurret(NEO, 20.0, 10.0, () -> flywheelRps[0]);
         double expected = volts(Units.lbIn2ToKgM2(10.0) * (50.0 * 2 * Math.PI) * (0.5 * 2 * Math.PI), 20.0);
         assertEquals(expected, ff.compute(0.0, 0.5, 0.0), EPS);
         assertEquals(0.0, ff.compute(0.0, 0.0, 0.0), EPS);
@@ -127,7 +127,7 @@ class FFTest {
     @Test
     void multiStageElevatorGravityAndFrictionDirection() {
         double[] angle = { 90.0 };
-        FFProvider ff = FF.multiStageElevator(NEO, 12.0, 1.0, 10.0, new double[]{ 5.0 },
+        IFFProvider ff = FF.multiStageElevator(NEO, 12.0, 1.0, 10.0, new double[]{ 5.0 },
             0.3, -0.2, null, noPieces(), () -> angle[0]);
         double torque = Units.lbsToKg(15.0) * G * Units.inchesToMeters(1.0);
         assertEquals(volts(torque, 12.0) + 0.3, ff.compute(0, 0.0, 0), EPS);   // holding → up friction
@@ -142,7 +142,7 @@ class FFTest {
     void pivotingElevatorAtRestIsPureGravity() {
         DriveOdometryState.Bucket zero = DriveOdometryState.Bucket.zero();
         DriveOdometryState still = new DriveOdometryState(zero, zero, zero, 0.0);
-        FFProvider ff = FF.pivotingElevator(NEO, 80.0, 20.0, 0.0, 10.0, null, 0.0, 0.0,
+        IFFProvider ff = FF.pivotingElevator(NEO, 80.0, 20.0, 0.0, 10.0, null, 0.0, 0.0,
             null, noPieces(), () -> still, () -> 0.0);
         double torque = Units.lbsToKg(10.0) * G * Units.inchesToMeters(20.0);
         assertEquals(volts(torque, 80.0), ff.compute(0.0, 0.0, 0.0), EPS);

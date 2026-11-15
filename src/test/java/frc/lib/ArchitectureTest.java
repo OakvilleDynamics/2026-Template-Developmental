@@ -22,8 +22,8 @@ import org.junit.jupiter.api.Test;
  *   1. Nothing in frc.lib imports frc.robot — lib code must be copyable into
  *      any robot project without this robot's constants or subsystems.
  *   2. Vendor motor/sensor libraries (CTRE, REV, ThriftyBot) are imported only
- *      under frc.lib.hardware — everything above talks to MotorIO /
- *      AbsoluteEncoderIO, which is what makes a vendor swap a one-value change.
+ *      under frc.lib.hardware — everything above talks to IMotorIO /
+ *      IAbsoluteEncoderIO, which is what makes a vendor swap a one-value change.
  *   3. Only frc.lib.util.Dashboard uses the WPILib dashboard API (SmartDashboard
  *      in 2026, Telemetry / Tunables in 2027) — everything else calls Dashboard,
  *      which is what makes a WPILib-year switch a one-file change.
@@ -67,13 +67,13 @@ class ArchitectureTest {
     @Test
     void mechanismsUseNoVendorImports() throws IOException {
         // Mechanism-style robot code (anything outside the drivetrain's IMU and
-        // Robot.java's SignalLogger) goes through MotorIO too.
+        // Robot.java's SignalLogger) goes through IMotorIO too.
         List<String> violations = scan(MAIN_ROOT, VENDOR_IMPORT, path ->
             !path.startsWith(HARDWARE_ROOT)
             && !path.toString().contains("subsystems/swerveDrive")
             && !path.getFileName().toString().equals("Robot.java"));
         assertTrue(violations.isEmpty(),
-            "Use MotorIO instead of vendor imports:\n  " + String.join("\n  ", violations));
+            "Use IMotorIO instead of vendor imports:\n  " + String.join("\n  ", violations));
     }
 
     private interface PathFilter { boolean include(Path path); }

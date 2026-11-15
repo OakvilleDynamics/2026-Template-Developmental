@@ -8,11 +8,11 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import frc.lib.util.Dashboard;
 
-import frc.lib.hardware.encoder.AbsoluteEncoderIO;
+import frc.lib.hardware.encoder.IAbsoluteEncoderIO;
 import frc.lib.hardware.encoder.ThriftyAnalogEncoder;
-import frc.lib.hardware.motor.MotorIO;
+import frc.lib.hardware.motor.IMotorIO;
 import frc.lib.hardware.motor.MotorIOConfig;
-import frc.lib.util.ConfigVerifiable;
+import frc.lib.util.IConfigVerifiable;
 import frc.lib.util.ConfigVerifyResult;
 import frc.lib.util.RobotLogger;
 import frc.lib.util.Units;
@@ -22,13 +22,13 @@ import frc.lib.util.Units;
  * PATH: src/main/java/frc/lib/swerve/SwerveModule.java
  *
  * One swerve module — vendor-agnostic. Takes its drive motor, steer motor and
- * absolute encoder as already-built MotorIO / AbsoluteEncoderIO objects; use
+ * absolute encoder as already-built IMotorIO / IAbsoluteEncoderIO objects; use
  * SwerveHardware to build them from a motor/encoder type. This class contains
  * no vendor-specific logic and reads no robot constants.
  *
  * ─── UNITS ────────────────────────────────────────────────────────────────────
- * Drive MotorIO: wheel shaft rotations / rot·s⁻¹ (gear ratio inside MotorIO)
- * Steer MotorIO: module azimuth rotations [-0.5, 0.5], continuous wrap
+ * Drive IMotorIO: wheel shaft rotations / rot·s⁻¹ (gear ratio inside IMotorIO)
+ * Steer IMotorIO: module azimuth rotations [-0.5, 0.5], continuous wrap
  * Public API: meters, Rotation2d (WPILib standard)
  *
  * ─── ENCODER SEEDING ─────────────────────────────────────────────────────────
@@ -39,14 +39,14 @@ import frc.lib.util.Units;
  * ─── PID LIVE TUNING ─────────────────────────────────────────────────────────
  * All PID values are published as dashboard tunables at startup and re-read every
  * loop. When a value changes, applyDashboardPIDUpdates() delegates to the
- * MotorIO — no vendor-specific logic here.
+ * IMotorIO — no vendor-specific logic here.
  */
-public class SwerveModule implements ConfigVerifiable {
+public class SwerveModule implements IConfigVerifiable {
 
     // ── Vendor-agnostic hardware ──────────────────────────────────────────────
-    private final MotorIO           driveMotor;
-    private final MotorIO           steerMotor;
-    private final AbsoluteEncoderIO absEncoder;
+    private final IMotorIO           driveMotor;
+    private final IMotorIO           steerMotor;
+    private final IAbsoluteEncoderIO absEncoder;
 
     // ── Identity / geometry ───────────────────────────────────────────────────
     private final String name;
@@ -68,17 +68,17 @@ public class SwerveModule implements ConfigVerifiable {
     /**
      * @param name                Telemetry label: "FL", "FR", "BL", "BR"
      * @param moduleIndex         0=FL, 1=FR, 2=BL, 3=BR
-     * @param driveMotor          drive MotorIO (velocity, wheel-shaft units)
-     * @param steerMotor          steer MotorIO (position, azimuth units, continuous wrap)
+     * @param driveMotor          drive IMotorIO (velocity, wheel-shaft units)
+     * @param steerMotor          steer IMotorIO (position, azimuth units, continuous wrap)
      * @param absEncoder          absolute azimuth encoder, zero = wheel straight forward
      * @param wheelDiameterInches drive wheel diameter (inches)
      */
     public SwerveModule(
             String name,
             int moduleIndex,
-            MotorIO driveMotor,
-            MotorIO steerMotor,
-            AbsoluteEncoderIO absEncoder,
+            IMotorIO driveMotor,
+            IMotorIO steerMotor,
+            IAbsoluteEncoderIO absEncoder,
             double wheelDiameterInches) {
 
         this.name                = name;
@@ -193,7 +193,7 @@ public class SwerveModule implements ConfigVerifiable {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // ConfigVerifiable implementation
+    // IConfigVerifiable implementation
     // ─────────────────────────────────────────────────────────────────────────
 
     @Override

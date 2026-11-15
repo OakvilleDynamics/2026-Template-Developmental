@@ -1,8 +1,8 @@
 package frc.lib.hardware.encoder;
 
 /**
- * AbsoluteEncoderIO.java
- * PATH: src/main/java/frc/lib/hardware/encoder/AbsoluteEncoderIO.java
+ * IAbsoluteEncoderIO.java
+ * PATH: src/main/java/frc/lib/hardware/encoder/IAbsoluteEncoderIO.java
  *
  * Vendor-agnostic interface for an absolute angle encoder (swerve steer,
  * arm pivot, turret).
@@ -16,7 +16,7 @@ package frc.lib.hardware.encoder;
  *
  * Implementations: ThriftyAnalogEncoder, CTRECANcoderEncoder, REVThroughBoreEncoder.
  */
-public interface AbsoluteEncoderIO {
+public interface IAbsoluteEncoderIO {
 
     /**
      * @return absolute angle in radians, range [0, 2π).

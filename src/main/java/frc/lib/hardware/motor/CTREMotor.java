@@ -26,7 +26,7 @@ import frc.lib.util.ConfigVerifyResult;
  * CTREMotor.java
  * PATH: src/main/java/frc/lib/hardware/motor/CTREMotor.java
  *
- * MotorIO for CTRE TalonFX (Phoenix 6). Covers Kraken X60, Kraken X44, Minion.
+ * IMotorIO for CTRE TalonFX (Phoenix 6). Covers Kraken X60, Kraken X44, Minion.
  *
  * ─── GEAR RATIO ──────────────────────────────────────────────────────────────
  * Applied via SensorToMechanismRatio, so every Phoenix 6 position/velocity
@@ -45,9 +45,9 @@ import frc.lib.util.ConfigVerifyResult;
  *
  * ─── CTRE-ONLY EXTRAS ────────────────────────────────────────────────────────
  * setTorqueCurrent(), setMotionMagicExpoPosition(), setNeutralMode(),
- * getTalonFX() — reach them by casting a MotorIO to CTREMotor.
+ * getTalonFX() — reach them by casting a IMotorIO to CTREMotor.
  */
-public class CTREMotor implements MotorIO {
+public class CTREMotor implements IMotorIO {
 
     private static final String VENDOR = MotorVendor.CTRE_TALONFX.displayName;
 
@@ -127,7 +127,7 @@ public class CTREMotor implements MotorIO {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // MotorIO — commands
+    // IMotorIO — commands
     // ─────────────────────────────────────────────────────────────────────────
 
     @Override
@@ -158,7 +158,7 @@ public class CTREMotor implements MotorIO {
     }
 
     @Override
-    public void follow(MotorIO leader, boolean opposeLeader) {
+    public void follow(IMotorIO leader, boolean opposeLeader) {
         // Hardware follower — zero Rio CPU per cycle after this call
         motor.setControl(new Follower(leader.getConfig().canId,
             opposeLeader ? MotorAlignmentValue.Opposed : MotorAlignmentValue.Aligned));
@@ -182,7 +182,7 @@ public class CTREMotor implements MotorIO {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // MotorIO — feedback
+    // IMotorIO — feedback
     // ─────────────────────────────────────────────────────────────────────────
 
     @Override public double getPositionRot()        { return motor.getPosition().getValueAsDouble(); }
@@ -202,7 +202,7 @@ public class CTREMotor implements MotorIO {
     @Override public boolean supportsEncoderSync()      { return true; }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // CTRE-only extras — reach by casting MotorIO to CTREMotor
+    // CTRE-only extras — reach by casting IMotorIO to CTREMotor
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
@@ -235,7 +235,7 @@ public class CTREMotor implements MotorIO {
         motor.getConfigurator().apply(cfg);
     }
 
-    /** Direct access to the TalonFX. Advanced use only — prefer the MotorIO API. */
+    /** Direct access to the TalonFX. Advanced use only — prefer the IMotorIO API. */
     public TalonFX getTalonFX() {
         return motor;
     }
