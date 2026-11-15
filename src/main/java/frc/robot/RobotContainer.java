@@ -100,7 +100,7 @@ public class RobotContainer {
     //
     // Steer gains are for a Thrifty Nova (STEER_MOTOR_TYPE = NOVA), NOT a TalonFX:
     //   - Nova PID runs on MOTOR rotations (before STEER_GEAR_RATIO), so gains
-    //     are ~1/100th the size of TalonFX/Phoenix 6 steer gains.
+    //     are much smaller than TalonFX/Phoenix 6 steer gains.
     //   - kS goes to Nova's setFF(), a feedforward on the setpoint, not a
     //     static-friction term. Keep it 0 for position control.
     //   - kV is ignored by the Nova.

@@ -39,12 +39,8 @@ public final class PathPlannerConstants {
     public static final double ROBOT_MOI_LBIN2 = 2500.0;
     public static final double ROBOT_MOI_KGM2  = Units.lbIn2ToKgM2(ROBOT_MOI_LBIN2);
 
-    /**
-     * Wheel coefficient of friction on FRC carpet.
-     * Typical range: 1.0–1.2 for billet wheels on competition carpet.
-     * TODO: verify on actual field carpet.
-     */
-    public static final double WHEEL_COF = 1.2;
+    /** Wheel coefficient of friction — single source in SwerveConstants. */
+    public static final double WHEEL_COF = SwerveConstants.WHEEL_FRICTION_COEFFICIENT;
 
     // ── Drive current limit ───────────────────────────────────────────────────
 

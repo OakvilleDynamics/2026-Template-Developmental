@@ -44,24 +44,32 @@ public final class SwerveConstants {
      */
     public static final double WHEEL_DIAMETER_INCHES = 4.0;
 
+    /**
+     * Wheel coefficient of friction on FRC carpet (used by PathPlanner).
+     * Typical range: 1.0–1.2 for billet wheels on competition carpet.
+     * TODO: verify on actual field carpet.
+     */
+    public static final double WHEEL_FRICTION_COEFFICIENT = 1.19;
+
     // ── Gear ratios ───────────────────────────────────────────────────────────
     /**
      * Drive motor rotations per wheel rotation.
-     * Thrifty Narrow: L1=8.14, L2=6.75, L3=6.12
-     * TODO: confirm your module order.
+     * 5.79:1 is set by the pinion installed on these Thrifty Narrow modules
+     * (taken from last season's code for the same modules).
      */
-    public static final double DRIVE_GEAR_RATIO = 6.75;
+    public static final double DRIVE_GEAR_RATIO = 5.79;
 
-    /** Minion motor rotations per module azimuth rotation. Thrifty Narrow = 12.8 */
-    public static final double STEER_GEAR_RATIO = 12.8;
+    /** Minion motor rotations per module azimuth rotation. Thrifty Narrow = 24:1 */
+    public static final double STEER_GEAR_RATIO = 24.0;
 
     // ── Speed limits ──────────────────────────────────────────────────────────
     /**
      * Maximum linear drive speed in ft/s (driver-facing unit).
      * Stored in both ft/s and m/s — m/s used by kinematics, ft/s used by DriveInput scaling.
-     * Kraken X60 at L2 theoretical max ≈ 15.5 ft/s. Cap at ~90% for control headroom.
+     * Kraken X60 at 5.79:1 with 4" wheels: theoretical free speed ≈ 18.1 ft/s
+     * (≈ 17.5 ft/s with FOC). Cap at ~90% of the FOC figure for control headroom.
      */
-    public static final double MAX_DRIVE_SPEED_FPS = 14.0;
+    public static final double MAX_DRIVE_SPEED_FPS = 15.5;
     public static final double MAX_DRIVE_SPEED_MPS = Units.ftpsToMps(MAX_DRIVE_SPEED_FPS);
 
     /** Maximum angular speed (rad/s). ~1 full rotation per second. */
