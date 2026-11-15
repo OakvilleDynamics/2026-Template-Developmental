@@ -98,6 +98,11 @@ public class RobotContainer {
     // drivePID: { kP, kI, kD, kS, kV, kA }
     // steerPID: { kP, kI, kD, kS, kV }
     //
+    // Drive gains run on the TalonFX in WHEEL units (SensorToMechanismRatio =
+    // DRIVE_GEAR_RATIO), so kV is volts per wheel rot/s:
+    //   Kraken X60 free speed ≈ 100 motor rot/s ÷ 5.79 ≈ 17.3 wheel rot/s
+    //   kV ≈ 12 V ÷ 17.3 ≈ 0.7 (≈ 0.72 with FOC). Tune at the robot.
+    //
     // Steer gains are for a Thrifty Nova (STEER_MOTOR_TYPE = NOVA), NOT a TalonFX:
     //   - Nova PID runs on MOTOR rotations (before STEER_GEAR_RATIO), so gains
     //     are much smaller than TalonFX/Phoenix 6 steer gains.
@@ -108,13 +113,13 @@ public class RobotContainer {
     // then add kD. Tunable live under Swerve/<module>/PID/.
     //==========================================================================
 
-    private static final double[] FL_DRIVE_PID = { 0.1, 0.0, 0.0, 0.15, 0.12, 0.01 };
+    private static final double[] FL_DRIVE_PID = { 0.1, 0.0, 0.0, 0.15, 0.7, 0.01 };
     private static final double[] FL_STEER_PID = { 0.1, 0.0, 0.0, 0.0, 0.0 };
-    private static final double[] FR_DRIVE_PID = { 0.1, 0.0, 0.0, 0.15, 0.12, 0.01 };
+    private static final double[] FR_DRIVE_PID = { 0.1, 0.0, 0.0, 0.15, 0.7, 0.01 };
     private static final double[] FR_STEER_PID = { 0.1, 0.0, 0.0, 0.0, 0.0 };
-    private static final double[] BL_DRIVE_PID = { 0.1, 0.0, 0.0, 0.15, 0.12, 0.01 };
+    private static final double[] BL_DRIVE_PID = { 0.1, 0.0, 0.0, 0.15, 0.7, 0.01 };
     private static final double[] BL_STEER_PID = { 0.1, 0.0, 0.0, 0.0, 0.0 };
-    private static final double[] BR_DRIVE_PID = { 0.1, 0.0, 0.0, 0.15, 0.12, 0.01 };
+    private static final double[] BR_DRIVE_PID = { 0.1, 0.0, 0.0, 0.15, 0.7, 0.01 };
     private static final double[] BR_STEER_PID = { 0.1, 0.0, 0.0, 0.0, 0.0 };
 
     //==========================================================================
