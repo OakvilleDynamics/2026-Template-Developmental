@@ -518,8 +518,8 @@ public class SwerveDrive extends SubsystemBase implements IAimDriveState {
     public Pose2d    getPose()              { return poseEstimator.getEstimatedPosition(); }
     public Rotation2d getYaw() {
         // Pigeon 2 reports yaw in degrees, CCW positive (NWU).
-        // Negated to match WPILib field convention — verify sign against physical mounting.
-        return Rotation2d.fromDegrees(-imu.getYaw().getValueAsDouble());
+        // WPILib also assumes CCW+ (NWU coordinate frame)
+        return Rotation2d.fromDegrees(imu.getYaw().getValueAsDouble());
     }
 
     /**
