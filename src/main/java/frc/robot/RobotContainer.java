@@ -97,16 +97,25 @@ public class RobotContainer {
     // Per-module PID defaults
     // drivePID: { kP, kI, kD, kS, kV, kA }
     // steerPID: { kP, kI, kD, kS, kV }
+    //
+    // Steer gains are for a Thrifty Nova (STEER_MOTOR_TYPE = NOVA), NOT a TalonFX:
+    //   - Nova PID runs on MOTOR rotations (before STEER_GEAR_RATIO), so gains
+    //     are ~1/100th the size of TalonFX/Phoenix 6 steer gains.
+    //   - kS goes to Nova's setFF(), a feedforward on the setpoint, not a
+    //     static-friction term. Keep it 0 for position control.
+    //   - kV is ignored by the Nova.
+    // Bring-up: start kP ≈ 0.1, raise until the wheels snap without oscillating,
+    // then add kD. Tunable live under Swerve/<module>/PID/.
     //==========================================================================
 
     private static final double[] FL_DRIVE_PID = { 0.1, 0.0, 0.0, 0.15, 0.12, 0.01 };
-    private static final double[] FL_STEER_PID = { 60.0, 0.0, 2.0, 0.25, 0.12 };
+    private static final double[] FL_STEER_PID = { 0.1, 0.0, 0.0, 0.0, 0.0 };
     private static final double[] FR_DRIVE_PID = { 0.1, 0.0, 0.0, 0.15, 0.12, 0.01 };
-    private static final double[] FR_STEER_PID = { 60.0, 0.0, 2.0, 0.25, 0.12 };
+    private static final double[] FR_STEER_PID = { 0.1, 0.0, 0.0, 0.0, 0.0 };
     private static final double[] BL_DRIVE_PID = { 0.1, 0.0, 0.0, 0.15, 0.12, 0.01 };
-    private static final double[] BL_STEER_PID = { 60.0, 0.0, 2.0, 0.25, 0.12 };
+    private static final double[] BL_STEER_PID = { 0.1, 0.0, 0.0, 0.0, 0.0 };
     private static final double[] BR_DRIVE_PID = { 0.1, 0.0, 0.0, 0.15, 0.12, 0.01 };
-    private static final double[] BR_STEER_PID = { 60.0, 0.0, 2.0, 0.25, 0.12 };
+    private static final double[] BR_STEER_PID = { 0.1, 0.0, 0.0, 0.0, 0.0 };
 
     //==========================================================================
     // Controllers
