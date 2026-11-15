@@ -210,7 +210,8 @@ send during a match vs. while tuning) belongs.
 
 | Pattern | Convention | Examples |
 |---|---|---|
-| Classes, interfaces, records, enums (and their files) | `UpperCamelCase`; acronyms stay uppercase | `SwerveDrive`, `DriveInput`, `CANIDs`, `IFFProvider` |
+| Classes, interfaces, records, enums (and their files) | `UpperCamelCase`; acronyms stay uppercase | `SwerveDrive`, `DriveInput`, `CANIDs` |
+| Interfaces | `I` prefix + `UpperCamelCase`; implementations keep plain names | `IMotorIO` → `CTREMotor`, `IDriverInputs` → `XboxInputs` |
 | Proper-noun-prefixed classes | Follow proper noun | `AprilTagFieldCal`, `PhotonCamera` |
 | Constants | `UPPER_SNAKE_CASE` | `MAX_DRIVE_SPEED_MPS`, `WHEEL_COF` |
 | Methods and variables | `lowerCamelCase` | `getPose()`, `addVisionMeasurement()` |
