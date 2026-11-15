@@ -283,8 +283,20 @@ public class RobotContainer {
     }
 
     private void configureButtonBindings() {
-        // TODO: add Xbox button bindings; for now the Xbox layout only drives.
+        // Zero the heading: point the robot away from the driver, then press.
+        // Works while disabled. No subsystem requirement, so driving isn't interrupted.
+        Command zeroHeading = Commands.runOnce(drive::zeroYaw).ignoringDisable(true);
+
+        if (driverInputs instanceof XboxInputs xbox) {
+            // TODO: add the rest of the Xbox button bindings.
+            new JoystickButton(xbox.controller(), XboxController.Button.kStart.value)
+                .onTrue(zeroHeading);
+            return;
+        }
+
         if (!(driverInputs instanceof FlightStickInputs sticks)) return;
+
+        new JoystickButton(sticks.leftStick(), 2).onTrue(zeroHeading);
 
         Joystick rightStick = sticks.rightStick();
 

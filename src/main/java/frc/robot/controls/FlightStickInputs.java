@@ -41,6 +41,9 @@ public class FlightStickInputs implements IDriverInputs {
     @Override public double corForward() { return -rightStick.getRawAxis(AXIS_Y); }
     @Override public double corLeft()    { return -rightStick.getRawAxis(AXIS_X); }
 
+    /** The left stick, for binding its buttons in RobotContainer. */
+    public Joystick leftStick() { return leftStick; }
+
     /** The right stick, for binding its buttons in RobotContainer. */
     public Joystick rightStick() { return rightStick; }
 }
