@@ -208,7 +208,11 @@ public class NovaMotor implements IMotorIO {
             mismatches.add("inversion: expected " + config.inverted + " got " + motor.getInverted());
         if (motor.getBrakeMode() != config.brakeOnNeutral)
             mismatches.add("brakeMode: expected " + config.brakeOnNeutral + " got " + motor.getBrakeMode());
-        if (config.novaMotorType != null) {
+        // Motor type must be set explicitly — the Nova otherwise runs whatever
+        // type is saved on it, a known silent-failure mode.
+        if (config.novaMotorType == null) {
+            mismatches.add("motorType: not configured — call withNovaMotorType()");
+        } else {
             MotorType want = toNovaType(config.novaMotorType);
             MotorType read = motor.getMotorType();
             if (read != want)

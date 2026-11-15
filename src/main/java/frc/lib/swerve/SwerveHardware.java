@@ -7,6 +7,7 @@ import frc.lib.hardware.encoder.ThriftyAnalogEncoder;
 import frc.lib.hardware.motor.IMotorIO;
 import frc.lib.hardware.motor.MotorIOConfig;
 import frc.lib.hardware.motor.MotorVendor;
+import frc.lib.hardware.motor.MotorIOConfig.NovaMotorType;
 
 /**
  * SwerveHardware.java
@@ -104,13 +105,17 @@ public final class SwerveHardware {
             default: throw new IllegalArgumentException("SwerveHardware: unsupported steer type " + type);
         }
 
-        return MotorIOConfig.builder(canId, vendor)
+        MotorIOConfig.Builder b = MotorIOConfig.builder(canId, vendor)
             .withInverted(vendor == MotorVendor.CTRE_TALONFX)
             .withBrakeOnNeutral(true)
             .withGearRatio(gearRatio)
             .withGains(pid)
             .withCurrentLimits(supplyAmps, statorAmps)
             .withContinuousWrap(true);
+        // TODO: let the robot choose the motor a Nova steer drives (NEO or Minion)
+        // instead of assuming Minion, e.g. split NOVA into NOVA_MINION / NOVA_NEO.
+        if (type == SteerMotorType.NOVA) b.withNovaMotorType(NovaMotorType.MINION);
+        return b;
     }
 
     /**
