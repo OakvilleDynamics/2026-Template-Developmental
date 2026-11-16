@@ -85,7 +85,7 @@ public final class SwerveConstants {
     /**
      * Absolute encoder inversion, all modules. Set true if "Abs Enc Rot"
      * decreases when the wheel turns counter-clockwise viewed from above.
-     * Supported for THRIFTY_ANALOG only.
+     * Supported for THRIFTY_ANALOG only. Last season's code did not invert.
      */
     public static final boolean ABS_ENCODER_INVERTED = false;
 
@@ -104,44 +104,29 @@ public final class SwerveConstants {
 
     // ── CAN IDs and port assignments ─────────────────────────────────────────
     // All CAN IDs and roboRIO port assignments are in CANIDs.java.
-    // Thrifty encoder full-scale voltage: ThriftyAnalogEncoder.DEFAULT_FULL_SCALE_VOLTS.
 
     // ── Steering zero offsets ─────────────────────────────────────────────────
 
     /**
-     * Analog voltage read when each module wheel points straight forward.
-     * Used when ABS_ENCODER_TYPE = THRIFTY_ANALOG.
+     * Absolute encoder reading, in rotations, when each wheel points straight
+     * forward. Used by every ABS_ENCODER_TYPE. Subtracted from the raw reading;
+     * the result is wrapped, so any value in [0, 1) or [-0.5, 0.5) works.
      *
      * HOW TO MEASURE:
-     *   1. Deploy with all offsets = 0.0
-     *   2. Rotate each wheel by hand to face straight forward
-     *   3. Read "Swerve/FL/Raw Volts" etc. from the dashboard
-     *   4. Paste those values here and redeploy
+     *   1. Rotate each wheel by hand to face straight forward, all bevel gears
+     *      on the same side
+     *   2. THRIFTY_ANALOG: read "Swerve/FL/Raw Rot" etc. (offset-free, any offsets)
+     *      Other types: deploy with offsets = 0.0 and read "Swerve/FL/Abs Enc Rot"
+     *   3. Paste those values here and redeploy
      *
-     * TODO: measure on your physical robot
+     * Starting values are last season's AnalogEncoder offsets for these modules
+     * (ticks of 4096). TODO: re-measure on the robot — they only hold if the
+     * encoders and magnets haven't been remounted.
      */
-    public static final double FL_STEER_OFFSET_VOLTS = 0.0;
-    public static final double FR_STEER_OFFSET_VOLTS = 0.0;
-    public static final double BL_STEER_OFFSET_VOLTS = 0.0;
-    public static final double BR_STEER_OFFSET_VOLTS = 0.0;
-
-    /**
-     * Absolute encoder offset in rotations when wheel points straight forward.
-     * Used when ABS_ENCODER_TYPE = CTRE_CANCODER or REV_THROUGH_BORE.
-     * Range: [-0.5, 0.5]. Subtract from raw encoder reading; result is normalized.
-     *
-     * HOW TO MEASURE:
-     *   1. Deploy with all offsets = 0.0
-     *   2. Rotate each wheel by hand to face straight forward
-     *   3. Read "Swerve/FL/Abs Enc Rot" from the dashboard
-     *   4. Paste those values here and redeploy
-     *
-     * TODO: measure on your physical robot
-     */
-    public static final double FL_STEER_OFFSET_ROT = 0.0;
-    public static final double FR_STEER_OFFSET_ROT = 0.0;
-    public static final double BL_STEER_OFFSET_ROT = 0.0;
-    public static final double BR_STEER_OFFSET_ROT = 0.0;
+    public static final double FL_STEER_OFFSET_ROT = 3118.0 / 4096.0;  // 0.7612
+    public static final double FR_STEER_OFFSET_ROT = 2651.0 / 4096.0;  // 0.6472
+    public static final double BL_STEER_OFFSET_ROT =  934.0 / 4096.0;  // 0.2280
+    public static final double BR_STEER_OFFSET_ROT = 3834.0 / 4096.0;  // 0.9360
 
     // ── Input deadband ────────────────────────────────────────────────────────
     /** Applied to all joystick axes before scaling. Eliminates stick drift. */

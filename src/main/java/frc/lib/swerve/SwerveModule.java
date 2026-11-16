@@ -135,9 +135,10 @@ public class SwerveModule implements IConfigVerifiable {
         Dashboard.log("Swerve/" + name + "/Abs Enc Rot",
             absEncoder.getAbsoluteAngleRad() / (2.0 * Math.PI));
 
-        // Thrifty analog: also publish raw voltage and log to DataLog
+        // Thrifty analog: also publish raw (offset-free) reading and voltage, log volts to DataLog
         if (absEncoder instanceof ThriftyAnalogEncoder thrifty) {
             double rawVolts = thrifty.getRawVolts();
+            Dashboard.log("Swerve/" + name + "/Raw Rot", thrifty.getRawRotations());
             Dashboard.log("Swerve/" + name + "/Raw Volts", rawVolts);
             RobotLogger.moduleSteerVolts[moduleIndex].append(rawVolts);
         }

@@ -15,40 +15,6 @@ import org.junit.jupiter.api.Test;
 class EncoderMathTest {
 
     private static final double EPS = 1e-9;
-    private static final double FULL = ThriftyAnalogEncoder.DEFAULT_FULL_SCALE_VOLTS;
-
-    @Test
-    void thriftyOffsetVoltageReadsZero() {
-        assertEquals(0.0, ThriftyAnalogEncoder.voltsToAngleRad(1.2, 1.2, FULL), EPS);
-    }
-
-    @Test
-    void thriftyQuarterTurn() {
-        assertEquals(Math.PI / 2, ThriftyAnalogEncoder.voltsToAngleRad(FULL / 4, 0.0, FULL), EPS);
-    }
-
-    @Test
-    void thriftyWrapsBelowOffset() {
-        // 0.3 V below the offset → 0.3 V short of a full turn
-        double expected = (FULL - 0.3) / FULL * 2 * Math.PI;
-        assertEquals(expected, ThriftyAnalogEncoder.voltsToAngleRad(1.0, 1.3, FULL), EPS);
-    }
-
-    @Test
-    void thriftyInvertedOffsetStillReadsZero() {
-        assertEquals(0.0, ThriftyAnalogEncoder.voltsToAngleRad(1.2, 1.2, FULL, true), EPS);
-    }
-
-    @Test
-    void thriftyInvertedQuarterTurnReadsThreeQuarters() {
-        assertEquals(1.5 * Math.PI, ThriftyAnalogEncoder.voltsToAngleRad(FULL / 4, 0.0, FULL, true), EPS);
-    }
-
-    @Test
-    void thriftyNotInvertedMatchesThreeArgForm() {
-        assertEquals(ThriftyAnalogEncoder.voltsToAngleRad(1.0, 1.3, FULL),
-                     ThriftyAnalogEncoder.voltsToAngleRad(1.0, 1.3, FULL, false), EPS);
-    }
 
     @Test
     void rotationOffsetReadsZero() {

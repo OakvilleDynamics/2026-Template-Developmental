@@ -127,23 +127,21 @@ public final class SwerveHardware {
      * @param steerMotor    the module's steer IMotorIO (REV_THROUGH_BORE reads through it)
      * @param analogPort    roboRIO analog port (THRIFTY_ANALOG only)
      * @param cancoderCanId CANcoder CAN ID (CTRE_CANCODER only)
-     * @param offsetVolts   Thrifty voltage when the wheel points forward (THRIFTY_ANALOG)
-     * @param offsetRot     rotation offset when the wheel points forward (CANCODER, THROUGH_BORE)
+     * @param offsetRot     raw reading in rotations when the wheel points forward
      * @param inverted      reverse the encoder direction (THRIFTY_ANALOG only)
      * @throws IllegalArgumentException REV_THROUGH_BORE with a non-REV steer motor,
      *                                  or inverted with an encoder that doesn't support it
      */
     public static IAbsoluteEncoderIO buildEncoder(
             AbsoluteEncoderType type, IMotorIO steerMotor,
-            int analogPort, int cancoderCanId, double offsetVolts, double offsetRot,
+            int analogPort, int cancoderCanId, double offsetRot,
             boolean inverted) {
         // TODO: support inversion for CTRE_CANCODER (SensorDirection) and REV_THROUGH_BORE.
         if (inverted && type != AbsoluteEncoderType.THRIFTY_ANALOG)
             throw new IllegalArgumentException(
                 "SwerveHardware: encoder inversion is only supported for THRIFTY_ANALOG, got " + type);
         switch (type) {
-            case THRIFTY_ANALOG:   return new ThriftyAnalogEncoder(analogPort, offsetVolts,
-                                       ThriftyAnalogEncoder.DEFAULT_FULL_SCALE_VOLTS, inverted);
+            case THRIFTY_ANALOG:   return new ThriftyAnalogEncoder(analogPort, offsetRot, inverted);
             case CTRE_CANCODER:    return new CTRECANcoderEncoder(cancoderCanId, offsetRot);
             case REV_THROUGH_BORE: return new REVThroughBoreEncoder(steerMotor, offsetRot);
             default: throw new IllegalArgumentException("SwerveHardware: unsupported encoder type " + type);
