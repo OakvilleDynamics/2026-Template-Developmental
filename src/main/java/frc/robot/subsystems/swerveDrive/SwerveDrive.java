@@ -216,6 +216,12 @@ public class SwerveDrive extends SubsystemBase implements IAimDriveState {
 
     @Override
     public void periodic() {
+        // While disabled, keep each steer encoder in sync with its absolute encoder
+        // (recovers a seed lost at boot, follows wheels turned by hand).
+        if (DriverStation.isDisabled()) {
+            for (SwerveModule m : modules) m.syncSteerToAbsolute();
+        }
+
         poseEstimator.update(getYaw(), getModulePositions());
 
         // Write latest estimated pose into the ring buffer for getPoseAtTime()

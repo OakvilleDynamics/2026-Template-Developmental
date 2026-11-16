@@ -3,6 +3,7 @@ package frc.lib.swerve;
 import java.util.ArrayList;
 import java.util.List;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
@@ -52,6 +53,11 @@ public class SwerveModule implements IConfigVerifiable {
     private final String name;
     private final int    moduleIndex;  // 0=FL, 1=FR, 2=BL, 3=BR — for RobotLogger indexing
     private final double wheelCircumferenceM;
+
+    // ── Steer re-sync ─────────────────────────────────────────────────────────
+    /** Re-seed when the internal steer angle drifts this far from the absolute encoder. */
+    private static final double STEER_RESYNC_THRESHOLD_ROT = 2.0 / 360.0;
+    private int steerResyncCount = 0;
 
     // ── Last commanded state (after optimize), for telemetry ─────────────────
     private SwerveModuleState lastDesiredState = new SwerveModuleState();
@@ -119,6 +125,23 @@ public class SwerveModule implements IConfigVerifiable {
         steerMotor.setPosition(desiredState.angle.getRotations(), 0.0);
     }
 
+    /**
+     * Re-seeds the steer motor's internal encoder from the absolute encoder if
+     * they disagree by more than STEER_RESYNC_THRESHOLD_ROT. Call only while
+     * disabled: it recovers a seed lost at startup (steer controller not yet
+     * booted) and keeps hand-turned wheels in sync, without fighting the
+     * steering loop while driving.
+     */
+    public void syncSteerToAbsolute() {
+        double absRot      = absEncoder.getAbsoluteAngleRad() / (2.0 * Math.PI);
+        double internalRot = steerMotor.getPositionRot();
+        double errorRot    = MathUtil.inputModulus(absRot - internalRot, -0.5, 0.5);
+        if (Math.abs(errorRot) > STEER_RESYNC_THRESHOLD_ROT) {
+            seedSteerFromAbsolute();
+            steerResyncCount++;
+        }
+    }
+
     public SwerveModuleState getState() {
         double speedMPS = driveMotor.getVelocityRps() * wheelCircumferenceM;
         return new SwerveModuleState(speedMPS, getSteerAngle());
@@ -136,6 +159,10 @@ public class SwerveModule implements IConfigVerifiable {
         // hold the last command while disabled.
         Dashboard.log("Swerve/" + name + "/Desired Angle Deg", lastDesiredState.angle.getDegrees());
         Dashboard.log("Swerve/" + name + "/Desired Speed MPS", lastDesiredState.speedMetersPerSecond);
+        // Times syncSteerToAbsolute() re-seeded. A few after boot is expected;
+        // a steadily climbing count while disabled means a noisy encoder or a
+        // steer controller not accepting the new position.
+        Dashboard.log("Swerve/" + name + "/Steer Resyncs", steerResyncCount);
         Dashboard.log("Swerve/" + name + "/Drive Amps",  driveMotor.getSupplyCurrentAmps());
         Dashboard.log("Swerve/" + name + "/Steer Amps",  steerMotor.getSupplyCurrentAmps());
 
