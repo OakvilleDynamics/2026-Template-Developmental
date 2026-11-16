@@ -171,25 +171,25 @@ public class RobotContainer {
         // TODO: verify drive inversion — FL/BL assumed inverted, FR/BR not inverted.
         SwerveModule flModule = buildModule("FL", 0,
             CANIDs.FL_DRIVE,                 CANIDs.FL_STEER,
-            PortIDs.AI_FL_STEER_ENCODER,     CANIDs.FL_CANCODER,
+            PortIDs.AI_FL_STEER_ENCODER,     CANIDs.FL_CANCODER_UNUSED,
             SwerveConstants.FL_STEER_OFFSET_VOLTS, SwerveConstants.FL_STEER_OFFSET_ROT,
             true,  FL_DRIVE_PID, FL_STEER_PID);
 
         SwerveModule frModule = buildModule("FR", 1,
             CANIDs.FR_DRIVE,                 CANIDs.FR_STEER,
-            PortIDs.AI_FR_STEER_ENCODER,     CANIDs.FR_CANCODER,
+            PortIDs.AI_FR_STEER_ENCODER,     CANIDs.FR_CANCODER_UNUSED,
             SwerveConstants.FR_STEER_OFFSET_VOLTS, SwerveConstants.FR_STEER_OFFSET_ROT,
             false, FR_DRIVE_PID, FR_STEER_PID);
 
         SwerveModule blModule = buildModule("BL", 2,
             CANIDs.BL_DRIVE,                 CANIDs.BL_STEER,
-            PortIDs.AI_BL_STEER_ENCODER,     CANIDs.BL_CANCODER,
+            PortIDs.AI_BL_STEER_ENCODER,     CANIDs.BL_CANCODER_UNUSED,
             SwerveConstants.BL_STEER_OFFSET_VOLTS, SwerveConstants.BL_STEER_OFFSET_ROT,
             true,  BL_DRIVE_PID, BL_STEER_PID);
 
         SwerveModule brModule = buildModule("BR", 3,
             CANIDs.BR_DRIVE,                 CANIDs.BR_STEER,
-            PortIDs.AI_BR_STEER_ENCODER,     CANIDs.BR_CANCODER,
+            PortIDs.AI_BR_STEER_ENCODER,     CANIDs.BR_CANCODER_UNUSED,
             SwerveConstants.BR_STEER_OFFSET_VOLTS, SwerveConstants.BR_STEER_OFFSET_ROT,
             false, BR_DRIVE_PID, BR_STEER_PID);
 

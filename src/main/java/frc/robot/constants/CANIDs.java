@@ -36,8 +36,8 @@ public final class CANIDs {
     // ── CANcoder CAN IDs — unused (ABS_ENCODER_TYPE = THRIFTY_ANALOG) ────────
     // Populated here for reference if encoder type is ever changed.
     // TODO: assign real IDs if switching to CTRE_CANCODER
-    public static final int FL_CANCODER = 21;
-    public static final int FR_CANCODER = 22;
-    public static final int BL_CANCODER = 23;
-    public static final int BR_CANCODER = 24;
+    public static final int FL_CANCODER_UNUSED = 21;
+    public static final int FR_CANCODER_UNUSED = 22;
+    public static final int BL_CANCODER_UNUSED = 23;
+    public static final int BR_CANCODER_UNUSED = 24;
 }
