@@ -53,6 +53,9 @@ public class SwerveModule implements IConfigVerifiable {
     private final int    moduleIndex;  // 0=FL, 1=FR, 2=BL, 3=BR — for RobotLogger indexing
     private final double wheelCircumferenceM;
 
+    // ── Last commanded state (after optimize), for telemetry ─────────────────
+    private SwerveModuleState lastDesiredState = new SwerveModuleState();
+
     // ── Live PID values (read back from dashboard each loop) ──────────────────
     private double drive_kP, drive_kI, drive_kD, drive_kS, drive_kV, drive_kA;
     private double steer_kP, steer_kI, steer_kD, steer_kS, steer_kV;
@@ -107,6 +110,7 @@ public class SwerveModule implements IConfigVerifiable {
 
     public void setDesiredState(SwerveModuleState desiredState) {
         applyDashboardPIDUpdates();
+        lastDesiredState = desiredState;
 
         // Drive: convert m/s → wheel rot/s; gear ratio handled inside driveMotor
         driveMotor.setVelocity(desiredState.speedMetersPerSecond / wheelCircumferenceM, 0.0);
@@ -128,6 +132,10 @@ public class SwerveModule implements IConfigVerifiable {
     public void publishTelemetry() {
         Dashboard.log("Swerve/" + name + "/Angle Deg",   getSteerAngle().getDegrees());
         Dashboard.log("Swerve/" + name + "/Speed MPS",   getState().speedMetersPerSecond);
+        // Commanded values to compare against the measured ones above. These
+        // hold the last command while disabled.
+        Dashboard.log("Swerve/" + name + "/Desired Angle Deg", lastDesiredState.angle.getDegrees());
+        Dashboard.log("Swerve/" + name + "/Desired Speed MPS", lastDesiredState.speedMetersPerSecond);
         Dashboard.log("Swerve/" + name + "/Drive Amps",  driveMotor.getSupplyCurrentAmps());
         Dashboard.log("Swerve/" + name + "/Steer Amps",  steerMotor.getSupplyCurrentAmps());
 
