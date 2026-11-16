@@ -102,6 +102,18 @@ public final class SwerveConstants {
     /** Maximum angular speed (rad/s). ~1 full rotation per second. */
     public static final double MAX_ANGULAR_SPEED_RPS = 2.0 * Math.PI;
 
+    /**
+     * Driver speed scaling for bring-up, applied in TeleopDrive after deadband
+     * and squaring. Full stick = scale × max speed. Only affects the driver —
+     * kinematics desaturation and PathPlanner still use the max speeds above.
+     * Live-tunable from the dashboard: "Drive/Teleop Speed Scale" and
+     * "Drive/Teleop Rotation Scale" (clamped to [0, 1]).
+     *
+     * TODO: set both to 1.0 once the drivetrain is validated.
+     */
+    public static final double TELEOP_SPEED_SCALE    = 0.3;  // ≈ 4.7 ft/s at full stick
+    public static final double TELEOP_ROTATION_SCALE = 0.5;  // ≈ 0.5 rot/s at full stick
+
     // ── CAN IDs and port assignments ─────────────────────────────────────────
     // All CAN IDs and roboRIO port assignments are in CANIDs.java.
 

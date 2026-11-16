@@ -8,6 +8,7 @@ import frc.robot.controls.IDriverInputs;
 import frc.lib.swerve.DriveInput;
 import frc.robot.subsystems.swerveDrive.SwerveDrive;
 import frc.lib.mechanisms.shooter.IAimDriveModes;
+import frc.lib.util.Dashboard;
 import frc.lib.util.Units;
 
 /**
@@ -48,6 +49,8 @@ import frc.lib.util.Units;
  * ─── INPUT SHAPING ───────────────────────────────────────────────────────────
  * squareInput() squares magnitude while preserving sign.
  * Gives finer low-speed control without losing full power at full deflection.
+ * Translation and rotation are then multiplied by the live-tunable teleop
+ * scales ("Drive/Teleop Speed Scale", "Drive/Teleop Rotation Scale").
  */
 public class TeleopDrive extends Command implements IAimDriveModes {
 
@@ -59,6 +62,12 @@ public class TeleopDrive extends Command implements IAimDriveModes {
     // ── CoR bounds (meters, converted from inches in constructor) ─────────────
     private final double corMaxX;
     private final double corMaxY;
+
+    // ── Driver speed scaling (live-tunable, clamped to [0, 1]) ────────────────
+    private final Dashboard.TunableNumber speedScale =
+        Dashboard.tunable("Drive/Teleop Speed Scale", SwerveConstants.TELEOP_SPEED_SCALE);
+    private final Dashboard.TunableNumber rotationScale =
+        Dashboard.tunable("Drive/Teleop Rotation Scale", SwerveConstants.TELEOP_ROTATION_SCALE);
 
     // ── Drive mode ────────────────────────────────────────────────────────────
 
@@ -178,12 +187,15 @@ public class TeleopDrive extends Command implements IAimDriveModes {
     @Override
     public void execute() {
 
+        double linScale = MathUtil.clamp(speedScale.get(),    0.0, 1.0);
+        double rotScale = MathUtil.clamp(rotationScale.get(), 0.0, 1.0);
+
         // ── Translation (field-relative) ──────────────────────────────────────
-        double vxFtps = squareInput(applyDeadband(inputs.forward())) * SwerveConstants.MAX_DRIVE_SPEED_FPS;
-        double vyFtps = squareInput(applyDeadband(inputs.left()))    * SwerveConstants.MAX_DRIVE_SPEED_FPS;
+        double vxFtps = squareInput(applyDeadband(inputs.forward())) * linScale * SwerveConstants.MAX_DRIVE_SPEED_FPS;
+        double vyFtps = squareInput(applyDeadband(inputs.left()))    * linScale * SwerveConstants.MAX_DRIVE_SPEED_FPS;
 
         // ── Rotation ──────────────────────────────────────────────────────────
-        double omega = squareInput(applyDeadband(inputs.rotate())) * SwerveConstants.MAX_ANGULAR_SPEED_RPS;
+        double omega = squareInput(applyDeadband(inputs.rotate())) * rotScale * SwerveConstants.MAX_ANGULAR_SPEED_RPS;
 
         // ── Center of rotation (linear, no squaring) ──────────────────────────
         // Inputs centered → CoR = (0,0) = robot center = pivot in place
