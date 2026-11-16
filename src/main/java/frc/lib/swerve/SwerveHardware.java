@@ -81,16 +81,18 @@ public final class SwerveHardware {
      *   Kraken X60 — 40 / 60 A     Kraken X44, Minion — 30 / 40 A
      *   Nova — 30 A   NEO Vortex — 30 A   NEO — 25 A   NEO 550 — 20 A
      *
-     * Inversion: TalonFX steer runs Clockwise_Positive; REV and Nova run
-     * non-inverted (matches the previously validated per-vendor classes).
+     * Inversion is chosen by the robot: positive output must turn the module
+     * counter-clockwise viewed from above. Previously validated: TalonFX steer
+     * inverted (Clockwise_Positive); REV and Nova non-inverted.
      *
      * @param type      steer motor type
      * @param canId     controller CAN ID
+     * @param inverted  invert steer output
      * @param pid       { kP, kI, kD, kS, kV } — kA unused for position control
      * @param gearRatio steer motor rotations per module azimuth rotation
      */
     public static MotorIOConfig.Builder steerMotorConfig(
-            SteerMotorType type, int canId, double[] pid, double gearRatio) {
+            SteerMotorType type, int canId, boolean inverted, double[] pid, double gearRatio) {
 
         MotorVendor vendor;
         double supplyAmps, statorAmps = 40.0;
@@ -106,7 +108,7 @@ public final class SwerveHardware {
         }
 
         MotorIOConfig.Builder b = MotorIOConfig.builder(canId, vendor)
-            .withInverted(vendor == MotorVendor.CTRE_TALONFX)
+            .withInverted(inverted)
             .withBrakeOnNeutral(true)
             .withGearRatio(gearRatio)
             .withGains(pid)
@@ -127,13 +129,21 @@ public final class SwerveHardware {
      * @param cancoderCanId CANcoder CAN ID (CTRE_CANCODER only)
      * @param offsetVolts   Thrifty voltage when the wheel points forward (THRIFTY_ANALOG)
      * @param offsetRot     rotation offset when the wheel points forward (CANCODER, THROUGH_BORE)
-     * @throws IllegalArgumentException REV_THROUGH_BORE with a non-REV steer motor
+     * @param inverted      reverse the encoder direction (THRIFTY_ANALOG only)
+     * @throws IllegalArgumentException REV_THROUGH_BORE with a non-REV steer motor,
+     *                                  or inverted with an encoder that doesn't support it
      */
     public static IAbsoluteEncoderIO buildEncoder(
             AbsoluteEncoderType type, IMotorIO steerMotor,
-            int analogPort, int cancoderCanId, double offsetVolts, double offsetRot) {
+            int analogPort, int cancoderCanId, double offsetVolts, double offsetRot,
+            boolean inverted) {
+        // TODO: support inversion for CTRE_CANCODER (SensorDirection) and REV_THROUGH_BORE.
+        if (inverted && type != AbsoluteEncoderType.THRIFTY_ANALOG)
+            throw new IllegalArgumentException(
+                "SwerveHardware: encoder inversion is only supported for THRIFTY_ANALOG, got " + type);
         switch (type) {
-            case THRIFTY_ANALOG:   return new ThriftyAnalogEncoder(analogPort, offsetVolts);
+            case THRIFTY_ANALOG:   return new ThriftyAnalogEncoder(analogPort, offsetVolts,
+                                       ThriftyAnalogEncoder.DEFAULT_FULL_SCALE_VOLTS, inverted);
             case CTRE_CANCODER:    return new CTRECANcoderEncoder(cancoderCanId, offsetRot);
             case REV_THROUGH_BORE: return new REVThroughBoreEncoder(steerMotor, offsetRot);
             default: throw new IllegalArgumentException("SwerveHardware: unsupported encoder type " + type);

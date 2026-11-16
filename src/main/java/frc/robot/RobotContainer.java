@@ -168,30 +168,29 @@ public class RobotContainer {
 
     public RobotContainer() {
 
-        // TODO: verify drive inversion — FL/BL assumed inverted, FR/BR not inverted.
         SwerveModule flModule = buildModule("FL", 0,
             CANIDs.FL_DRIVE,                 CANIDs.FL_STEER,
             PortIDs.AI_FL_STEER_ENCODER,     CANIDs.FL_CANCODER_UNUSED,
             SwerveConstants.FL_STEER_OFFSET_VOLTS, SwerveConstants.FL_STEER_OFFSET_ROT,
-            true,  FL_DRIVE_PID, FL_STEER_PID);
+            SwerveConstants.FL_DRIVE_INVERTED, FL_DRIVE_PID, FL_STEER_PID);
 
         SwerveModule frModule = buildModule("FR", 1,
             CANIDs.FR_DRIVE,                 CANIDs.FR_STEER,
             PortIDs.AI_FR_STEER_ENCODER,     CANIDs.FR_CANCODER_UNUSED,
             SwerveConstants.FR_STEER_OFFSET_VOLTS, SwerveConstants.FR_STEER_OFFSET_ROT,
-            false, FR_DRIVE_PID, FR_STEER_PID);
+            SwerveConstants.FR_DRIVE_INVERTED, FR_DRIVE_PID, FR_STEER_PID);
 
         SwerveModule blModule = buildModule("BL", 2,
             CANIDs.BL_DRIVE,                 CANIDs.BL_STEER,
             PortIDs.AI_BL_STEER_ENCODER,     CANIDs.BL_CANCODER_UNUSED,
             SwerveConstants.BL_STEER_OFFSET_VOLTS, SwerveConstants.BL_STEER_OFFSET_ROT,
-            true,  BL_DRIVE_PID, BL_STEER_PID);
+            SwerveConstants.BL_DRIVE_INVERTED, BL_DRIVE_PID, BL_STEER_PID);
 
         SwerveModule brModule = buildModule("BR", 3,
             CANIDs.BR_DRIVE,                 CANIDs.BR_STEER,
             PortIDs.AI_BR_STEER_ENCODER,     CANIDs.BR_CANCODER_UNUSED,
             SwerveConstants.BR_STEER_OFFSET_VOLTS, SwerveConstants.BR_STEER_OFFSET_ROT,
-            false, BR_DRIVE_PID, BR_STEER_PID);
+            SwerveConstants.BR_DRIVE_INVERTED, BR_DRIVE_PID, BR_STEER_PID);
 
         drive = new SwerveDrive(
             new SwerveModule[]{ flModule, frModule, blModule, brModule },
@@ -265,6 +264,7 @@ public class RobotContainer {
 
         IMotorIO steerMotor = IMotorIO.create(SwerveHardware
             .steerMotorConfig(SwerveConstants.STEER_MOTOR_TYPE, steerCanId,
+                              SwerveConstants.STEER_MOTOR_INVERTED,
                               steerPID, SwerveConstants.STEER_GEAR_RATIO)
             .withCanSignals(SwerveConstants.SIGNAL_UPDATE_HZ, SwerveConstants.SIGNAL_UPDATE_HZ_TEMP,
                             SwerveConstants.OPTIMIZE_CAN_UTILIZATION)
@@ -272,7 +272,8 @@ public class RobotContainer {
 
         IAbsoluteEncoderIO absEncoder = SwerveHardware.buildEncoder(
             SwerveConstants.ABS_ENCODER_TYPE, steerMotor,
-            analogPort, cancoderCanId, offsetVolts, offsetRot);
+            analogPort, cancoderCanId, offsetVolts, offsetRot,
+            SwerveConstants.ABS_ENCODER_INVERTED);
 
         return new SwerveModule(name, index, driveMotor, steerMotor, absEncoder,
                                 SwerveConstants.WHEEL_DIAMETER_INCHES);

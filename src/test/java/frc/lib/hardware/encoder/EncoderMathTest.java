@@ -35,6 +35,22 @@ class EncoderMathTest {
     }
 
     @Test
+    void thriftyInvertedOffsetStillReadsZero() {
+        assertEquals(0.0, ThriftyAnalogEncoder.voltsToAngleRad(1.2, 1.2, FULL, true), EPS);
+    }
+
+    @Test
+    void thriftyInvertedQuarterTurnReadsThreeQuarters() {
+        assertEquals(1.5 * Math.PI, ThriftyAnalogEncoder.voltsToAngleRad(FULL / 4, 0.0, FULL, true), EPS);
+    }
+
+    @Test
+    void thriftyNotInvertedMatchesThreeArgForm() {
+        assertEquals(ThriftyAnalogEncoder.voltsToAngleRad(1.0, 1.3, FULL),
+                     ThriftyAnalogEncoder.voltsToAngleRad(1.0, 1.3, FULL, false), EPS);
+    }
+
+    @Test
     void rotationOffsetReadsZero() {
         assertEquals(0.0, CTRECANcoderEncoder.rotationsToAngleRad(0.37, 0.37), EPS);
     }

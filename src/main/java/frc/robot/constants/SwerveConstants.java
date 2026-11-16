@@ -62,6 +62,33 @@ public final class SwerveConstants {
     /** Minion motor rotations per module azimuth rotation. Thrifty Narrow = 24:1 */
     public static final double STEER_GEAR_RATIO = 24.0;
 
+    // ── Inversion ─────────────────────────────────────────────────────────────
+    /**
+     * Drive motor inversion, per module. With every steer offset measured with
+     * the bevel gears on the same side, all four modules are physically
+     * identical and should share one value. If one wheel drives backward,
+     * flip it here (or add half a rotation to its steer offset).
+     */
+    public static final boolean FL_DRIVE_INVERTED = false;
+    public static final boolean FR_DRIVE_INVERTED = false;
+    public static final boolean BL_DRIVE_INVERTED = false;
+    public static final boolean BR_DRIVE_INVERTED = false;
+
+    /**
+     * Steer motor inversion, all modules. Positive steer output must turn the
+     * wheel counter-clockwise viewed from above (WPILib convention), so that
+     * "Angle Deg" increases when the wheel turns CCW.
+     * Nova + Minion: false. A TalonFX steer has previously needed true.
+     */
+    public static final boolean STEER_MOTOR_INVERTED = false;
+
+    /**
+     * Absolute encoder inversion, all modules. Set true if "Abs Enc Rot"
+     * decreases when the wheel turns counter-clockwise viewed from above.
+     * Supported for THRIFTY_ANALOG only.
+     */
+    public static final boolean ABS_ENCODER_INVERTED = false;
+
     // ── Speed limits ──────────────────────────────────────────────────────────
     /**
      * Maximum linear drive speed in ft/s (driver-facing unit).
