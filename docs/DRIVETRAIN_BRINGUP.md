@@ -49,7 +49,7 @@ Hardware: Kraken X60 drive (TalonFX), Minion steer on Thrifty Nova, Thrifty anal
 - [ ] **Phoenix Tuner X:** Krakens 2/4/6/8 and Pigeon 1 are on the roboRIO CAN bus (not a CANivore), firmware is current, and you know the license status.
 - [ ] **Thrifty app:** Novas 3/5/7/9 match the corner they're on, firmware is current, and motor type is Minion.
 - [x] **Gear ratios:** 5.79:1 drive (installed pinion) and 24:1 steer, confirmed from last season's code. Still confirm the wheels are 4".
-- [ ] **Wheelbase:** measure pivot-to-pivot center distance and confirm 22" × 22" (`WHEEL_BASE_IN` in `RobotContainer`).
+- [X] **Wheelbase:** measure pivot-to-pivot center distance and confirm 22" × 22" (`WHEEL_BASE_IN` in `RobotContainer`).
 - [ ] **Analog wiring:** encoders go FL→AI0, FR→AI1, BL→AI2, BR→AI3.
 - [ ] **Driver Station:** the Xbox controller, or the left flight stick, is on USB port 0, and the right stick is on port 1.
 

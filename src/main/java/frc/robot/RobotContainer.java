@@ -66,10 +66,10 @@ public class RobotContainer {
 
     // Thrifty Narrow pivot center is 2.5" from outer frame edge on each side (verified from CAD).
     // Wheel base = 27.0 - 2 × 2.5 = 22.0"
-    private static final double[] WHEEL_BASE_IN = { 22.0, 22.0 };
+    private static final double[] WHEEL_BASE_IN = { 24.0, 24.0 };
     private static final double[] FRAME_IN      = { 27.0, 27.0 };
     private static final double[] BUMPER_IN     = { 33.0, 33.0 };
-    private static final double   WHEEL_DIAM_IN = 4.0;
+    private static final double   WHEEL_DIAM_IN = SwerveConstants.WHEEL_DIAMETER_INCHES;
 
     private static final double COR_MAX_X_IN = BUMPER_IN[0] / 2.0;
     private static final double COR_MAX_Y_IN = BUMPER_IN[1] / 2.0;
