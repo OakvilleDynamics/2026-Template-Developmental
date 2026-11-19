@@ -16,11 +16,15 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.*;
 import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.util.sendable.Sendable;
+import edu.wpi.first.util.sendable.SendableBuilder;
+
 import com.ctre.phoenix6.hardware.Pigeon2;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.lib.util.Dashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.PathPlannerConstants;
@@ -208,6 +212,46 @@ public class SwerveDrive extends SubsystemBase implements IAimDriveState {
         // Pigeon 2 self-calibrates on power-up. Temperature calibration is performed
         // once in Phoenix Tuner X — no runtime calibrate() call needed.
         publishGeometry();
+
+        // Add swerve module states to Elastic
+        Dashboard.log(
+            "Swerve Drive",
+            new Sendable() {
+            @Override
+            public void initSendable(SendableBuilder builder) {
+                builder.setSmartDashboardType("SwerveDrive");
+
+                builder.addDoubleProperty(
+                    "Front Left Angle", () -> modules[0].getState().angle.getDegrees(), null);
+                builder.addDoubleProperty(
+                    "Front Left Velocity",
+                    () -> modules[0].getState().speedMetersPerSecond,
+                    null);
+
+                builder.addDoubleProperty(
+                    "Front Right Angle",
+                    () -> modules[1].getState().angle.getDegrees(),
+                    null);
+                builder.addDoubleProperty(
+                    "Front Right Velocity",
+                    () -> modules[1].getState().speedMetersPerSecond,
+                    null);
+
+                builder.addDoubleProperty(
+                    "Back Left Angle", () -> modules[2].getState().angle.getDegrees(), null);
+                builder.addDoubleProperty(
+                    "Back Left Velocity", () -> modules[2].getState().speedMetersPerSecond, null);
+
+                builder.addDoubleProperty(
+                    "Back Right Angle", () -> modules[3].getState().angle.getDegrees(), null);
+                builder.addDoubleProperty(
+                    "Back Right Velocity",
+                    () -> modules[3].getState().speedMetersPerSecond,
+                    null);
+
+                builder.addDoubleProperty("Robot Angle", () -> getYaw().getDegrees(), null);
+            }
+            });
     }
 
     // ─────────────────────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 package frc.lib.util;
 
+import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
@@ -36,6 +37,7 @@ public final class Dashboard {
     public static void log(String key, double value)  { SmartDashboard.putNumber(key, value); }
     public static void log(String key, boolean value) { SmartDashboard.putBoolean(key, value); }
     public static void log(String key, String value)  { SmartDashboard.putString(key, value); }
+    public static void log(String key, Sendable value) { SmartDashboard.putData(key, value); }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Live-editable values
