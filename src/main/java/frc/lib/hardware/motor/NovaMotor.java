@@ -140,7 +140,11 @@ public class NovaMotor implements IMotorIO {
 
     @Override
     public void setEncoderPosition(double positionRot) {
-        motor.setEncoderPosition(positionRot * gearRatio);
+        // ThriftyLib 2026.1.2: unlike getPosition()/setPosition() (rotations, scaled
+        // internally), setEncoderPosition() sends its argument as raw encoder ticks via an
+        // int cast. Convert mechanism rot -> motor rot -> internal ticks (42/rev), rounding
+        // so the library's truncation doesn't bias the value toward zero.
+        motor.setEncoderPosition(Math.round(positionRot * gearRatio * EncoderType.INTERNAL.ticks));
     }
 
     @Override
