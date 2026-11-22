@@ -16,3 +16,11 @@ Create an intake template mechanism (call it intakeMechanism to be consistent wi
     Also need ability to have a 'stop intake' external command passed in with a property to just stop the roller or stop the roller and retract the intake (or or or... 3rd option to retract the intake but keep the roller running)
 
     May also need to think through how it would handle a multi-game piece type game like 2025, 2023, 2021, 2019 or 2017 ?? 
+
+Future swerve drivetrain SW changes (moved from docs/DRIVETRAIN_BRINGUP.md)
+    Choose the motor a Nova steer drives. SwerveHardware.steerMotorConfig assumes a NOVA steer drives a Minion. Let the robot pick NEO or Minion, e.g. split SteerMotorType.NOVA into NOVA_MINION / NOVA_NEO. (TODO in SwerveHardware.)
+
+    Consider wiring the absolute encoders to the Novas. The Nova has an absolute-encoder mode (EncoderType.ABS, setAbsOffset, setPositionAbs). It would steer directly from the absolute encoder with no startup seeding. Needs rewiring all four modules and confirming the Thrifty encoder works on the Nova's port.
+        Code needed: NovaMotor always calls useEncoderType(EncoderType.INTERNAL), and neither MotorIOConfig nor IMotorIO can select a different feedback sensor. Add a vendor-neutral feedback setting to MotorIOConfig (e.g. internal vs. absolute, plus the sensor-to-mechanism ratio). With ABS feedback on the azimuth shaft, NovaMotor must not apply the 24:1 gear ratio to setpoints and readback, getVelocity() returns 0, wrapping uses setAbsoluteWrapping, and steer gains need re-tuning (error is in azimuth rotations, not motor rotations).
+
+    Choose Xbox or flight sticks automatically. DriverStation.getJoystickIsXbox(0) isn't reliable when RobotContainer is built, because the Driver Station often isn't connected yet at boot. Detecting it later (e.g. at enable) means rebuilding the drive command and button bindings then. For now, switch DRIVER_CONTROLLER in RobotContainer and redeploy.
