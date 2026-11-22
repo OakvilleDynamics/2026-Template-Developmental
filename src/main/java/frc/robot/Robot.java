@@ -2,6 +2,8 @@ package frc.robot;
 
 import com.ctre.phoenix6.SignalLogger;
 
+import edu.wpi.first.net.WebServer;
+import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.TimedRobot;
 import frc.lib.util.Dashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -38,6 +40,11 @@ public class Robot extends TimedRobot {
         // WPILib DataLog — computed quantities, vision, pathfinding (.wpilog).
         // Falls back to roboRIO internal storage if no USB detected.
         RobotLogger.init();
+
+        // Serve the deploy folder over HTTP on port 5800 (allowed on FRC fields) so
+        // Elastic on the drive laptop can pull elastic-layout.json with
+        // File > Load Layout From Robot (Ctrl+D).
+        WebServer.start(5800, Filesystem.getDeployDirectory().getPath());
 
         robotContainer = new RobotContainer();
         Dashboard.log("Robot/Status", "Initializing");
