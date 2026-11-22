@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.RobotBase;
 
 /**
  * ConfigVerifier.java
@@ -40,6 +41,10 @@ import edu.wpi.first.wpilibj.DriverStation;
  * Driver Station console — DriverStation.reportError() for any failure
  *
  * A per-device pass/fail is also pushed under "ConfigVerifier/<DeviceName>".
+ *
+ * ─── SIMULATION ──────────────────────────────────────────────────────────────
+ * Skipped in simulation: no physical controllers answer, so every apply/readback
+ * would time out and flood the console. Status reads "SKIPPED (simulation)".
  */
 public final class ConfigVerifier {
 
@@ -64,6 +69,14 @@ public final class ConfigVerifier {
      * Blocks for up to (5 retries × 50ms × device count) — typically < 2s total.
      */
     public static void runAll() {
+        if (RobotBase.isSimulation()) {
+            Dashboard.log("ConfigVerifier/Status", "SKIPPED (simulation)");
+            Dashboard.log("ConfigVerifier/Faults", "");
+            System.out.println("[ConfigVerifier] Skipped in simulation ("
+                               + registry.size() + " device group(s) registered).");
+            return;
+        }
+
         if (registry.isEmpty()) {
             Dashboard.log("ConfigVerifier/Status", "OK (no devices registered)");
             Dashboard.log("ConfigVerifier/Faults", "");
