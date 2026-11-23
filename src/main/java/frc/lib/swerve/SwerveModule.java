@@ -121,7 +121,7 @@ public class SwerveModule implements IConfigVerifiable {
         // Drive: convert m/s → wheel rot/s; gear ratio handled inside driveMotor
         driveMotor.setVelocity(desiredState.speedMetersPerSecond / wheelCircumferenceM, 0.0);
 
-        // Steer: getRotations() returns [-0.5, 0.5]; wrap handled inside steerMotor
+        // Steer: azimuth rotations; Rotation2d doesn't wrap, so steerMotor handles it
         steerMotor.setPosition(desiredState.angle.getRotations(), 0.0);
     }
 
@@ -153,11 +153,11 @@ public class SwerveModule implements IConfigVerifiable {
     }
 
     public void publishTelemetry() {
-        Dashboard.log("Swerve/" + name + "/Angle Deg",   getSteerAngle().getDegrees());
+        Dashboard.log("Swerve/" + name + "/Angle Deg",   getSteerAngleDeg());
         Dashboard.log("Swerve/" + name + "/Speed MPS",   getState().speedMetersPerSecond);
         // Commanded values to compare against the measured ones above. These
         // hold the last command while disabled.
-        Dashboard.log("Swerve/" + name + "/Desired Angle Deg", lastDesiredState.angle.getDegrees());
+        Dashboard.log("Swerve/" + name + "/Desired Angle Deg", getDesiredSteerAngleDeg());
         Dashboard.log("Swerve/" + name + "/Desired Speed MPS", lastDesiredState.speedMetersPerSecond);
         // Times syncSteerToAbsolute() re-seeded. A few after boot is expected;
         // a steadily climbing count while disabled means a noisy encoder or a
@@ -257,5 +257,15 @@ public class SwerveModule implements IConfigVerifiable {
 
     private Rotation2d getSteerAngle() {
         return Rotation2d.fromRotations(steerMotor.getPositionRot());
+    }
+
+    /** Measured azimuth for display, wrapped to (-180°, 180°]. */
+    double getSteerAngleDeg() {
+        return Units.normalizeAngleDeg(getSteerAngle().getDegrees());
+    }
+
+    /** Commanded azimuth for display, wrapped to (-180°, 180°]. */
+    double getDesiredSteerAngleDeg() {
+        return Units.normalizeAngleDeg(lastDesiredState.angle.getDegrees());
     }
 }

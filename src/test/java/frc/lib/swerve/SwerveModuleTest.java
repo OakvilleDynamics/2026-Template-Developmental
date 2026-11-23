@@ -307,6 +307,16 @@ class SwerveModuleTest {
     }
 
     @Test
+    void displayedAnglesAreWrappedSoMeasuredAndDesiredCompare() {
+        Rig rig = new Rig(0.0);
+        rig.steer.positionRot = 3.25;
+        rig.module.setDesiredState(state(0.0, 450.0));
+
+        assertEquals(90.0, rig.module.getSteerAngleDeg(), 1e-6);
+        assertEquals(90.0, rig.module.getDesiredSteerAngleDeg(), 1e-6);
+    }
+
+    @Test
     void telemetryDoesNotCommandTheMotors() {
         Rig rig = new Rig(45.0);
         rig.module.setDesiredState(state(1.0, 45.0));
