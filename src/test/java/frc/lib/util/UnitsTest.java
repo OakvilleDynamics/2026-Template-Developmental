@@ -5,9 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
 /**
- * UnitsTest.java
- * PATH: src/test/java/frc/lib/util/UnitsTest.java
- *
  * Every English ↔ SI conversion round-trips, and angle normalization lands in
  * (-180°, 180°].
  */

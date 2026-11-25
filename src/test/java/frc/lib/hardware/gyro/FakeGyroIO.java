@@ -1,9 +1,6 @@
 package frc.lib.hardware.gyro;
 
 /**
- * FakeGyroIO.java
- * PATH: src/test/java/frc/lib/hardware/gyro/FakeGyroIO.java
- *
  * In-memory IGyroIO for unit tests — no HAL, no CAN, no vendor library.
  * Readings are plain fields the test sets directly.
  */

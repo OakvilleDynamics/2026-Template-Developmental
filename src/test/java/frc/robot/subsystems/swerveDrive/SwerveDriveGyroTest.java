@@ -15,9 +15,6 @@ import frc.lib.swerve.DriveInput;
 import frc.lib.swerve.SwerveModule;
 
 /**
- * SwerveDriveGyroTest.java
- * PATH: src/test/java/frc/robot/subsystems/swerveDrive/SwerveDriveGyroTest.java
- *
  * Proves SwerveDrive runs on an injected IGyroIO with no Pigeon or CAN bus:
  * yaw is read from the gyro, zeroed through it, and used for field-relative drive.
  */

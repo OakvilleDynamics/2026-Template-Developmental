@@ -13,9 +13,6 @@ import frc.lib.hardware.motor.MotorIOConfig;
 import frc.lib.hardware.motor.MotorVendor;
 
 /**
- * MechanismConfigTest.java
- * PATH: src/test/java/frc/lib/control/MechanismConfigTest.java
- *
  * MechanismConfig → per-motor MotorIOConfig derivation, copy semantics, and
  * builder validation. Pure Java — no HAL.
  */

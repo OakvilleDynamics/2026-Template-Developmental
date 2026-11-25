@@ -19,14 +19,11 @@ import frc.lib.hardware.motor.MotorVendor;
 import frc.lib.util.ConfigVerifyResult;
 
 /**
- * MechanismUnitTest.java
- * PATH: src/test/java/frc/lib/control/MechanismUnitTest.java
- *
  * MechanismUnit logic against FakeMotorIO — unit conversion, FF injection,
  * follower wiring, encoder sync, travel limits, homing, live PID tuning.
  * No motor hardware or vendor library is touched.
  *
- * Each test uses a unique mechanism name so dashboard keys never collide.
+ * <p>Each test uses a unique mechanism name so dashboard keys never collide.
  */
 class MechanismUnitTest {
 

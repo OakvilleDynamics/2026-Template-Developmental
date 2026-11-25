@@ -13,9 +13,6 @@ import frc.lib.swerve.DriveOdometryState;
 import frc.lib.util.Units;
 
 /**
- * FFTest.java
- * PATH: src/test/java/frc/lib/control/ff/FFTest.java
- *
  * Pure-math checks of the physics feed-forward factories. Expected values are
  * computed independently from V = τ × 12 / (gearRatio × stallTorqueNm).
  */

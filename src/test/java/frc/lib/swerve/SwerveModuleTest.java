@@ -26,14 +26,11 @@ import frc.lib.util.ConfigVerifyResult;
 import frc.lib.util.Dashboard;
 
 /**
- * SwerveModuleTest.java
- * PATH: src/test/java/frc/lib/swerve/SwerveModuleTest.java
- *
  * SwerveModule logic against fakes — startup seeding, command and feedback unit
  * conversion, absolute-encoder resync, and live PID updates. No motor hardware
  * or vendor library is touched.
  *
- * Each test uses a unique module name so dashboard keys never collide.
+ * <p>Each test uses a unique module name so dashboard keys never collide.
  */
 class SwerveModuleTest {
 

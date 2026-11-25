@@ -7,9 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 /**
- * DashboardTest.java
- * PATH: src/test/java/frc/lib/util/DashboardTest.java
- *
  * Behaviour every Dashboard implementation (2026 SmartDashboard, 2027
  * Telemetry/Tunables) must share. Keys are unique per test.
  */

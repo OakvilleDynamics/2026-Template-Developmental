@@ -14,21 +14,20 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 /**
- * ArchitectureTest.java
- * PATH: src/test/java/frc/lib/ArchitectureTest.java
- *
  * Enforces the lib / robot boundary so the layout cannot quietly erode:
  *
- *   1. Nothing in frc.lib imports frc.robot — lib code must be copyable into
- *      any robot project without this robot's constants or subsystems.
- *   2. Vendor motor/sensor libraries (CTRE, REV, ThriftyBot) are imported only
- *      under frc.lib.hardware — everything above talks to IMotorIO /
- *      IAbsoluteEncoderIO, which is what makes a vendor swap a one-value change.
- *   3. Only frc.lib.util.Dashboard uses the WPILib dashboard API (SmartDashboard
- *      in 2026, Telemetry / Tunables in 2027) — everything else calls Dashboard,
- *      which is what makes a WPILib-year switch a one-file change.
+ * <pre>{@code
+ * 1. Nothing in frc.lib imports frc.robot — lib code must be copyable into
+ *    any robot project without this robot's constants or subsystems.
+ * 2. Vendor motor/sensor libraries (CTRE, REV, ThriftyBot) are imported only
+ *    under frc.lib.hardware — everything above talks to IMotorIO /
+ *    IAbsoluteEncoderIO, which is what makes a vendor swap a one-value change.
+ * 3. Only frc.lib.util.Dashboard uses the WPILib dashboard API (SmartDashboard
+ *    in 2026, Telemetry / Tunables in 2027) — everything else calls Dashboard,
+ *    which is what makes a WPILib-year switch a one-file change.
+ * }</pre>
  *
- * Pure file scan — no HAL, runs in milliseconds.
+ * <p>Pure file scan — no HAL, runs in milliseconds.
  */
 class ArchitectureTest {
 

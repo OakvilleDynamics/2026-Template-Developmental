@@ -5,9 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
 /**
- * EncoderMathTest.java
- * PATH: src/test/java/frc/lib/hardware/encoder/EncoderMathTest.java
- *
  * Offset + wrap conversions used by the absolute encoders. These decide the
  * swerve steer seed angle at power-on, so a sign or wrap error here points
  * every wheel the wrong way.

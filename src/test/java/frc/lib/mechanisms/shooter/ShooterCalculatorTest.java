@@ -11,14 +11,11 @@ import frc.lib.mechanisms.shooter.ShooterCalculator.ShooterWarning;
 import frc.lib.mechanisms.shooter.ShotProfile.LookupEntry;
 
 /**
- * ShooterCalculatorTest.java
- * PATH: src/test/java/frc/lib/mechanisms/shooter/ShooterCalculatorTest.java
- *
  * Pure-math checks of the static-shot path, table interpolation, heading
  * bounds and turret limit warnings. Uses its own small table (pivot at robot
  * center) so results do not change when the robot's shot table is tuned.
  *
- * Replaces the old ShooterCalculator.main() smoke test.
+ * <p>Replaces the old ShooterCalculator.main() smoke test.
  */
 class ShooterCalculatorTest {
 

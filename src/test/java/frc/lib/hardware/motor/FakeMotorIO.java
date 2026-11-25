@@ -5,20 +5,19 @@ import java.util.List;
 import frc.lib.util.ConfigVerifyResult;
 
 /**
- * FakeMotorIO.java
- * PATH: src/test/java/frc/lib/hardware/motor/FakeMotorIO.java
- *
  * In-memory IMotorIO for unit tests — no HAL, no CAN, no vendor library.
  *
- * Records every command (last duty cycle / velocity / position / FF volts,
+ * <p>Records every command (last duty cycle / velocity / position / FF volts,
  * follow target, encoder resets, gain updates). Feedback values (position,
  * velocity, currents) are plain fields the test sets directly to simulate the
  * mechanism, e.g. stalling against a hard stop:
  *
- *   leader.velocityRps = 0.0;
- *   leader.stallCurrentAmps = 45.0;
+ * <pre>{@code
+ * leader.velocityRps = 0.0;
+ * leader.stallCurrentAmps = 45.0;
+ * }</pre>
  *
- * Capabilities (hardware motion profile, encoder-sync support) are settable so
+ * <p>Capabilities (hardware motion profile, encoder-sync support) are settable so
  * tests can exercise both the CTRE/REV-style and Nova-style code paths.
  */
 public class FakeMotorIO implements IMotorIO {
