@@ -13,42 +13,52 @@ import frc.lib.util.IConfigVerifiable;
 import frc.lib.util.ConfigVerifyResult;
 
 /**
- * MechanismUnit.java
- * PATH: src/main/java/frc/lib/control/MechanismUnit.java
- *
  * One mechanism's motor group (leader + optional followers) with all shared
  * control logic. Built on IMotorIO, so it contains no vendor code — the vendor
  * for every motor comes from the MechanismConfig.
  *
- * Instantiate via factory:
- *   MechanismUnit arm = MechanismUnit.create(config);
+ * <p>Instantiate via factory:
  *
- * Or with pre-built IMotorIOs (unit tests use FakeMotorIO this way):
- *   MechanismUnit arm = new MechanismUnit(config, leaderIO, followerIO);
+ * <pre>{@code
+ * MechanismUnit arm = MechanismUnit.create(config);
+ * }</pre>
  *
- * Vendor-only features (CTRE torque control, Nova PID slot 1, ...) are reached
+ * <p>Or with pre-built IMotorIOs (unit tests use FakeMotorIO this way):
+ *
+ * <pre>{@code
+ * MechanismUnit arm = new MechanismUnit(config, leaderIO, followerIO);
+ * }</pre>
+ *
+ * <p>Vendor-only features (CTRE torque control, Nova PID slot 1, ...) are reached
  * by casting getLeader() to CTREMotor / REVMotor / NovaMotor.
  *
- * ─── SHARED LOGIC IN THIS CLASS ──────────────────────────────────────────────
- *   • Follower topology wiring (MECHANICAL hardware follow, ENCODER_SYNC)
- *   • Tier-2 + Tier-3 FF computation (lambda calls + sum)
- *   • Finite-difference acceleration estimation (dv/dt)
- *   • Software duty cycle ramp (fallback when hardware ramp unavailable)
- *   • Software motion-profile step limiter (controllers without MotionMagic/MAXMotion)
- *   • PID live-tuning loop (dashboard read-back → IMotorIO.applyGains)
- *   • ENCODER_SYNC follower correction (position error → duty cycle output)
- *   • Current-based end-of-travel detection and homing
- *   • DataLog entry lifecycle (per-instance, not static)
- *   • dashboard telemetry publishing
+ * <h2>Shared logic in this class</h2>
  *
- * ─── CALL PATTERN IN SUBSYSTEM PERIODIC ──────────────────────────────────────
- *   // One call per loop — encoder sync, FF, PID tuning, and telemetry are automatic:
- *   arm.setPosition(targetDeg);
+ * <ul>
+ *   <li>Follower topology wiring (MECHANICAL hardware follow, ENCODER_SYNC)</li>
+ *   <li>Tier-2 + Tier-3 FF computation (lambda calls + sum)</li>
+ *   <li>Finite-difference acceleration estimation (dv/dt)</li>
+ *   <li>Software duty cycle ramp (fallback when hardware ramp unavailable)</li>
+ *   <li>Software motion-profile step limiter (controllers without MotionMagic/MAXMotion)</li>
+ *   <li>PID live-tuning loop (dashboard read-back → IMotorIO.applyGains)</li>
+ *   <li>ENCODER_SYNC follower correction (position error → duty cycle output)</li>
+ *   <li>Current-based end-of-travel detection and homing</li>
+ *   <li>DataLog entry lifecycle (per-instance, not static)</li>
+ *   <li>dashboard telemetry publishing</li>
+ * </ul>
  *
- * ─── THREAD SAFETY ───────────────────────────────────────────────────────────
- *   All methods are intended to be called from the WPILib robot periodic thread
- *   (CommandScheduler.run() context). No synchronization is performed.
- *   The tier-2/3 FF lambdas and all state fields assume single-threaded access.
+ * <h2>Call pattern in subsystem periodic</h2>
+ *
+ * <pre>{@code
+ * // One call per loop — encoder sync, FF, PID tuning, and telemetry are automatic:
+ * arm.setPosition(targetDeg);
+ * }</pre>
+ *
+ * <h2>Thread safety</h2>
+ *
+ * <p>All methods are intended to be called from the WPILib robot periodic thread
+ * (CommandScheduler.run() context). No synchronization is performed.
+ * The tier-2/3 FF lambdas and all state fields assume single-threaded access.
  */
 public class MechanismUnit implements IConfigVerifiable {
 
@@ -445,10 +455,10 @@ public class MechanismUnit implements IConfigVerifiable {
      * Returns true when the mechanism is within its configured setpoint deadband.
      * Uses the most recently commanded setpoint from setVelocity() or setPosition().
      *
-     * Velocity mechanisms: compares actual RPS against the last setVelocity() value.
+     * <p>Velocity mechanisms: compares actual RPS against the last setVelocity() value.
      * Position mechanisms: compares actual degrees against the last setPosition() value.
      *
-     * Always returns false if config.setpointDeadband was not set (default 0.0).
+     * <p>Always returns false if config.setpointDeadband was not set (default 0.0).
      * A warning is logged to the driver station the first time this is called
      * without a deadband configured — and once at construction time.
      */
@@ -507,7 +517,7 @@ public class MechanismUnit implements IConfigVerifiable {
      * Software duty cycle ramp.
      * Steps rampedDutyCycle toward target by at most maxDelta per loop.
      * maxDelta = LOOP_PERIOD_SECS / openLoopRampSecs (full swing per second).
-     * Returns target unchanged when openLoopRampSecs <= 0.
+     * Returns target unchanged when openLoopRampSecs ≤ 0.
      */
     private double applyDutyCycleRamp(double target) {
         if (config.openLoopRampSecs <= 0.0) {
@@ -525,7 +535,7 @@ public class MechanismUnit implements IConfigVerifiable {
      * Software velocity setpoint step-limiter, used when the leader has no
      * hardware motion profile. Steps rampedVelocitySetpoint toward target by at
      * most motionAccelerationRpss * LOOP_PERIOD_SECS per cycle.
-     * Returns target unchanged when motionAccelerationRpss <= 0.
+     * Returns target unchanged when motionAccelerationRpss ≤ 0.
      */
     private double applyVelocityRamp(double targetRps) {
         if (config.motionAccelerationRpss <= 0.0) return targetRps;
@@ -560,7 +570,7 @@ public class MechanismUnit implements IConfigVerifiable {
      * Changes are only written to the controller when a value actually changes,
      * avoiding unnecessary CAN traffic.
      *
-     * NOTE: Live tuning via the dashboard is a development tool.
+     * <p>NOTE: Live tuning via the dashboard is a development tool.
      * For REV controllers, applying new gains triggers a configure() call
      * which may briefly interrupt closed-loop control. Do not rely on this
      * at competition with time-critical mechanisms.
@@ -628,8 +638,8 @@ public class MechanismUnit implements IConfigVerifiable {
 
     /**
      * Update stall counters for lead and (if present) ENCODER_SYNC follower.
-     * A limit latches when both detection current >= threshold AND
-     * |velocity| <= threshold hold for stallDetectionCycles consecutive loops.
+     * A limit latches when both detection current ≥ threshold AND
+     * |velocity| ≤ threshold hold for stallDetectionCycles consecutive loops.
      * No-op when no travel limits are configured (early return).
      * Called at the start of every set*() invocation.
      */

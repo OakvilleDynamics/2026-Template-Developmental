@@ -1,78 +1,95 @@
 package frc.lib.control.ff;
 
 /**
- * IFFProvider.java
- * PATH: src/main/java/frc/lib/control/ff/IFFProvider.java
- *
  * Functional interface for feed-forward voltage computations in MechanismUnit.
  * Used for both tier-2 (self-contained gravity/spring physics) and tier-3
  * (cross-system coupling that requires external subsystem state).
  *
- * ─── UNIT CONTRACT ───────────────────────────────────────────────────────────
- *   positionDeg : mechanism shaft position in degrees (after gear ratio)
- *   velocityRps : mechanism shaft velocity in rotations/second (signed)
- *   accelRpss   : mechanism shaft acceleration in rotations/second² (signed)
- *   return      : feed-forward voltage addend in volts
+ * <h2>Unit contract</h2>
  *
- * ─── TIER-2 vs TIER-3 ────────────────────────────────────────────────────────
- * The type is the same for both tiers. The difference is what the lambda closes over:
+ * <pre>{@code
+ * positionDeg : mechanism shaft position in degrees (after gear ratio)
+ * velocityRps : mechanism shaft velocity in rotations/second (signed)
+ * accelRpss   : mechanism shaft acceleration in rotations/second² (signed)
+ * return      : feed-forward voltage addend in volts
+ * }</pre>
  *
- *   Tier-2: closes over nothing external — uses only the params provided.
- *           Example: arm gravity, spring pull, multi-stage elevator weight steps.
+ * <h2>Tier-2 vs Tier-3</h2>
  *
- *   Tier-3: closes over other subsystem references captured at construction time
- *           in RobotContainer (where all subsystems exist).
- *           Example: gyroscopic resistance from a flywheel, elevator tilt from
- *           a rotating base, game-piece-count-dependent weight.
+ * <p>The type is the same for both tiers. The difference is what the lambda closes over:
  *
- * ─── EXAMPLE TIER-2 LAMBDAS ──────────────────────────────────────────────────
+ * <pre>{@code
+ * Tier-2: closes over nothing external — uses only the params provided.
+ *         Example: arm gravity, spring pull, multi-stage elevator weight steps.
  *
- *   // Rotating arm: full gravity at horizontal (0°), zero at vertical (90°)
- *   (pos, vel, accel) -> KG * Math.cos(Math.toRadians(pos))
+ * Tier-3: closes over other subsystem references captured at construction time
+ *         in RobotContainer (where all subsystems exist).
+ *         Example: gyroscopic resistance from a flywheel, elevator tilt from
+ *         a rotating base, game-piece-count-dependent weight.
+ * }</pre>
  *
- *   // Elevator: different constant FF for up vs down
- *   (pos, vel, accel) -> vel >= 0 ? KG_UP : KG_DOWN
+ * <h2>Example Tier-2 lambdas</h2>
  *
- *   // Multi-stage elevator: weight steps as stages extend
- *   (pos, vel, accel) -> {
- *       double kG = vel >= 0 ? KG_BASE_UP : KG_BASE_DOWN;
- *       if (pos > STAGE_2_EXTENDS_DEG) kG += vel >= 0 ? STAGE_2_UP : STAGE_2_DOWN;
- *       if (pos > STAGE_3_EXTENDS_DEG) kG += vel >= 0 ? STAGE_3_UP : STAGE_3_DOWN;
- *       return kG;
- *   }
+ * <pre>{@code
+ * // Rotating arm: full gravity at horizontal (0°), zero at vertical (90°)
+ * (pos, vel, accel) -> KG * Math.cos(Math.toRadians(pos))
+ * }</pre>
  *
- *   // Non-linear spring (constant-force spring on energy chain puller)
- *   (pos, vel, accel) -> springForceTable.interpolate(pos)
+ * <pre>{@code
+ * // Elevator: different constant FF for up vs down
+ * (pos, vel, accel) -> vel >= 0 ? KG_UP : KG_DOWN
+ * }</pre>
  *
- * ─── EXAMPLE TIER-3 LAMBDAS ──────────────────────────────────────────────────
+ * <pre>{@code
+ * // Multi-stage elevator: weight steps as stages extend
+ * (pos, vel, accel) -> {
+ *     double kG = vel >= 0 ? KG_BASE_UP : KG_BASE_DOWN;
+ *     if (pos > STAGE_2_EXTENDS_DEG) kG += vel >= 0 ? STAGE_2_UP : STAGE_2_DOWN;
+ *     if (pos > STAGE_3_EXTENDS_DEG) kG += vel >= 0 ? STAGE_3_UP : STAGE_3_DOWN;
+ *     return kG;
+ * }
+ * }</pre>
  *
- *   // Gyroscopic resistance: turret opposed by spinning flywheel
- *   // flywheel reference captured at RobotContainer construction time
- *   (pos, vel, accel) -> {
- *       double omegaTurretRadps   = vel * 2 * Math.PI;
- *       double omegaFlywheelRadps = flywheel.getVelocityRps() * 2 * Math.PI;
- *       return (FLYWHEEL_MOI_KGM2 * omegaFlywheelRadps * omegaTurretRadps) / MOTOR_TORQUE_K;
- *   }
+ * <pre>{@code
+ * // Non-linear spring (constant-force spring on energy chain puller)
+ * (pos, vel, accel) -> springForceTable.interpolate(pos)
+ * }</pre>
  *
- *   // Tilting multi-stage elevator with game pieces: gravity + centrifugal + inertial
- *   // base and gamePieceTracker captured at construction time
- *   (pos, vel, accel) -> {
- *       double massKg = CARRIAGE_MASS_KG + gamePieceTracker.getCount() * PIECE_MASS_KG;
- *       if (pos > STAGE_2_DEG) massKg += STAGE_2_MASS_KG;
- *       double gravN     = massKg * 9.81 * Math.sin(Math.toRadians(base.getPositionDeg()));
- *       double radiusM   = pos / 360.0 * METERS_PER_ROT;
- *       double omegaBase = base.getVelocityRps() * 2 * Math.PI;
- *       double centrN    = massKg * omegaBase * omegaBase * radiusM;
- *       double inertN    = massKg * accel * METERS_PER_ROT;
- *       return (gravN - centrN + inertN) / NEWTONS_PER_VOLT;
- *   }
+ * <h2>Example Tier-3 lambdas</h2>
  *
- * ─── CONVENIENCE FACTORIES ───────────────────────────────────────────────────
- * See MechanismConfig.armFF(), MechanismConfig.elevatorFF(), MechanismConfig.noFF()
+ * <pre>{@code
+ * // Gyroscopic resistance: turret opposed by spinning flywheel
+ * // flywheel reference captured at RobotContainer construction time
+ * (pos, vel, accel) -> {
+ *     double omegaTurretRadps   = vel * 2 * Math.PI;
+ *     double omegaFlywheelRadps = flywheel.getVelocityRps() * 2 * Math.PI;
+ *     return (FLYWHEEL_MOI_KGM2 * omegaFlywheelRadps * omegaTurretRadps) / MOTOR_TORQUE_K;
+ * }
+ * }</pre>
+ *
+ * <pre>{@code
+ * // Tilting multi-stage elevator with game pieces: gravity + centrifugal + inertial
+ * // base and gamePieceTracker captured at construction time
+ * (pos, vel, accel) -> {
+ *     double massKg = CARRIAGE_MASS_KG + gamePieceTracker.getCount() * PIECE_MASS_KG;
+ *     if (pos > STAGE_2_DEG) massKg += STAGE_2_MASS_KG;
+ *     double gravN     = massKg * 9.81 * Math.sin(Math.toRadians(base.getPositionDeg()));
+ *     double radiusM   = pos / 360.0 * METERS_PER_ROT;
+ *     double omegaBase = base.getVelocityRps() * 2 * Math.PI;
+ *     double centrN    = massKg * omegaBase * omegaBase * radiusM;
+ *     double inertN    = massKg * accel * METERS_PER_ROT;
+ *     return (gravN - centrN + inertN) / NEWTONS_PER_VOLT;
+ * }
+ * }</pre>
+ *
+ * <h2>Convenience factories</h2>
+ *
+ * <p>See MechanismConfig.armFF(), MechanismConfig.elevatorFF(), MechanismConfig.noFF()
  * for pre-built lambdas covering the most common cases.
  *
- * ─── THREAD SAFETY ───────────────────────────────────────────────────────────
- * Both tier-2 and tier-3 lambdas are called exclusively from the robot periodic
+ * <h2>Thread safety</h2>
+ *
+ * <p>Both tier-2 and tier-3 lambdas are called exclusively from the robot periodic
  * thread (inside MechanismUnit.setVelocity() / setPosition()). No synchronization
  * is required as long as all callers remain on the same thread — which WPILib
  * CommandScheduler guarantees.

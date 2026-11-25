@@ -7,37 +7,43 @@ import frc.lib.swerve.DriveOdometryState;
 import frc.lib.util.Units;
 
 /**
- * FF.java
- * PATH: src/main/java/frc/lib/control/ff/FF.java
- *
  * Static factory library for physics-based IFFProvider lambdas.
  * (Formerly MechanismUnit.FF — pulled out so it can be unit-tested and reused
  * without constructing any motor hardware.)
  *
- * All voltage calculations are derived from motor datasheet constants
+ * <p>All voltage calculations are derived from motor datasheet constants
  * (via MotorModels) rather than empirical calibration voltages, so
  * values are grounded in vendor-verified specs and require no per-mechanism
  * holding-voltage measurement.
  *
- * ─── VOLTAGE FORMULA ─────────────────────────────────────────────────────────
- * For a load requiring torque τ_mech at the mechanism shaft:
+ * <h2>Voltage formula</h2>
  *
- *   V_ff = τ_mech × 12V / (gearRatio × motor.stallTorqueNm)
+ * <p>For a load requiring torque τ_mech at the mechanism shaft:
  *
- * On-controller kV (Tier 1) already handles dynamic back-EMF; these
+ * <pre>{@code
+ * V_ff = τ_mech × 12V / (gearRatio × motor.stallTorqueNm)
+ * }</pre>
+ *
+ * <p>On-controller kV (Tier 1) already handles dynamic back-EMF; these
  * factories target the static/quasi-static gravity and spring loads only.
  *
- * ─── UNITS AT THE INTERFACE ──────────────────────────────────────────────────
+ * <h2>Units at the interface</h2>
+ *
+ * <pre>{@code
  * Masses    : lbs  (converted to kg internally)
  * Distances : inches  (converted to meters internally)
  * Angles    : degrees  (matches IFFProvider positionDeg convention)
  * Returns   : volts
+ * }</pre>
  *
- * ─── TIER PLACEMENT ──────────────────────────────────────────────────────────
+ * <h2>Tier placement</h2>
+ *
+ * <pre>{@code
  * Tier 2 (self-contained): springTurret, rotatingArm
  * Tier 3 (cross-system):   gyroscopicTurret, multiStageElevator, pivotingElevator
  *   Tier-3 factories accept Supplier arguments that close over other
  *   subsystem references; build these in RobotContainer.
+ * }</pre>
  */
 public final class FF {
 
@@ -80,24 +86,27 @@ public final class FF {
      * Piecewise-linear feed-forward for a mechanism with a non-linear
      * restoring force (constant-force spring, surgical tubing, gas spring).
      *
-     * Calibration points are measured torques at the mechanism shaft in lb·in,
+     * <p>Calibration points are measured torques at the mechanism shaft in lb·in,
      * for the forward direction of rotation. When the motor rotates in reverse,
      * the torque values are negated automatically — a spring that assists forward
      * motion at a given angle inherently resists the same reverse motion by the
      * same magnitude.
      *
-     * Between calibration points: linear interpolation.
+     * <p>Between calibration points: linear interpolation.
      * Outside the calibrated angle range: returns 0.0 (intentionally conspicuous —
      * the PID will visibly fight the spring, flagging the gap during tuning).
      * Within FRICTION_DEADBAND_RPS of zero velocity: applies forward-direction
      * convention to prevent sign-flip jitter while holding position.
      *
-     * Calibration procedure: hold a fish scale at a known distance from the pivot
+     * <p>Calibration procedure: hold a fish scale at a known distance from the pivot
      * at each angle stop and record force_lbs × distance_in as torqueLbIn.
      * Positive torque = spring assists the forward-rotation direction at that angle.
      *
-     * Internally converts lb·in → N·m via Units.lbInToNm(), then:
-     *   V = τ × 12V / (gearRatio × motor.stallTorqueNm)
+     * <p>Internally converts lb·in → N·m via Units.lbInToNm(), then:
+     *
+     * <pre>{@code
+     * V = τ × 12V / (gearRatio × motor.stallTorqueNm)
+     * }</pre>
      *
      * @param motor     motor model from MotorModels (e.g. MotorModels.NEO)
      * @param gearRatio motor rotations per mechanism shaft rotation
@@ -153,13 +162,16 @@ public final class FF {
      * Gravity compensation for a rotating arm whose center of mass changes
      * as game pieces are acquired or released.
      *
-     * Physics:
-     *   τ_mech = [armMass × armCg + Σ(count_i × pieceMass_i × pieceCg_i)] × g × cos(pos°)
-     *   V_ff   = τ_mech × 12V / (gearRatio × motor.stallTorqueNm)
+     * <p>Physics:
      *
-     * positionDeg convention: 0° = horizontal (full gravity load), 90° = vertical (zero load).
+     * <pre>{@code
+     * τ_mech = [armMass × armCg + Σ(count_i × pieceMass_i × pieceCg_i)] × g × cos(pos°)
+     * V_ff   = τ_mech × 12V / (gearRatio × motor.stallTorqueNm)
+     * }</pre>
      *
-     * For a fixed-CG arm with no game pieces, pass empty arrays for the
+     * <p>positionDeg convention: 0° = horizontal (full gravity load), 90° = vertical (zero load).
+     *
+     * <p>For a fixed-CG arm with no game pieces, pass empty arrays for the
      * gamePiece* parameters.
      *
      * @param motor               motor model from MotorModels (e.g. MotorModels.NEO)
@@ -225,24 +237,27 @@ public final class FF {
     /**
      * Gyroscopic resistance compensation for a turret that rotates a spinning flywheel.
      *
-     * A spinning flywheel has angular momentum (L = I × ω). When the turret rotates,
+     * <p>A spinning flywheel has angular momentum (L = I × ω). When the turret rotates,
      * it changes the direction of that angular momentum vector, which requires a torque
      * (the gyroscopic reaction torque). Without FF compensation, the turret PID must
      * fight this load reactively, causing heading lag proportional to flywheel speed.
      *
-     * Physics:
-     *   τ_gyro = I_flywheel × ω_flywheel × ω_turret
-     *   V_ff   = τ_gyro × 12V / (turretGearRatio × turretMotor.stallTorqueNm)
+     * <p>Physics:
      *
-     * Sign is self-consistent: positive turret velocity with positive flywheel spin
+     * <pre>{@code
+     * τ_gyro = I_flywheel × ω_flywheel × ω_turret
+     * V_ff   = τ_gyro × 12V / (turretGearRatio × turretMotor.stallTorqueNm)
+     * }</pre>
+     *
+     * <p>Sign is self-consistent: positive turret velocity with positive flywheel spin
      * produces positive τ (FF assists through the resistance). If flywheel direction
      * reverses, FF sign flips automatically.
      *
-     * I_flywheel is a fixed physical property of the flywheel assembly — provide it
+     * <p>I_flywheel is a fixed physical property of the flywheel assembly — provide it
      * once at construction from a CAD model or measurement. Flywheel angular velocity
      * is read each cycle via the supplier.
      *
-     * This is Tier 3 because it closes over the flywheel MechanismUnit's velocity.
+     * <p>This is Tier 3 because it closes over the flywheel MechanismUnit's velocity.
      * Wire it in RobotContainer where both mechanism references exist.
      *
      * @param turretMotor              motor model for the turret (e.g. MotorModels.MINION)
@@ -269,22 +284,28 @@ public final class FF {
     /**
      * Gravity compensation for a multi-stage linear elevator.
      *
-     * The elevator angle relative to ground is read each cycle via
+     * <p>The elevator angle relative to ground is read each cycle via
      * {@code elevatorAngleDegSupplier}:
-     *   - Permanently vertical:  {@code () -> 90.0}
-     *   - Pivoting base:         {@code pivotArm::getPositionDeg}
      *
-     * This makes the factory Tier 3 — even a "fixed vertical" elevator uses a
+     * <ul>
+     *   <li>Permanently vertical:  {@code () -> 90.0}</li>
+     *   <li>Pivoting base:         {@code pivotArm::getPositionDeg}</li>
+     * </ul>
+     *
+     * <p>This makes the factory Tier 3 — even a "fixed vertical" elevator uses a
      * supplier so the angle can be driven from a base pivot without code changes.
      *
-     * Physics:
-     *   F_gravity = totalMass × g × sin(elevatorAngle)
-     *     (sin: 90° = vertical = full load, 0° = horizontal = no load)
-     *   τ_mech    = F_gravity × spoolRadius
-     *   V_ff_base = τ_mech × 12V / (gearRatio × motor.stallTorqueNm)
-     *   V_ff      = V_ff_base + frictionOffset (direction-dependent)
+     * <p>Physics:
      *
-     * The {@code frictionOffsetVolts*} parameters absorb chain/belt asymmetry
+     * <pre>{@code
+     * F_gravity = totalMass × g × sin(elevatorAngle)
+     *   (sin: 90° = vertical = full load, 0° = horizontal = no load)
+     * τ_mech    = F_gravity × spoolRadius
+     * V_ff_base = τ_mech × 12V / (gearRatio × motor.stallTorqueNm)
+     * V_ff      = V_ff_base + frictionOffset (direction-dependent)
+     * }</pre>
+     *
+     * <p>The {@code frictionOffsetVolts*} parameters absorb chain/belt asymmetry
      * that the physics model cannot capture. Set both to 0 for a first pass;
      * tune by observing position hold error at different load conditions.
      *
@@ -355,25 +376,28 @@ public final class FF {
      * Combined gravity + drivetrain inertia feed-forward for an elevator
      * mounted on a pivot at its base.
      *
-     * positionDeg: angle of the base pivot (0° = horizontal, 90° = vertical).
+     * <p>positionDeg: angle of the base pivot (0° = horizontal, 90° = vertical).
      *
-     * Three voltage components are summed:
+     * <p>Three voltage components are summed:
      *
-     * 1. GRAVITY — effective load varies with cos(pivotAngle):
-     *      τ_grav = totalMass × g × cgDist × cos(pivotAngle)
+     * <p>1. GRAVITY — effective load varies with cos(pivotAngle):
      *
-     * 2. DRIVETRAIN LINEAR INERTIA — forward/backward robot acceleration
-     *    creates a pseudo-force in the robot frame that projects onto the
-     *    pivot load axis via sin(pivotAngle):
-     *      accelFwd = linearAccelMag × cos(accelHeading − robotHeading)
-     *      τ_inertia = totalMass × accelFwd × cgDist × sin(pivotAngle)
+     * <pre>{@code
+     * τ_grav = totalMass × g × cgDist × cos(pivotAngle)
+     * }</pre>
      *
-     * 3. CENTRIPETAL — robot rotation causes the elevator CG to trace an
-     *    arc, adding inward centripetal acceleration:
-     *      a_centripetal = ω² × cgOffsetFromCenter
-     *      τ_centripetal = totalMass × a_centripetal × cgDist × sin(pivotAngle)
+     * <p>2. DRIVETRAIN LINEAR INERTIA — forward/backward robot acceleration
+     * creates a pseudo-force in the robot frame that projects onto the
+     * pivot load axis via sin(pivotAngle):
+     * accelFwd = linearAccelMag × cos(accelHeading − robotHeading)
+     * τ_inertia = totalMass × accelFwd × cgDist × sin(pivotAngle)
      *
-     * Robot state is read from DriveOdometryState.blendedState each cycle.
+     * <p>3. CENTRIPETAL — robot rotation causes the elevator CG to trace an
+     * arc, adding inward centripetal acceleration:
+     * a_centripetal = ω² × cgOffsetFromCenter
+     * τ_centripetal = totalMass × a_centripetal × cgDist × sin(pivotAngle)
+     *
+     * <p>Robot state is read from DriveOdometryState.blendedState each cycle.
      *
      * @param motor                      motor model from MotorModels
      * @param gearRatio                  motor rotations per mechanism shaft rotation

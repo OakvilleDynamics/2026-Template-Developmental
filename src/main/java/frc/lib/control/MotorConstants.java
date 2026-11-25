@@ -1,9 +1,6 @@
 package frc.lib.control;
 
 /**
- * MotorConstants.java
- * PATH: src/main/java/frc/lib/control/MotorConstants.java
- *
  * Enumerations and constants shared by MechanismUnit and MechanismConfig.
  * No vendor-specific imports. The vendor enum lives in
  * frc.lib.hardware.motor.MotorVendor.
@@ -15,17 +12,19 @@ public final class MotorConstants {
     /**
      * How follower motors track the leader.
      *
-     *   NONE          — single-motor mechanism; no followers
-     *   MECHANICAL    — hardware follower; controller mirrors leader output directly.
-     *                   Use when motors share a rigid mechanical linkage (same shaft,
-     *                   belt, or chain with no possibility of slip).
-     *                   Zero Rio CPU per cycle after construction.
-     *   ENCODER_SYNC  — software follower; Rio reads both encoders each loop and
-     *                   applies a proportional duty cycle correction when the follower
-     *                   drifts beyond the deadband. Use for non-rigid couplings where
-     *                   slip is possible and must be detected/corrected.
-     *                   NOTE: Not supported for THRIFTYBOT_NOVA — Nova's follow() API
-     *                   does not expose independent encoder readback on the follower.
+     * <pre>{@code
+     * NONE          — single-motor mechanism; no followers
+     * MECHANICAL    — hardware follower; controller mirrors leader output directly.
+     *                 Use when motors share a rigid mechanical linkage (same shaft,
+     *                 belt, or chain with no possibility of slip).
+     *                 Zero Rio CPU per cycle after construction.
+     * ENCODER_SYNC  — software follower; Rio reads both encoders each loop and
+     *                 applies a proportional duty cycle correction when the follower
+     *                 drifts beyond the deadband. Use for non-rigid couplings where
+     *                 slip is possible and must be detected/corrected.
+     *                 NOTE: Not supported for THRIFTYBOT_NOVA — Nova's follow() API
+     *                 does not expose independent encoder readback on the follower.
+     * }</pre>
      */
     public enum FollowMode {
         NONE,
@@ -38,9 +37,12 @@ public final class MotorConstants {
     /**
      * Robot control loop period (seconds). Matches WPILib default 20ms loop.
      * Used for:
-     *   - Software duty cycle ramp rate calculations
-     *   - Finite-difference acceleration estimation (dv/dt)
-     *   - Software motion-profile step limiter (controllers without one, e.g. Nova)
+     *
+     * <ul>
+     *   <li>Software duty cycle ramp rate calculations</li>
+     *   <li>Finite-difference acceleration estimation (dv/dt)</li>
+     *   <li>Software motion-profile step limiter (controllers without one, e.g. Nova)</li>
+     * </ul>
      */
     public static final double LOOP_PERIOD_SECS = 0.020;
 
@@ -48,7 +50,7 @@ public final class MotorConstants {
 
     /**
      * Default deadband for ENCODER_SYNC follow mode (rotations, mechanism shaft).
-     * Correction is not applied when |leaderPos - followerPos| <= this value.
+     * Correction is not applied when |leaderPos - followerPos| ≤ this value.
      * Tune per-mechanism via MechanismConfig.Builder.withEncoderSync().
      */
     public static final double ENCODER_SYNC_DEADBAND_ROT = 0.05;

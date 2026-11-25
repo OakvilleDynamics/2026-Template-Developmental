@@ -8,61 +8,74 @@ import frc.lib.hardware.motor.MotorIOConfig;
 import frc.lib.hardware.motor.MotorVendor;
 
 /**
- * MechanismConfig.java
- * PATH: src/main/java/frc/lib/control/MechanismConfig.java
- *
  * Immutable configuration object for a MechanismUnit. Build one with the
  * inner Builder, then pass it to MechanismUnit.create().
  *
- * ─── UNIT CONTRACT AT THIS INTERFACE ─────────────────────────────────────────
- *   Position         : degrees  (mechanism shaft, after gear ratio)
- *   Velocity         : rotations/second  (mechanism shaft)
- *   Feed-forward     : volts
- *   Duty cycle       : -1.0 to 1.0
- *   Current          : amps
- *   Time / ramp rate : seconds
+ * <h2>Unit contract at this interface</h2>
  *
- * ─── GEAR RATIO CONVENTION ───────────────────────────────────────────────────
- *   gearRatio = motor rotations per mechanism shaft rotation
- *   A 10:1 reduction  → gearRatio = 10.0
- *   A 1:2 upduction   → gearRatio = 0.5
- *   This matches the Phoenix 6 SensorToMechanismRatio convention.
- *   Applied internally per vendor; all setpoints and feedback are in
- *   mechanism-shaft units at the public API layer.
+ * <pre>{@code
+ * Position         : degrees  (mechanism shaft, after gear ratio)
+ * Velocity         : rotations/second  (mechanism shaft)
+ * Feed-forward     : volts
+ * Duty cycle       : -1.0 to 1.0
+ * Current          : amps
+ * Time / ramp rate : seconds
+ * }</pre>
  *
- * ─── SOFT LIMITS ─────────────────────────────────────────────────────────────
- *   softLimitForwardDeg / softLimitReverseDeg use Double.NaN to mean "disabled".
- *   Converted to rotations internally before being written to motor controllers.
+ * <h2>Gear ratio convention</h2>
  *
- * ─── FOLLOWER RULES ──────────────────────────────────────────────────────────
- *   canIds[0]          — always the leader
- *   canIds[1..n]       — followers; all must be the same vendor as the leader
- *   followerInverted[] — parallel to canIds[1..n]; true = opposite direction
- *   Mixed-vendor mechanisms are not supported and will throw at factory time.
+ * <pre>{@code
+ * gearRatio = motor rotations per mechanism shaft rotation
+ * A 10:1 reduction  → gearRatio = 10.0
+ * A 1:2 upduction   → gearRatio = 0.5
+ * This matches the Phoenix 6 SensorToMechanismRatio convention.
+ * Applied internally per vendor; all setpoints and feedback are in
+ * mechanism-shaft units at the public API layer.
+ * }</pre>
  *
- * ─── FEED-FORWARD ────────────────────────────────────────────────────────────
- *   Tier 1 (on-controller kS/kV/kA): in the pid[] array at indices 3/4/5.
- *   Tier 2 (Rio-computed, self-contained): tier2FF lambda.
- *   Tier 3 (Rio-computed, cross-system): tier3FF lambda.
- *   See IFFProvider.java for full documentation and examples.
- *   Physics-based factories: FF.rotatingArm(), multiStageElevator(),
- *     pivotingElevator(), springTurret(), gyroscopicTurret().
- *   Convenience factory for no-FF case: MechanismConfig.noFF().
+ * <h2>Soft limits</h2>
  *
- * ─── MOTION PROFILE ──────────────────────────────────────────────────────────
- *   Set motionCruiseVelocityRps > 0 to activate motion profiling.
- *   CTRE: MotionMagic (trapezoidal; set motionJerkRpss3 > 0 for S-curve).
- *   REV:  MAXMotion.
- *   Nova: Software setpoint step-limiter using motionAccelerationRpss.
- *   Leave at 0 to use raw closed-loop without profile (velocity control
- *   typically does not need a cruise velocity, only acceleration).
+ * <p>softLimitForwardDeg / softLimitReverseDeg use Double.NaN to mean "disabled".
+ * Converted to rotations internally before being written to motor controllers.
+ *
+ * <h2>Follower rules</h2>
+ *
+ * <pre>{@code
+ * canIds[0]          — always the leader
+ * canIds[1..n]       — followers; all must be the same vendor as the leader
+ * followerInverted[] — parallel to canIds[1..n]; true = opposite direction
+ * Mixed-vendor mechanisms are not supported and will throw at factory time.
+ * }</pre>
+ *
+ * <h2>Feed-forward</h2>
+ *
+ * <p>Tier 1 (on-controller kS/kV/kA): in the pid[] array at indices 3/4/5.
+ * Tier 2 (Rio-computed, self-contained): tier2FF lambda.
+ * Tier 3 (Rio-computed, cross-system): tier3FF lambda.
+ * See IFFProvider.java for full documentation and examples.
+ * Physics-based factories: FF.rotatingArm(), multiStageElevator(),
+ * pivotingElevator(), springTurret(), gyroscopicTurret().
+ * Convenience factory for no-FF case: MechanismConfig.noFF().
+ *
+ * <h2>Motion profile</h2>
+ *
+ * <pre>{@code
+ * Set motionCruiseVelocityRps > 0 to activate motion profiling.
+ * CTRE: MotionMagic (trapezoidal; set motionJerkRpss3 > 0 for S-curve).
+ * REV:  MAXMotion.
+ * Nova: Software setpoint step-limiter using motionAccelerationRpss.
+ * Leave at 0 to use raw closed-loop without profile (velocity control
+ * typically does not need a cruise velocity, only acceleration).
+ * }</pre>
  */
 public final class MechanismConfig {
 
     // ── Identity ──────────────────────────────────────────────────────────────
 
-    /** Human-readable mechanism name. Used as DataLog path prefix and
-     *  dashboard namespace. Example: "Shooter", "Elevator", "Wrist". */
+    /**
+     * Human-readable mechanism name. Used as DataLog path prefix and
+     * dashboard namespace. Example: "Shooter", "Elevator", "Wrist".
+     */
     public final String name;
 
     // ── Motor roster ──────────────────────────────────────────────────────────
@@ -73,8 +86,10 @@ public final class MechanismConfig {
     /** Vendor for each motor, parallel to canIds. All must be identical. */
     public final MotorVendor[] vendors;
 
-    /** Whether each follower is inverted relative to its designated leader.
-     *  Length = canIds.length - 1. Parallel to followerModes and followerLeaderIndices. */
+    /**
+     * Whether each follower is inverted relative to its designated leader.
+     * Length = canIds.length - 1. Parallel to followerModes and followerLeaderIndices.
+     */
     public final boolean[] followerInverted;
 
     /**
@@ -89,21 +104,26 @@ public final class MechanismConfig {
      * Leader index per follower (0-based index into canIds[]).
      * Length = canIds.length - 1. Parallel to followerModes.
      *
-     * 0 = follows the main leader (canIds[0]) — the default for all followers.
+     * <p>0 = follows the main leader (canIds[0]) — the default for all followers.
      * N = follows canIds[N], enabling follower-of-follower topologies.
      *
-     * Example 4-motor topology:
-     *   canIds = {10, 11, 12, 13}
-     *   followerLeaderIndices = {0, 0, 2}
-     *   → 11 follows 10, 12 follows 10, 13 follows canIds[2]=12
+     * <p>Example 4-motor topology:
+     *
+     * <pre>{@code
+     * canIds = {10, 11, 12, 13}
+     * followerLeaderIndices = {0, 0, 2}
+     * → 11 follows 10, 12 follows 10, 13 follows canIds[2]=12
+     * }</pre>
      */
     public final int[] followerLeaderIndices;
 
     // ── Mechanical ────────────────────────────────────────────────────────────
 
-    /** Motor rotations per mechanism shaft rotation. >1 = speed reduction.
-     *  Applied via SensorToMechanismRatio (CTRE), conversion factors (REV),
-     *  or manual scaling (Nova). Default: 1.0 (direct drive). */
+    /**
+     * Motor rotations per mechanism shaft rotation. >1 = speed reduction.
+     * Applied via SensorToMechanismRatio (CTRE), conversion factors (REV),
+     * or manual scaling (Nova). Default: 1.0 (direct drive).
+     */
     public final double gearRatio;
 
     /** Invert leader motor output direction. Default: false. */
@@ -112,6 +132,7 @@ public final class MechanismConfig {
     // ── PID gains ─────────────────────────────────────────────────────────────
 
     /**
+     * <pre>{@code
      * On-controller PID/FF gains: { kP, kI, kD, kS, kV, kA }
      *   kP : proportional gain
      *   kI : integral gain
@@ -121,14 +142,17 @@ public final class MechanismConfig {
      *   kA : acceleration feed-forward (volts per RPS²) — inertia compensation
      * All run on the motor controller. kA availability varies by vendor.
      * Live-tunable from the dashboard during development.
+     * }</pre>
      */
     public final double[] pid;
 
     // ── Soft limits ───────────────────────────────────────────────────────────
 
-    /** Forward soft limit (degrees, mechanism shaft). Double.NaN = disabled.
-     *  Motor output is cut to neutral if position exceeds this and a forward
-     *  command is applied. */
+    /**
+     * Forward soft limit (degrees, mechanism shaft). Double.NaN = disabled.
+     * Motor output is cut to neutral if position exceeds this and a forward
+     * command is applied.
+     */
     public final double softLimitForwardDeg;
 
     /** Reverse soft limit (degrees, mechanism shaft). Double.NaN = disabled. */
@@ -136,39 +160,51 @@ public final class MechanismConfig {
 
     // ── Current limits ────────────────────────────────────────────────────────
 
-    /** Maximum supply (input) current in amps. Protects breakers.
-     *  CTRE: SupplyCurrentLimit. REV: SmartCurrentLimit. Nova: current limit. */
+    /**
+     * Maximum supply (input) current in amps. Protects breakers.
+     * CTRE: SupplyCurrentLimit. REV: SmartCurrentLimit. Nova: current limit.
+     */
     public final double supplyCurrentLimitAmps;
 
-    /** Maximum stator (output) current in amps. Controls torque / prevents slip.
-     *  CTRE only: StatorCurrentLimit. Ignored by REV and Nova implementations. */
+    /**
+     * Maximum stator (output) current in amps. Controls torque / prevents slip.
+     * CTRE only: StatorCurrentLimit. Ignored by REV and Nova implementations.
+     */
     public final double statorCurrentLimitAmps;
 
     // ── Ramp rates ────────────────────────────────────────────────────────────
 
-    /** Seconds from zero to full output for open-loop (duty cycle) control.
-     *  0 = no ramp. Applied as hardware ramp where supported (CTRE, REV).
-     *  Nova falls back to software ramp in the abstract base. */
+    /**
+     * Seconds from zero to full output for open-loop (duty cycle) control.
+     * 0 = no ramp. Applied as hardware ramp where supported (CTRE, REV).
+     * Nova falls back to software ramp in the abstract base.
+     */
     public final double openLoopRampSecs;
 
-    /** Seconds from zero to full output for closed-loop control.
-     *  0 = no ramp. Applied as hardware ramp where supported. */
+    /**
+     * Seconds from zero to full output for closed-loop control.
+     * 0 = no ramp. Applied as hardware ramp where supported.
+     */
     public final double closedLoopRampSecs;
 
     // ── Motion profile (soft start for closed-loop) ───────────────────────────
 
-    /** Maximum cruise velocity for motion profile (mechanism shaft RPS).
-     *  0 = motion profile disabled; raw closed-loop used instead.
-     *  Set > 0 to activate MotionMagic (CTRE), MAXMotion (REV), or
-     *  software step-limiter (Nova). */
+    /**
+     * Maximum cruise velocity for motion profile (mechanism shaft RPS).
+     * 0 = motion profile disabled; raw closed-loop used instead.
+     * Set > 0 to activate MotionMagic (CTRE), MAXMotion (REV), or
+     * software step-limiter (Nova).
+     */
     public final double motionCruiseVelocityRps;
 
     /** Maximum acceleration for motion profile (mechanism shaft RPS²). */
     public final double motionAccelerationRpss;
 
-    /** Jerk limit for CTRE MotionMagic S-curve profile (mechanism shaft RPS³).
-     *  0 = trapezoidal profile (no jerk limiting).
-     *  Ignored by REV and Nova implementations. */
+    /**
+     * Jerk limit for CTRE MotionMagic S-curve profile (mechanism shaft RPS³).
+     * 0 = trapezoidal profile (no jerk limiting).
+     * Ignored by REV and Nova implementations.
+     */
     public final double motionJerkRpss3;
 
     // ── Feed-forward lambdas ──────────────────────────────────────────────────
@@ -202,18 +238,24 @@ public final class MechanismConfig {
 
     // ── Neutral behavior ──────────────────────────────────────────────────────
 
-    /** true = brake mode (resist movement when not commanded).
-     *  false = coast mode. Default: true. */
+    /**
+     * true = brake mode (resist movement when not commanded).
+     * false = coast mode. Default: true.
+     */
     public final boolean brakeOnNeutral;
 
     // ── Encoder sync (ENCODER_SYNC follow mode only) ──────────────────────────
 
-    /** Error threshold before sync correction activates (rotations, mechanism shaft).
-     *  Default: MotorConstants.ENCODER_SYNC_DEADBAND_ROT */
+    /**
+     * Error threshold before sync correction activates (rotations, mechanism shaft).
+     * Default: MotorConstants.ENCODER_SYNC_DEADBAND_ROT
+     */
     public final double encoderSyncDeadbandRot;
 
-    /** Proportional gain for sync correction (duty cycle per rotation of error).
-     *  Output clamped to [-1.0, 1.0]. Default: MotorConstants.ENCODER_SYNC_KP_DEFAULT */
+    /**
+     * Proportional gain for sync correction (duty cycle per rotation of error).
+     * Output clamped to [-1.0, 1.0]. Default: MotorConstants.ENCODER_SYNC_KP_DEFAULT
+     */
     public final double encoderSyncKp;
 
     // ── End-of-travel stall detection thresholds ──────────────────────────────
@@ -236,25 +278,37 @@ public final class MechanismConfig {
     /** Maximum |velocity| (RPS) to register an upper-limit stall on the lead motor. */
     public final double leadUpperMaxSpeedRps;
 
-    /** Lower-limit current threshold for the ENCODER_SYNC follower.
-     *  Double.NaN = inherit leadLowerCurrentAmps. */
+    /**
+     * Lower-limit current threshold for the ENCODER_SYNC follower.
+     * Double.NaN = inherit leadLowerCurrentAmps.
+     */
     public final double followerLowerCurrentAmps;
-    /** Lower-limit speed threshold for the ENCODER_SYNC follower.
-     *  Double.NaN = inherit leadLowerMaxSpeedRps. */
+    /**
+     * Lower-limit speed threshold for the ENCODER_SYNC follower.
+     * Double.NaN = inherit leadLowerMaxSpeedRps.
+     */
     public final double followerLowerMaxSpeedRps;
-    /** Upper-limit current threshold for the ENCODER_SYNC follower.
-     *  Double.NaN = inherit leadUpperCurrentAmps. */
+    /**
+     * Upper-limit current threshold for the ENCODER_SYNC follower.
+     * Double.NaN = inherit leadUpperCurrentAmps.
+     */
     public final double followerUpperCurrentAmps;
-    /** Upper-limit speed threshold for the ENCODER_SYNC follower.
-     *  Double.NaN = inherit leadUpperMaxSpeedRps. */
+    /**
+     * Upper-limit speed threshold for the ENCODER_SYNC follower.
+     * Double.NaN = inherit leadUpperMaxSpeedRps.
+     */
     public final double followerUpperMaxSpeedRps;
 
-    /** Number of consecutive loops both stall conditions must hold before a limit latches.
-     *  Default: 3 (~60ms at 50Hz). Increase to reduce false positives. */
+    /**
+     * Number of consecutive loops both stall conditions must hold before a limit latches.
+     * Default: 3 (~60ms at 50Hz). Increase to reduce false positives.
+     */
     public final int stallDetectionCycles;
 
-    /** Encoder value (degrees, mechanism shaft) written to both sides after homing completes.
-     *  Double.NaN = 0 degrees. */
+    /**
+     * Encoder value (degrees, mechanism shaft) written to both sides after homing completes.
+     * Double.NaN = 0 degrees.
+     */
     public final double homingZeroOffsetDeg;
 
     /**
@@ -283,7 +337,7 @@ public final class MechanismConfig {
      * Use for flat mechanisms with no gravity component, or when
      * tier-2/3 feed-forward is not needed.
      *
-     * For physics-based gravity and spring compensation, use the factories in
+     * <p>For physics-based gravity and spring compensation, use the factories in
      * {@link FF}: rotatingArm(), multiStageElevator(), pivotingElevator(),
      * springTurret(), gyroscopicTurret().
      */
@@ -298,7 +352,7 @@ public final class MechanismConfig {
     /**
      * Hardware config for motor {@code index} (0 = leader, 1..n = followers).
      *
-     * The leader gets every setting. Followers get the same gear ratio, current
+     * <p>The leader gets every setting. Followers get the same gear ratio, current
      * limits, neutral mode and CAN signal rates with their own CAN ID, and no
      * gains, soft limits, or motion profile — those only matter on the controller
      * running the closed loop. Only ENCODER_SYNC followers get an inversion
@@ -563,7 +617,7 @@ public final class MechanismConfig {
          * Convenience method — sets all followers to the same follow mode with
          * all following canIds[0] (the main leader). Use for simple 1-leader topologies.
          *
-         * For mixed-mode or follower-of-follower topologies, use withFollowerConfig().
+         * <p>For mixed-mode or follower-of-follower topologies, use withFollowerConfig().
          *
          * @param mode             follow mode applied to every follower
          * @param followerInverted inversion per follower, parallel to canIds[1..n]
@@ -585,7 +639,7 @@ public final class MechanismConfig {
          * Use when followers have different modes or a follower must follow another
          * follower rather than the main leader.
          *
-         * All three arrays must be the same length = canIds.length - 1.
+         * <p>All three arrays must be the same length = canIds.length - 1.
          *
          * @param modes              follow mode per follower
          * @param followerInverted   inversion per follower
@@ -632,6 +686,7 @@ public final class MechanismConfig {
 
         /**
          * Set on-controller PID/FF gains.
+         *
          * @param pid { kP, kI, kD, kS, kV, kA }
          */
         public Builder withPID(double[] pid) {
@@ -645,6 +700,7 @@ public final class MechanismConfig {
         /**
          * Set position soft limits (degrees, mechanism shaft).
          * Pass Double.NaN for either value to leave it disabled.
+         *
          * @param reverseDeg lower bound (most negative position)
          * @param forwardDeg upper bound (most positive position)
          */
@@ -656,6 +712,7 @@ public final class MechanismConfig {
 
         /**
          * Set current limits.
+         *
          * @param supplyAmps supply (input) current limit — protects breakers
          * @param statorAmps stator (output) current limit — CTRE only, controls torque
          */
@@ -667,6 +724,7 @@ public final class MechanismConfig {
 
         /**
          * Set ramp rates.
+         *
          * @param openLoopSecs   seconds 0→full for duty cycle (0 = no ramp)
          * @param closedLoopSecs seconds 0→full for closed-loop (0 = no ramp)
          */
@@ -678,6 +736,7 @@ public final class MechanismConfig {
 
         /**
          * Enable motion profiling (MotionMagic / MAXMotion / software step-limiter).
+         *
          * @param cruiseVelocityRps max cruise velocity (mechanism shaft RPS)
          * @param accelerationRpss  max acceleration (mechanism shaft RPS²)
          * @param jerkRpss3         jerk limit for CTRE S-curve (0 = trapezoidal)
@@ -727,6 +786,7 @@ public final class MechanismConfig {
 
         /**
          * Tune ENCODER_SYNC follow parameters.
+         *
          * @param deadbandRot error threshold before correction fires (rotations)
          * @param kp          proportional gain (duty cycle per rotation of error)
          */
@@ -738,8 +798,8 @@ public final class MechanismConfig {
 
         /**
          * Configure end-of-travel stall detection thresholds for the lead motor.
-         * A limit latches when detectionCurrent >= minCurrentAmps AND
-         * |velocity| <= maxSpeedRps simultaneously for stallDetectionCycles loops.
+         * A limit latches when detectionCurrent ≥ minCurrentAmps AND
+         * |velocity| ≤ maxSpeedRps simultaneously for stallDetectionCycles loops.
          * Pass Double.NaN for any value to leave that limit disabled.
          *
          * @param lowerCurrentAmps minimum detection current (amps) for lower-limit stall
