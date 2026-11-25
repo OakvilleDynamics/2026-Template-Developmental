@@ -13,25 +13,27 @@ import frc.lib.hardware.motor.MotorVendor;
  *
  * <h2>Unit contract at this interface</h2>
  *
- * <pre>{@code
- * Position         : degrees  (mechanism shaft, after gear ratio)
- * Velocity         : rotations/second  (mechanism shaft)
- * Feed-forward     : volts
- * Duty cycle       : -1.0 to 1.0
- * Current          : amps
- * Time / ramp rate : seconds
- * }</pre>
+ * <ul>
+ *   <li><b>Position</b>: degrees (mechanism shaft, after gear ratio)</li>
+ *   <li><b>Velocity</b>: rotations/second (mechanism shaft)</li>
+ *   <li><b>Feed-forward</b>: volts</li>
+ *   <li><b>Duty cycle</b>: -1.0 to 1.0</li>
+ *   <li><b>Current</b>: amps</li>
+ *   <li><b>Time / ramp rate</b>: seconds</li>
+ * </ul>
  *
  * <h2>Gear ratio convention</h2>
  *
- * <pre>{@code
- * gearRatio = motor rotations per mechanism shaft rotation
- * A 10:1 reduction  → gearRatio = 10.0
- * A 1:2 upduction   → gearRatio = 0.5
- * This matches the Phoenix 6 SensorToMechanismRatio convention.
+ * <p>gearRatio = motor rotations per mechanism shaft rotation:
+ *
+ * <ul>
+ *   <li>A 10:1 reduction → {@code gearRatio = 10.0}</li>
+ *   <li>A 1:2 upduction → {@code gearRatio = 0.5}</li>
+ * </ul>
+ *
+ * <p>This matches the Phoenix 6 SensorToMechanismRatio convention.
  * Applied internally per vendor; all setpoints and feedback are in
  * mechanism-shaft units at the public API layer.
- * }</pre>
  *
  * <h2>Soft limits</h2>
  *
@@ -40,12 +42,13 @@ import frc.lib.hardware.motor.MotorVendor;
  *
  * <h2>Follower rules</h2>
  *
- * <pre>{@code
- * canIds[0]          — always the leader
- * canIds[1..n]       — followers; all must be the same vendor as the leader
- * followerInverted[] — parallel to canIds[1..n]; true = opposite direction
- * Mixed-vendor mechanisms are not supported and will throw at factory time.
- * }</pre>
+ * <ul>
+ *   <li>{@code canIds[0]} — always the leader</li>
+ *   <li>{@code canIds[1..n]} — followers; all must be the same vendor as the leader</li>
+ *   <li>{@code followerInverted[]} — parallel to canIds[1..n]; true = opposite direction</li>
+ * </ul>
+ *
+ * <p>Mixed-vendor mechanisms are not supported and will throw at factory time.
  *
  * <h2>Feed-forward</h2>
  *
@@ -59,14 +62,16 @@ import frc.lib.hardware.motor.MotorVendor;
  *
  * <h2>Motion profile</h2>
  *
- * <pre>{@code
- * Set motionCruiseVelocityRps > 0 to activate motion profiling.
- * CTRE: MotionMagic (trapezoidal; set motionJerkRpss3 > 0 for S-curve).
- * REV:  MAXMotion.
- * Nova: Software setpoint step-limiter using motionAccelerationRpss.
- * Leave at 0 to use raw closed-loop without profile (velocity control
+ * <p>Set motionCruiseVelocityRps &gt; 0 to activate motion profiling:
+ *
+ * <ul>
+ *   <li><b>CTRE</b>: MotionMagic (trapezoidal; set motionJerkRpss3 &gt; 0 for S-curve)</li>
+ *   <li><b>REV</b>: MAXMotion</li>
+ *   <li><b>Nova</b>: software setpoint step-limiter using motionAccelerationRpss</li>
+ * </ul>
+ *
+ * <p>Leave at 0 to use raw closed-loop without profile (velocity control
  * typically does not need a cruise velocity, only acceleration).
- * }</pre>
  */
 public final class MechanismConfig {
 
@@ -132,17 +137,19 @@ public final class MechanismConfig {
     // ── PID gains ─────────────────────────────────────────────────────────────
 
     /**
-     * <pre>{@code
-     * On-controller PID/FF gains: { kP, kI, kD, kS, kV, kA }
-     *   kP : proportional gain
-     *   kI : integral gain
-     *   kD : derivative gain
-     *   kS : static friction voltage (volts) — kick to overcome stiction
-     *   kV : velocity feed-forward (volts per RPS) — back-EMF compensation
-     *   kA : acceleration feed-forward (volts per RPS²) — inertia compensation
-     * All run on the motor controller. kA availability varies by vendor.
+     * On-controller PID/FF gains, in order:
+     *
+     * <ul>
+     *   <li>{@code kP}: proportional gain</li>
+     *   <li>{@code kI}: integral gain</li>
+     *   <li>{@code kD}: derivative gain</li>
+     *   <li>{@code kS}: static friction voltage (volts) — kick to overcome stiction</li>
+     *   <li>{@code kV}: velocity feed-forward (volts per RPS) — back-EMF compensation</li>
+     *   <li>{@code kA}: acceleration feed-forward (volts per RPS²) — inertia compensation</li>
+     * </ul>
+     *
+     * <p>All run on the motor controller. kA availability varies by vendor.
      * Live-tunable from the dashboard during development.
-     * }</pre>
      */
     public final double[] pid;
 
@@ -498,11 +505,11 @@ public final class MechanismConfig {
     /**
      * Fluent builder for MechanismConfig.
      *
-     * Required: name, canIds, vendors.
+     * <p>Required: name, canIds, vendors.
      * All other fields have safe defaults appropriate for a single-motor mechanism
      * with no profile, no soft limits, and no feed-forward.
      *
-     * Example — single CTRE leader, arm with gravity compensation:
+     * <p>Example — single CTRE leader, arm with gravity compensation:
      * <pre>{@code
      * MechanismConfig cfg = new MechanismConfig.Builder(
      *         "Shoulder", new int[]{ 15 }, MotorVendor.CTRE_TALONFX)
@@ -516,7 +523,7 @@ public final class MechanismConfig {
      *     .build();
      * }</pre>
      *
-     * Example — two REV SparkMax followers (mechanical), vertical elevator:
+     * <p>Example — two REV SparkMax followers (mechanical), vertical elevator:
      * <pre>{@code
      * MechanismConfig cfg = new MechanismConfig.Builder(
      *         "Elevator", new int[]{ 20, 21 }, MotorVendor.REV_SPARKMAX)

@@ -7,26 +7,25 @@ package frc.lib.control.ff;
  *
  * <h2>Unit contract</h2>
  *
- * <pre>{@code
- * positionDeg : mechanism shaft position in degrees (after gear ratio)
- * velocityRps : mechanism shaft velocity in rotations/second (signed)
- * accelRpss   : mechanism shaft acceleration in rotations/second² (signed)
- * return      : feed-forward voltage addend in volts
- * }</pre>
+ * <ul>
+ *   <li>{@code positionDeg}: mechanism shaft position in degrees (after gear ratio)</li>
+ *   <li>{@code velocityRps}: mechanism shaft velocity in rotations/second (signed)</li>
+ *   <li>{@code accelRpss}: mechanism shaft acceleration in rotations/second² (signed)</li>
+ *   <li>{@code return}: feed-forward voltage addend in volts</li>
+ * </ul>
  *
  * <h2>Tier-2 vs Tier-3</h2>
  *
  * <p>The type is the same for both tiers. The difference is what the lambda closes over:
  *
- * <pre>{@code
- * Tier-2: closes over nothing external — uses only the params provided.
- *         Example: arm gravity, spring pull, multi-stage elevator weight steps.
- *
- * Tier-3: closes over other subsystem references captured at construction time
- *         in RobotContainer (where all subsystems exist).
- *         Example: gyroscopic resistance from a flywheel, elevator tilt from
- *         a rotating base, game-piece-count-dependent weight.
- * }</pre>
+ * <ul>
+ *   <li><b>Tier-2</b>: closes over nothing external — uses only the params provided.
+ *       Example: arm gravity, spring pull, multi-stage elevator weight steps.</li>
+ *   <li><b>Tier-3</b>: closes over other subsystem references captured at construction time
+ *       in RobotContainer (where all subsystems exist).
+ *       Example: gyroscopic resistance from a flywheel, elevator tilt from
+ *       a rotating base, game-piece-count-dependent weight.</li>
+ * </ul>
  *
  * <h2>Example Tier-2 lambdas</h2>
  *

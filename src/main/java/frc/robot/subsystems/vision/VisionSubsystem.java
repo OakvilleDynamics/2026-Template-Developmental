@@ -28,10 +28,10 @@ import java.util.Optional;
  *
  * <h2>Internal objects</h2>
  *
- * <pre>{@code
- * AprilTagFieldCal    — field layout, per-tag offsets, geometry
- * VisionHealthMonitor — pre-match validation, health tracking
- * }</pre>
+ * <ul>
+ *   <li>{@code AprilTagFieldCal} — field layout, per-tag offsets, geometry</li>
+ *   <li>{@code VisionHealthMonitor} — pre-match validation, health tracking</li>
+ * </ul>
  *
  * <p>These are not accessible from outside — all access goes through
  * the public methods below.

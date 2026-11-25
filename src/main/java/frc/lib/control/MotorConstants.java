@@ -12,19 +12,11 @@ public final class MotorConstants {
     /**
      * How follower motors track the leader.
      *
-     * <pre>{@code
-     * NONE          — single-motor mechanism; no followers
-     * MECHANICAL    — hardware follower; controller mirrors leader output directly.
-     *                 Use when motors share a rigid mechanical linkage (same shaft,
-     *                 belt, or chain with no possibility of slip).
-     *                 Zero Rio CPU per cycle after construction.
-     * ENCODER_SYNC  — software follower; Rio reads both encoders each loop and
-     *                 applies a proportional duty cycle correction when the follower
-     *                 drifts beyond the deadband. Use for non-rigid couplings where
-     *                 slip is possible and must be detected/corrected.
-     *                 NOTE: Not supported for THRIFTYBOT_NOVA — Nova's follow() API
-     *                 does not expose independent encoder readback on the follower.
-     * }</pre>
+     * <ul>
+     *   <li>{@code NONE} — single-motor mechanism; no followers</li>
+     *   <li>{@code MECHANICAL} — hardware follower; controller mirrors leader output directly. Use when motors share a rigid mechanical linkage (same shaft, belt, or chain with no possibility of slip). Zero Rio CPU per cycle after construction.</li>
+     *   <li>{@code ENCODER_SYNC} — software follower; Rio reads both encoders each loop and applies a proportional duty cycle correction when the follower drifts beyond the deadband. Use for non-rigid couplings where slip is possible and must be detected/corrected. NOTE: Not supported for THRIFTYBOT_NOVA — Nova's follow() API does not expose independent encoder readback on the follower.</li>
+     * </ul>
      */
     public enum FollowMode {
         NONE,

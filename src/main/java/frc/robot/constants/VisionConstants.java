@@ -13,24 +13,23 @@ import frc.lib.util.Units;
  *
  * <p>Each new season, update:
  *
- * <pre>{@code
- * 1. GAME_YEAR_FIELD  — change the AprilTagFields enum value in RobotContainer
- *                       (not here — VisionConstants holds the default reference only)
- * 2. Camera transforms — remeasure if robot geometry changed
- * 3. Stream URLs       — verify port numbers in PhotonVision UI
- * 4. AprilTagIgnore.java — review tag IDs for new field layout
- * }</pre>
+ * <ol>
+ *   <li>GAME_YEAR_FIELD — change the AprilTagFields enum value in RobotContainer (not here — VisionConstants holds the default reference only)</li>
+ *   <li>Camera transforms — remeasure if robot geometry changed</li>
+ *   <li>Stream URLs — verify port numbers in PhotonVision UI</li>
+ *   <li>AprilTagIgnore.java — review tag IDs for new field layout</li>
+ * </ol>
  *
  * <h2>Event setup checklist</h2>
  *
  * <p>At each competition event:
  *
- * <pre>{@code
- * 1. Verify stream URLs are reachable from driver station laptop
- * 2. Confirm camera names match exactly what is set in PhotonVision UI
- * 3. Run field calibration procedure via "Field Calibration" Elastic tab
- * 4. Apply any needed tag offsets and generate the offsets file
- * }</pre>
+ * <ol>
+ *   <li>Verify stream URLs are reachable from driver station laptop</li>
+ *   <li>Confirm camera names match exactly what is set in PhotonVision UI</li>
+ *   <li>Run field calibration procedure via "Field Calibration" Elastic tab</li>
+ *   <li>Apply any needed tag offsets and generate the offsets file</li>
+ * </ol>
  *
  * <h2>Camera transform coordinate frame</h2>
  *
@@ -181,10 +180,10 @@ public final class VisionConstants {
      *
      * <p>Above threshold — recommendation depends on camera agreement:
      *
-     * <pre>{@code
-     * Both cameras agree but both off from WPILib → apply field offset
-     * Cameras disagree with each other → check camera transform
-     * }</pre>
+     * <ul>
+     *   <li>Both cameras agree but both off from WPILib → apply field offset</li>
+     *   <li>Cameras disagree with each other → check camera transform</li>
+     * </ul>
      *
      * <p>Default: 1.0 inch. Adjustable live from "Cal Tolerance (in)" slider
      * on the Field Calibration Elastic tab.

@@ -7,18 +7,18 @@ import edu.wpi.first.wpilibj.Joystick;
  *
  * <p>LEFT STICK:
  *
- * <pre>{@code
- * Axis 1 (Y)     → forward/back translation
- * Axis 0 (X)     → left/right strafe
- * }</pre>
+ * <ul>
+ *   <li><b>Axis 1 (Y)</b> → forward/back translation</li>
+ *   <li><b>Axis 0 (X)</b> → left/right strafe</li>
+ * </ul>
  *
  * <p>RIGHT STICK:
  *
- * <pre>{@code
- * Axis 2 (twist) → rotation
- * Axis 1 (Y)     → center of rotation forward/back
- * Axis 0 (X)     → center of rotation left/right
- * }</pre>
+ * <ul>
+ *   <li><b>Axis 2 (twist)</b> → rotation</li>
+ *   <li><b>Axis 1 (Y)</b> → center of rotation forward/back</li>
+ *   <li><b>Axis 0 (X)</b> → center of rotation left/right</li>
+ * </ul>
  *
  * <p>Raw stick Y is negative when pushed forward and X/twist are positive to the
  * right, so every axis is negated to match the IDriverInputs convention.

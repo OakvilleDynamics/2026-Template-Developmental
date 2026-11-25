@@ -32,19 +32,19 @@ import edu.wpi.first.wpilibj.RobotBase;
  * <p>Each registered device retries its config apply up to 5× with a 50ms delay,
  * then reads the config back from the device and diffs key fields:
  *
- * <pre>{@code
- * CTRE TalonFX  : inversion, neutralMode, supplyCurrentLimit, statorCurrentLimit
- * REV Spark     : inversion, idleMode, smartCurrentLimit
- * ThriftyNova   : inversion, brakeMode, motorType (if withNovaMotorType() was set)
- * }</pre>
+ * <ul>
+ *   <li><b>CTRE TalonFX</b>: inversion, neutralMode, supplyCurrentLimit, statorCurrentLimit</li>
+ *   <li><b>REV Spark</b>: inversion, idleMode, smartCurrentLimit</li>
+ *   <li>{@code ThriftyNova}: inversion, brakeMode, motorType (if withNovaMotorType() was set)</li>
+ * </ul>
  *
  * <h2>Fault surface</h2>
  *
- * <pre>{@code
- * Dashboard key  "ConfigVerifier/Status"     "OK" or "FAULTS DETECTED"
- * Dashboard key  "ConfigVerifier/Faults"     blank-separated fault details
- * Driver Station console — DriverStation.reportError() for any failure
- * }</pre>
+ * <ul>
+ *   <li>Dashboard key {@code "ConfigVerifier/Status"} — "OK" or "FAULTS DETECTED"</li>
+ *   <li>Dashboard key {@code "ConfigVerifier/Faults"} — blank-separated fault details</li>
+ *   <li>Driver Station console — DriverStation.reportError() for any failure</li>
+ * </ul>
  *
  * <p>A per-device pass/fail is also pushed under "ConfigVerifier/&lt;DeviceName>".
  *

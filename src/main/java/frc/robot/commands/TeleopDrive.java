@@ -20,15 +20,17 @@ import frc.lib.util.Units;
  * <p>Reads the driver's axes through IDriverInputs, so this command does not know
  * which controller is attached. Controller mappings live in frc.robot.controls:
  *
- * <pre>{@code
- * FlightStickInputs — two Logitech Extreme 3D Pros (with CoR control)
- * XboxInputs        — one Xbox-style controller (no CoR control)
+ * <ul>
+ *   <li>{@code FlightStickInputs} — two Logitech Extreme 3D Pros (with CoR control)</li>
+ *   <li>{@code XboxInputs} — one Xbox-style controller (no CoR control)</li>
+ * </ul>
  *
- * forward() → vx    — forward/back, field-relative (ft/s)
- * left()    → vy    — left/right strafe, field-relative (ft/s)
- * rotate()  → omega — robot rotation rate (rad/s)
- * corForward() / corLeft() → center of rotation (robot-relative)
- * }</pre>
+ * <ul>
+ *   <li>{@code forward()} → vx — forward/back, field-relative (ft/s)</li>
+ *   <li>{@code left()} → vy — left/right strafe, field-relative (ft/s)</li>
+ *   <li>{@code rotate()} → omega — robot rotation rate (rad/s)</li>
+ *   <li>{@code corForward()} / {@code corLeft()} → center of rotation (robot-relative)</li>
+ * </ul>
  *
  * <h2>Center of rotation</h2>
  *
@@ -39,13 +41,12 @@ import frc.lib.util.Units;
  *
  * <h2>Drive modes</h2>
  *
- * <pre>{@code
- * NORMAL           — full driver control (default)
- * POINT_AT         — heading PID locks to a field target; translation free
- * HEADING_BOUND    — driver controls heading freely within [min, max] window;
- *                    PID-holds to nearest bound if heading exits the window
- * STATIC_SHOT_LOCK — wheels X-braced, no translation; for stationary shooting
- * }</pre>
+ * <ul>
+ *   <li>{@code NORMAL} — full driver control (default)</li>
+ *   <li>{@code POINT_AT} — heading PID locks to a field target; translation free</li>
+ *   <li>{@code HEADING_BOUND} — driver controls heading freely within [min, max] window; PID-holds to nearest bound if heading exits the window</li>
+ *   <li>{@code STATIC_SHOT_LOCK} — wheels X-braced, no translation; for stationary shooting</li>
+ * </ul>
  *
  * <p>The ShooterAimController sets the active mode each loop via the enable/clear
  * methods. This is the external driver-input pipeline — driver inputs are read

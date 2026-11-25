@@ -42,13 +42,13 @@ import frc.lib.util.Units;
  *
  * <h2>Constructor geometry inputs (all in inches)</h2>
  *
- * <pre>{@code
- * wheelBaseInches    double[2] { x, y } — wheel steering axis center-to-center
- * frameInches        double[2] { x, y } — outer frame, no bumpers
- * bumperInches       double[2] { x, y } — outer dimensions with bumpers
- * wheelDiamInches    double    — drive wheel diameter
- * headingPID         double[3] { kP, kI, kD } — point-at-target heading controller
- * }</pre>
+ * <ul>
+ *   <li>{@code wheelBaseInches} ({@code double[2] {x, y}}) — wheel steering axis center-to-center</li>
+ *   <li>{@code frameInches} ({@code double[2] {x, y}}) — outer frame, no bumpers</li>
+ *   <li>{@code bumperInches} ({@code double[2] {x, y}}) — outer dimensions with bumpers</li>
+ *   <li>{@code wheelDiamInches} ({@code double}) — drive wheel diameter</li>
+ *   <li>{@code headingPID} ({@code double[3] {kP, kI, kD}}) — point-at-target heading controller</li>
+ * </ul>
  *
  * <p>All values converted to meters internally on entry.
  *
@@ -375,11 +375,11 @@ public class SwerveDrive extends SubsystemBase implements IAimDriveState {
      *
      * <p>Behavior:
      *
-     * <pre>{@code
-     * Heading within bounds  → passes driver omega through unchanged (full control)
-     * Heading below minDeg   → PID-holds to minAbsHeadingDeg (overrides driver omega)
-     * Heading above maxDeg   → PID-holds to maxAbsHeadingDeg (overrides driver omega)
-     * }</pre>
+     * <ul>
+     *   <li><b>Heading within bounds</b> → passes driver omega through unchanged (full control)</li>
+     *   <li><b>Heading below minDeg</b> → PID-holds to minAbsHeadingDeg (overrides driver omega)</li>
+     *   <li><b>Heading above maxDeg</b> → PID-holds to maxAbsHeadingDeg (overrides driver omega)</li>
+     * </ul>
      *
      * <p>Reuses the same headingPID and HEADING_PID_MAX_OMEGA as drivePointAt().
      * Bounds come from ShooterOutput.headingBoundsDeg — the range of robot headings

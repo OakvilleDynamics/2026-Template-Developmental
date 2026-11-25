@@ -40,11 +40,11 @@ import frc.lib.util.Units;
  * <p>The elevator angle relative to ground drives the gravity FF calculation.
  * Three cases, all resolved to the same {@code Supplier<Double>} at construction:
  *
- * <pre>{@code
- * Fixed vertical (no pivot, no external supplier):  () -> 90.0
- * Internal pivot sub-mechanism:                     pivot::getPositionDeg
- * External pivot / angle source:                    withExternalAngleSupplier(...)
- * }</pre>
+ * <ul>
+ *   <li><b>Fixed vertical</b> (no pivot, no external supplier): {@code () -> 90.0}</li>
+ *   <li><b>Internal pivot sub-mechanism</b>: {@code pivot::getPositionDeg}</li>
+ *   <li><b>External pivot / angle source</b>: {@code withExternalAngleSupplier(...)}</li>
+ * </ul>
  *
  * <h2>Feed-forward</h2>
  *
@@ -73,26 +73,28 @@ import frc.lib.util.Units;
  *
  * <p>SEEKING (initial, after any setpoint change):
  *
- * <pre>{@code
- * isReady() = false
- * → READY when all configured sub-mechanisms are within setpointDeadband
- * }</pre>
+ * <b>SEEKING</b> ({@code isReady() == false}):
+ *
+ * <ul>
+ *   <li>→ READY when all configured sub-mechanisms are within setpointDeadband</li>
+ * </ul>
  *
  * <p>READY:
  *
- * <pre>{@code
- * isReady() = true
- * → SEEKING if elevator position drops more than holdThresholdIn below setpoint
- * → SEEKING if any setpoint is changed
- * }</pre>
+ * <b>READY</b> ({@code isReady() == true}):
+ *
+ * <ul>
+ *   <li>→ SEEKING if elevator position drops more than holdThresholdIn below setpoint</li>
+ *   <li>→ SEEKING if any setpoint is changed</li>
+ * </ul>
  *
  * <h2>Units at this interface</h2>
  *
- * <pre>{@code
- * Elevator position / default  : inches
- * Pivot position / default     : degrees
- * Hold threshold               : inches
- * }</pre>
+ * <ul>
+ *   <li><b>Elevator position / default</b>: inches</li>
+ *   <li><b>Pivot position / default</b>: degrees</li>
+ *   <li><b>Hold threshold</b>: inches</li>
+ * </ul>
  *
  * <h2>Call pattern</h2>
  *
@@ -448,10 +450,10 @@ public class ElevatorMechanism extends SubsystemBase implements IConfigVerifiabl
     /**
      * Fluent builder for ElevatorMechanism.
      *
-     * Required: withElevator(), withMasses(), withDrivetrainSuppliers().
+     * <p>Required: withElevator(), withMasses(), withDrivetrainSuppliers().
      * Optional: withPivot() or withExternalAngleSupplier(), withElevatorHoldThresholdIn().
      *
-     * Example — fixed vertical, single stage, one game piece type:
+     * <p>Example — fixed vertical, single stage, one game piece type:
      * <pre>{@code
      * ElevatorMechanism elevator = new ElevatorMechanism.Builder("Elevator")
      *     .withElevator(elevatorConfig, MotorModels.NEO_VORTEX, 0.75, 0.0)
@@ -463,7 +465,7 @@ public class ElevatorMechanism extends SubsystemBase implements IConfigVerifiabl
      *     .build();
      * }</pre>
      *
-     * Example — pivoting base, two stages:
+     * <p>Example — pivoting base, two stages:
      * <pre>{@code
      * ElevatorMechanism elevator = new ElevatorMechanism.Builder("PivotElevator")
      *     .withElevator(elevatorConfig, MotorModels.NEO_VORTEX, 0.75, 0.0)

@@ -17,12 +17,12 @@ import frc.lib.util.ConfigVerifyResult;
  *
  * <h2>Implementations</h2>
  *
- * <pre>{@code
- * CTREMotor — TalonFX (Phoenix 6)
- * REVMotor  — SparkMax / SparkFlex (REVLib)
- * NovaMotor — ThriftyBot Nova (ThriftyLib)
- * FakeMotorIO (src/test) — in-memory stand-in for unit tests, no HAL required
- * }</pre>
+ * <ul>
+ *   <li>{@code CTREMotor} — TalonFX (Phoenix 6)</li>
+ *   <li>{@code REVMotor} — SparkMax / SparkFlex (REVLib)</li>
+ *   <li>{@code NovaMotor} — ThriftyBot Nova (ThriftyLib)</li>
+ *   <li><b>FakeMotorIO (src/test)</b> — in-memory stand-in for unit tests, no HAL required</li>
+ * </ul>
  *
  * <h2>Units</h2>
  *

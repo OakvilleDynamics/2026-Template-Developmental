@@ -26,35 +26,31 @@ import frc.lib.util.Units;
  *
  * <p>Each new season:
  *
- * <pre>{@code
- * 1. GAME_PIECE_HEIGHT_M   — update for the game piece's height above carpet
- * 2. GAME_PIECE_CAMERA_TRANSFORM — remeasure if robot geometry changed
- * 3. CLUSTER_RADIUS_M      — tune based on how pieces are distributed on field
- * 4. DETECTION_CONFIDENCE_MIN — adjust based on PhotonVision pipeline accuracy
- * }</pre>
+ * <ol>
+ *   <li>GAME_PIECE_HEIGHT_M — update for the game piece's height above carpet</li>
+ *   <li>GAME_PIECE_CAMERA_TRANSFORM — remeasure if robot geometry changed</li>
+ *   <li>CLUSTER_RADIUS_M — tune based on how pieces are distributed on field</li>
+ *   <li>DETECTION_CONFIDENCE_MIN — adjust based on PhotonVision pipeline accuracy</li>
+ * </ol>
  *
  * <h2>Event setup checklist</h2>
  *
  * <p>At each competition event:
  *
- * <pre>{@code
- * 1. Verify GAME_PIECE_CAMERA_NAME matches exactly what is set in PhotonVision UI
- * 2. Confirm stream URL is reachable from driver station
- * 3. Pre-match check: place a game piece ~1–2 m in front of intake, confirm
- *    "Piece Detected" reads true on Elastic "Vision Health" tab
- * }</pre>
+ * <ol>
+ *   <li>Verify GAME_PIECE_CAMERA_NAME matches exactly what is set in PhotonVision UI</li>
+ *   <li>Confirm stream URL is reachable from driver station</li>
+ *   <li>Pre-match check: place a game piece ~1–2 m in front of intake, confirm; "Piece Detected" reads true on Elastic "Vision Health" tab</li>
+ * </ol>
  *
  * <h2>Camera transform convention</h2>
  *
  * <p>Transform3d encodes camera position and orientation relative to robot center:
  *
- * <pre>{@code
- * Translation3d(x, y, z) — robot center to camera (meters, robot frame)
- *   +x = forward, +y = left, +z = up
- * Rotation3d(roll, pitch, yaw) — camera pointing direction
- *   Negative pitch = camera tilted down (pointing toward floor)
- *   Yaw 0 = facing forward (same as robot)
- * }</pre>
+ * <ul>
+ *   <li>{@code Translation3d(x, y, z)} — robot center to camera (meters, robot frame); +x = forward, +y = left, +z = up</li>
+ *   <li>{@code Rotation3d(roll, pitch, yaw)} — camera pointing direction; Negative pitch = camera tilted down (pointing toward floor); Yaw 0 = facing forward (same as robot)</li>
+ * </ul>
  *
  * <h2>Back-projection math</h2>
  *

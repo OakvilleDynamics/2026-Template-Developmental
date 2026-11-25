@@ -7,16 +7,16 @@ import edu.wpi.first.wpilibj.XboxController;
  *
  * <p>LEFT STICK:
  *
- * <pre>{@code
- * Y → forward/back translation
- * X → left/right strafe
- * }</pre>
+ * <ul>
+ *   <li><b>Y</b> → forward/back translation</li>
+ *   <li><b>X</b> → left/right strafe</li>
+ * </ul>
  *
  * <p>RIGHT STICK:
  *
- * <pre>{@code
- * X → rotation
- * }</pre>
+ * <ul>
+ *   <li><b>X</b> → rotation</li>
+ * </ul>
  *
  * <p>No center-of-rotation control — the robot always pivots about its center.
  *

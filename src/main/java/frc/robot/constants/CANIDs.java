@@ -9,10 +9,10 @@ package frc.robot.constants;
  *
  * <p>Before first deploy, verify each ID against the physical device:
  *
- * <pre>{@code
- * CTRE devices (Kraken, Pigeon 2): use Phoenix Tuner X (Self-Test Snapshot)
- * Thrifty Nova: use ThriftyBot app or Nova's built-in LED blink pattern
- * }</pre>
+ * <ul>
+ *   <li><b>CTRE devices (Kraken, Pigeon 2)</b>: use Phoenix Tuner X (Self-Test Snapshot)</li>
+ *   <li><b>Thrifty Nova</b>: use ThriftyBot app or Nova's built-in LED blink pattern</li>
+ * </ul>
  *
  * <p>TODO: confirm all IDs match physical wiring before first deploy.
  */

@@ -27,26 +27,21 @@ import java.util.function.BooleanSupplier;
  *
  * <h2>Hunt modes</h2>
  *
- * <pre>{@code
- * NEAREST_PIECE       — drive to the nearest piece, trigger intake, stop.
- * SEQUENTIAL_PIECES   — intake nearest piece, then next nearest, repeat until none.
- * NEAREST_CLUSTER     — drive to the centroid of the nearest cluster, intake all, stop.
- * SEQUENTIAL_CLUSTERS — intake nearest cluster, then next, repeat until none.
- * }</pre>
+ * <ul>
+ *   <li>{@code NEAREST_PIECE} — drive to the nearest piece, trigger intake, stop.</li>
+ *   <li>{@code SEQUENTIAL_PIECES} — intake nearest piece, then next nearest, repeat until none.</li>
+ *   <li>{@code NEAREST_CLUSTER} — drive to the centroid of the nearest cluster, intake all, stop.</li>
+ *   <li>{@code SEQUENTIAL_CLUSTERS} — intake nearest cluster, then next, repeat until none.</li>
+ * </ul>
  *
  * <h2>State machine</h2>
  *
- * <pre>{@code
- * FINDING      — poll gamePieceVision for a target.
- *                No piece found within HUNT_NO_PIECE_TIMEOUT_SECS → DONE.
- *                Piece found → compute arrival Pose2d, start pathfinder → PATHFINDING.
- * PATHFINDING  — inner AutoBuilder command runs via CommandScheduler.
- *                Pathfinder finishes → trigger intakeTrigger → INTAKING.
- * INTAKING     — wait for intakeComplete or INTAKE_TIMEOUT_SECS.
- *                NEAREST_PIECE / NEAREST_CLUSTER → DONE.
- *                SEQUENTIAL_* → mark target consumed → FINDING.
- * DONE         — isFinished() returns true.
- * }</pre>
+ * <ul>
+ *   <li>{@code FINDING} — poll gamePieceVision for a target. No piece found within HUNT_NO_PIECE_TIMEOUT_SECS → DONE. Piece found → compute arrival Pose2d, start pathfinder → PATHFINDING.</li>
+ *   <li>{@code PATHFINDING} — inner AutoBuilder command runs via CommandScheduler. Pathfinder finishes → trigger intakeTrigger → INTAKING.</li>
+ *   <li>{@code INTAKING} — wait for intakeComplete or INTAKE_TIMEOUT_SECS. NEAREST_PIECE / NEAREST_CLUSTER → DONE. SEQUENTIAL_* → mark target consumed → FINDING.</li>
+ *   <li>{@code DONE} — isFinished() returns true.</li>
+ * </ul>
  *
  * <h2>Arrival heading</h2>
  *
@@ -64,10 +59,10 @@ import java.util.function.BooleanSupplier;
  *
  * <p>The command is decoupled from any specific intake subsystem. It takes:
  *
- * <pre>{@code
- * intakeTrigger  — Runnable called once when the robot arrives at the piece.
- * intakeComplete — BooleanSupplier that returns true when the piece is collected.
- * }</pre>
+ * <ul>
+ *   <li>{@code intakeTrigger} — Runnable called once when the robot arrives at the piece.</li>
+ *   <li>{@code intakeComplete} — BooleanSupplier that returns true when the piece is collected.</li>
+ * </ul>
  *
  * <p>Wire these in RobotContainer once the intake subsystem exists.
  *

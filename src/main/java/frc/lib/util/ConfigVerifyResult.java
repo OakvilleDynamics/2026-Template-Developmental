@@ -9,19 +9,17 @@ import java.util.List;
  *
  * <h2>Fields</h2>
  *
- * <pre>{@code
- * deviceName      Human-readable label, e.g. "FL Drive", "Shooter Flywheel"
- * canId           CAN bus ID of the motor controller
- * vendor          Short vendor/model string, e.g. "CTRE TalonFX"
- * applySucceeded  False if every retry attempt failed — readback not attempted
- * fieldMismatches Each mismatch: "fieldName: expected X got Y"
- * }</pre>
+ * <ul>
+ *   <li>{@code deviceName} — Human-readable label, e.g. "FL Drive", "Shooter Flywheel"</li>
+ *   <li>{@code canId} — CAN bus ID of the motor controller</li>
+ *   <li>{@code vendor} — Short vendor/model string, e.g. "CTRE TalonFX"</li>
+ *   <li>{@code applySucceeded} — False if every retry attempt failed — readback not attempted</li>
+ *   <li>{@code fieldMismatches} — each mismatch as "fieldName: expected X got Y"</li>
+ * </ul>
  *
  * <h2>Result interpretation</h2>
  *
- * <pre>{@code
- * passed()        True only when apply succeeded AND no field mismatches
- * }</pre>
+ * <p>{@code passed()} is true only when apply succeeded AND there are no field mismatches.
  */
 public final class ConfigVerifyResult {
 

@@ -30,14 +30,12 @@ import frc.robot.subsystems.swerveDrive.SwerveDrive;
  *
  * <p>Every loop:
  *
- * <pre>{@code
- * 1. Pull the latest PhotonPipelineResult from the intake camera.
- * 2. Retrieve the robot pose at the frame's capture timestamp.
- * 3. Back-project each detected target from pixel angles (yaw, pitch) to a
- *    field-relative Translation2d using floor-intersection geometry.
- * 4. Merge new detections into the tracked list (update existing nearby entries
- *    or add new ones). Expire stale entries.
- * }</pre>
+ * <ol>
+ *   <li>Pull the latest PhotonPipelineResult from the intake camera.</li>
+ *   <li>Retrieve the robot pose at the frame's capture timestamp.</li>
+ *   <li>Back-project each detected target from pixel angles (yaw, pitch) to a field-relative Translation2d using floor-intersection geometry.</li>
+ *   <li>Merge new detections into the tracked list (update existing nearby entries or add new ones). Expire stale entries.</li>
+ * </ol>
  *
  * <h2>Back-projection math</h2>
  *

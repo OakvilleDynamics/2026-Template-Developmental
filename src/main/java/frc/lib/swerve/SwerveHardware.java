@@ -38,11 +38,13 @@ public final class SwerveHardware {
      *
      * <p>Current limits (supply / stator):
      *
-     * <pre>{@code
-     * Kraken X60 — 60 / 80 A     Kraken X44 — 40 / 60 A
-     * NEO Vortex — 60 A          NEO        — 50 A
-     * Nova/Pulsar — 60 A
-     * }</pre>
+     * <ul>
+     *   <li>Kraken X60 — 60 / 80 A</li>
+     *   <li>Kraken X44 — 40 / 60 A</li>
+     *   <li>NEO Vortex — 60 A</li>
+     *   <li>NEO — 50 A</li>
+     *   <li>Nova/Pulsar — 60 A</li>
+     * </ul>
      *
      * @param type      drive motor type
      * @param canId     controller CAN ID
@@ -81,10 +83,14 @@ public final class SwerveHardware {
      *
      * <p>Current limits (supply / stator):
      *
-     * <pre>{@code
-     * Kraken X60 — 40 / 60 A     Kraken X44, Minion — 30 / 40 A
-     * Nova — 30 A   NEO Vortex — 30 A   NEO — 25 A   NEO 550 — 20 A
-     * }</pre>
+     * <ul>
+     *   <li>Kraken X60 — 40 / 60 A</li>
+     *   <li>Kraken X44, Minion — 30 / 40 A</li>
+     *   <li>Nova — 30 A</li>
+     *   <li>NEO Vortex — 30 A</li>
+     *   <li>NEO — 25 A</li>
+     *   <li>NEO 550 — 20 A</li>
+     * </ul>
      *
      * <p>Inversion is chosen by the robot: positive output must turn the module
      * counter-clockwise viewed from above. Previously validated: TalonFX steer

@@ -10,13 +10,13 @@ package frc.lib.hardware.motor;
  *
  * <h2>Unit contract</h2>
  *
- * <pre>{@code
- * Position      : rotations (mechanism shaft, after gear ratio)
- * Velocity      : rotations/second (mechanism shaft)
- * Soft limits   : rotations (mechanism shaft); Double.NaN = disabled
- * Current       : amps
- * Ramp / time   : seconds
- * }</pre>
+ * <ul>
+ *   <li><b>Position</b>: rotations (mechanism shaft, after gear ratio)</li>
+ *   <li><b>Velocity</b>: rotations/second (mechanism shaft)</li>
+ *   <li><b>Soft limits</b>: rotations (mechanism shaft); Double.NaN = disabled</li>
+ *   <li><b>Current</b>: amps</li>
+ *   <li><b>Ramp / time</b>: seconds</li>
+ * </ul>
  *
  * <h2>Gear ratio convention</h2>
  *
@@ -26,15 +26,14 @@ package frc.lib.hardware.motor;
  *
  * <h2>Vendor support notes</h2>
  *
- * <pre>{@code
- * statorCurrentLimitAmps : CTRE only (REV/Nova use the supply limit)
- * motionJerkRpss3        : CTRE MotionMagic S-curve only
- * kS / kA                : REV and Nova do not run these on-controller
- *                          (Nova maps kS to its FF term)
- * continuousWrap         : hardware on CTRE/REV, software on Nova
- * signal rates / optimizeCanUtilization : CTRE only
- * novaMotorType          : Nova only — checked by ConfigVerifier
- * }</pre>
+ * <ul>
+ *   <li>{@code statorCurrentLimitAmps}: CTRE only (REV/Nova use the supply limit)</li>
+ *   <li>{@code motionJerkRpss3}: CTRE MotionMagic S-curve only</li>
+ *   <li>{@code kS / kA}: REV and Nova do not run these on-controller (Nova maps kS to its FF term)</li>
+ *   <li>{@code continuousWrap}: hardware on CTRE/REV, software on Nova</li>
+ *   <li>{@code signal rates / optimizeCanUtilization}: CTRE only</li>
+ *   <li>{@code novaMotorType}: Nova only — checked by ConfigVerifier</li>
+ * </ul>
  */
 public final class MotorIOConfig {
 

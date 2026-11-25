@@ -9,22 +9,20 @@ import frc.lib.util.Units;
  *
  * <h2>Units at this interface</h2>
  *
- * <pre>{@code
- * Input  : vx, vy in FEET/SECOND
- *          omega in RADIANS/SECOND
- *          centerOfRotation in METERS (robot-relative from robot center)
- * Stored : all values in METERS/SECOND internally after conversion
- * }</pre>
+ * <ul>
+ *   <li><b>Input</b>: vx, vy in FEET/SECOND; omega in RADIANS/SECOND; centerOfRotation in METERS (robot-relative from robot center)</li>
+ *   <li><b>Stored</b>: all values in METERS/SECOND internally after conversion</li>
+ * </ul>
  *
  * <p>The conversion happens once here. SwerveDrive never sees ft/s.
  *
  * <h2>Field-relative convention</h2>
  *
- * <pre>{@code
- * vx  positive → toward the far field wall (away from your alliance station)
- * vy  positive → field left (from driver's perspective facing the field)
- * omega CCW positive when viewed from above
- * }</pre>
+ * <ul>
+ *   <li>{@code vx} — positive → toward the far field wall (away from your alliance station)</li>
+ *   <li>{@code vy} — positive → field left (from driver's perspective facing the field)</li>
+ *   <li>{@code omega} — CCW positive when viewed from above</li>
+ * </ul>
  *
  * <h2>Center of rotation</h2>
  *

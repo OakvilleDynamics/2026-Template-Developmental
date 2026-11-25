@@ -15,11 +15,10 @@ import frc.lib.control.MechanismConfig;
  *
  * <p>Two entry points:
  *
- * <pre>{@code
- * calculateStaticShot()  — robot is fully stopped when firing
- * calculateOnTheMove()   — robot is moving; compensates for robot and
- *                          turret motion during ball flight
- * }</pre>
+ * <ul>
+ *   <li>{@code calculateStaticShot()} — robot is fully stopped when firing</li>
+ *   <li>{@code calculateOnTheMove()} — robot is moving; compensates for robot and turret motion during ball flight</li>
+ * </ul>
  *
  * <p>Shot profiles (RPM, hood angle, ToF), pivot geometry and the speed warning
  * threshold come from the ShotProfile passed to the constructor; turret limits
@@ -28,29 +27,27 @@ import frc.lib.control.MechanismConfig;
  *
  * <h2>Units at this interface</h2>
  *
- * <pre>{@code
- * Angles           : degrees
- * Linear distances : feet
- * Linear velocities: ft/s
- * Linear accels    : ft/s²
- * Angular velocities  : deg/s
- * Angular accelerations: deg/s²
- * }</pre>
+ * <ul>
+ *   <li><b>Angles</b>: degrees</li>
+ *   <li><b>Linear distances</b>: feet</li>
+ *   <li><b>Linear velocities</b>: ft/s</li>
+ *   <li><b>Linear accels</b>: ft/s²</li>
+ *   <li><b>Angular velocities</b>: deg/s</li>
+ *   <li><b>Angular accelerations</b>: deg/s²</li>
+ * </ul>
  *
  * <h2>Output</h2>
  *
  * <p>ShooterOutput contains:
  *
- * <pre>{@code
- * rpm, hoodAngle         — feed directly to ShooterMechanism
- * turretAngleRobotDeg    — commanded turret angle (robot-relative)
- * shooterHeadingFieldDeg — absolute field heading from pivot to target
- * shooterHeadingRobotDeg — same, robot-relative
- * headingBoundsDeg       — [min, max] absolute robot headings that keep the
- *                          turret within its soft stops; used by
- *                          ShooterAimController to bound drive heading
- * warnings               — set of ShooterWarning flags
- * }</pre>
+ * <ul>
+ *   <li>{@code rpm, hoodAngle} — feed directly to ShooterMechanism</li>
+ *   <li>{@code turretAngleRobotDeg} — commanded turret angle (robot-relative)</li>
+ *   <li>{@code shooterHeadingFieldDeg} — absolute field heading from pivot to target</li>
+ *   <li>{@code shooterHeadingRobotDeg} — same, robot-relative</li>
+ *   <li>{@code headingBoundsDeg} — [min, max] absolute robot headings that keep the turret within its soft stops; used by; ShooterAimController to bound drive heading</li>
+ *   <li>{@code warnings} — set of ShooterWarning flags</li>
+ * </ul>
  */
 public class ShooterCalculator {
 

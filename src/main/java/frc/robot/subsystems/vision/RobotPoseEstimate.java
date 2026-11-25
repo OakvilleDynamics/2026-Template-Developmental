@@ -8,26 +8,26 @@ import edu.wpi.first.math.geometry.Pose3d;
  *
  * <h2>Fields</h2>
  *
- * <pre>{@code
- * pose           — full 3D pose: x, y, z (meters) + roll, pitch, yaw (radians)
- * timestampSecs  — FPGA time when this estimate was captured (for latency compensation)
- * ambiguity      — PhotonVision ambiguity score (0.0 = perfect, 1.0 = worst)
- * tagCount       — number of AprilTags used to produce this estimate
- * cameraName     — which camera produced this estimate ("front_cam" / "rear_cam")
- * isValid        — false if no tags were visible or estimate was filtered out
- * }</pre>
+ * <ul>
+ *   <li>{@code pose} — full 3D pose: x, y, z (meters) + roll, pitch, yaw (radians)</li>
+ *   <li>{@code timestampSecs} — FPGA time when this estimate was captured (for latency compensation)</li>
+ *   <li>{@code ambiguity} — PhotonVision ambiguity score (0.0 = perfect, 1.0 = worst)</li>
+ *   <li>{@code tagCount} — number of AprilTags used to produce this estimate</li>
+ *   <li>{@code cameraName} — which camera produced this estimate ("front_cam" / "rear_cam")</li>
+ *   <li>{@code isValid} — false if no tags were visible or estimate was filtered out</li>
+ * </ul>
  *
  * <h2>Accessing individual values</h2>
  *
- * <pre>{@code
- * pose.getX()                       — field X position (meters, field-relative)
- * pose.getY()                       — field Y position (meters, field-relative)
- * pose.getZ()                       — height above field floor (meters)
- * pose.getRotation().getX()         — roll  (radians)
- * pose.getRotation().getY()         — pitch (radians)
- * pose.getRotation().getZ()         — yaw   (radians, field-relative heading)
- * pose.toPose2d()                   — flattened 2D pose for odometry fusion later
- * }</pre>
+ * <ul>
+ *   <li>{@code pose.getX()} — field X position (meters, field-relative)</li>
+ *   <li>{@code pose.getY()} — field Y position (meters, field-relative)</li>
+ *   <li>{@code pose.getZ()} — height above field floor (meters)</li>
+ *   <li>{@code pose.getRotation().getX()} — roll (radians)</li>
+ *   <li>{@code pose.getRotation().getY()} — pitch (radians)</li>
+ *   <li>{@code pose.getRotation().getZ()} — yaw (radians, field-relative heading)</li>
+ *   <li>{@code pose.toPose2d()} — flattened 2D pose for odometry fusion later</li>
+ * </ul>
  *
  * <h2>Usage</h2>
  *
@@ -98,11 +98,11 @@ public class RobotPoseEstimate {
      *
      * <p>Selection priority:
      *
-     * <pre>{@code
-     * 1. Valid over invalid
-     * 2. More tags over fewer tags (multi-tag is more reliable)
-     * 3. Lower ambiguity over higher ambiguity
-     * }</pre>
+     * <ol>
+     *   <li>Valid over invalid</li>
+     *   <li>More tags over fewer tags (multi-tag is more reliable)</li>
+     *   <li>Lower ambiguity over higher ambiguity</li>
+     * </ol>
      *
      * <p>Used by VisionSubsystem to pick the best estimate from two cameras.
      */

@@ -9,11 +9,11 @@ import frc.lib.util.Units;
  *
  * <p>Physical robot properties follow the project pattern:
  *
- * <pre>{@code
- * English values defined first (lbs, lb·in²)
- * SI values derived immediately below via Units.*
- * RobotContainer references the _KG and _KGM2 forms only.
- * }</pre>
+ * <ul>
+ *   <li>English values defined first (lbs, lb·in²)</li>
+ *   <li>SI values derived immediately below via Units.*</li>
+ *   <li>RobotContainer references the _KG and _KGM2 forms only.</li>
+ * </ul>
  *
  * <h2>What lives here</h2>
  *

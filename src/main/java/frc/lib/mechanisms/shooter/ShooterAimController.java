@@ -17,11 +17,11 @@ import frc.lib.util.Units;
  * 3. Pushes RPM, hood angle, and (if PHYSICAL_TURRET) turret angle to ShooterMechanism.
  * 4. Directs the driver drive command (IAimDriveModes) into the appropriate drive mode:
  *
- * <pre>{@code
- * STATIC_SHOT    → X-lock (physical turret) or aim-then-lock (swerve turret)
- * ON_THE_MOVE    → heading-bounded driver control
- * IDLE           → full driver control (no override)
- * }</pre>
+ * <ul>
+ *   <li>{@code STATIC_SHOT} → X-lock (physical turret) or aim-then-lock (swerve turret)</li>
+ *   <li>{@code ON_THE_MOVE} → heading-bounded driver control</li>
+ *   <li>{@code IDLE} → full driver control (no override)</li>
+ * </ul>
  *
  * <h2>Wiring</h2>
  *
@@ -49,15 +49,14 @@ import frc.lib.util.Units;
  *
  * <h2>Turret modes</h2>
  *
- * <pre>{@code
- * PHYSICAL_TURRET   — a physical turret motor rotates to aim; robot heading is
- *                     guided within the allowed window but not locked.
- *                     Static shot: wheels X-lock immediately while turret aims.
- *
- * SWERVE_AS_TURRET  — no physical turret; the robot heading IS the aim direction.
- *                     ShooterCalculator receives turretAngle = 0° always.
- *                     Static shot: two-phase — robot aims (POINT_AT) then X-locks.
- * }</pre>
+ * <ul>
+ *   <li>{@code PHYSICAL_TURRET} — a physical turret motor rotates to aim; robot heading is
+ *       guided within the allowed window but not locked.
+ *       Static shot: wheels X-lock immediately while turret aims.</li>
+ *   <li>{@code SWERVE_AS_TURRET} — no physical turret; the robot heading IS the aim direction.
+ *       ShooterCalculator receives turretAngle = 0° always.
+ *       Static shot: two-phase — robot aims (POINT_AT) then X-locks.</li>
+ * </ul>
  *
  * <h2>Unit conversions</h2>
  *
@@ -155,11 +154,12 @@ public class ShooterAimController extends SubsystemBase {
     private double     targetFeetY      = 0.0;
 
     /**
-     * <pre>{@code
      * For SWERVE_AS_TURRET + STATIC_SHOT: two-phase state machine.
-     * Phase 1 (false) = aiming with POINT_AT.
-     * Phase 2 (true)  = X-locked after heading acquired.
-     * }</pre>
+     *
+     * <ul>
+     *   <li>{@code false} — Phase 1, aiming with POINT_AT</li>
+     *   <li>{@code true} — Phase 2, X-locked after heading acquired</li>
+     * </ul>
      */
     private boolean    staticShotLocked = false;
 
@@ -172,23 +172,24 @@ public class ShooterAimController extends SubsystemBase {
      * <p>IN_BOUNDS
      * Heading within headingBoundsDeg. Turret aims normally. isReady() can fire.
      *
-     * <pre>{@code
-     * WAITING_AT_FORWARD_LIMIT
-     *   Heading went CCW past headingBoundsDeg[0] — target would require the turret
-     *   to exceed softMax. Turret parks at softMax and waits.
-     *   → Back to IN_BOUNDS if heading returns inside the valid window.
-     *   → Flips to WAITING_AT_REVERSE_LIMIT if heading drifts CCW past the flip
-     *     threshold (X% of the dead zone from softMax toward softMin side).
-     *     Turret traverses to softMin; once heading enters the valid window from
-     *     that side the turret backs off softMin and aims normally.
-     * }</pre>
+     * <b>WAITING_AT_FORWARD_LIMIT</b>: heading went CCW past headingBoundsDeg[0] — target would
+     * require the turret to exceed softMax. Turret parks at softMax and waits.
      *
-     * <pre>{@code
-     * WAITING_AT_REVERSE_LIMIT
-     *   Symmetric: heading went CW past headingBoundsDeg[1]. Turret parks at softMin.
-     *   → Back to IN_BOUNDS if heading returns inside the valid window.
-     *   → Flips to WAITING_AT_FORWARD_LIMIT if heading drifts CW past the flip threshold.
-     * }</pre>
+     * <ul>
+     *   <li>→ Back to IN_BOUNDS if heading returns inside the valid window.</li>
+     *   <li>→ Flips to WAITING_AT_REVERSE_LIMIT if heading drifts CCW past the flip
+     *       threshold (X% of the dead zone from softMax toward softMin side).
+     *       Turret traverses to softMin; once heading enters the valid window from
+     *       that side the turret backs off softMin and aims normally.</li>
+     * </ul>
+     *
+     * <b>WAITING_AT_REVERSE_LIMIT</b>: symmetric — heading went CW past headingBoundsDeg[1].
+     * Turret parks at softMin.
+     *
+     * <ul>
+     *   <li>→ Back to IN_BOUNDS if heading returns inside the valid window.</li>
+     *   <li>→ Flips to WAITING_AT_FORWARD_LIMIT if heading drifts CW past the flip threshold.</li>
+     * </ul>
      */
     private enum TurretBoundState {
         IN_BOUNDS,
@@ -444,26 +445,22 @@ public class ShooterAimController extends SubsystemBase {
      *
      * <p>Both turret modes use a two-phase approach:
      *
-     * <pre>{@code
-     * Phase 1 — bring robot heading into the valid window (turret can reach target)
-     * Phase 2 — X-lock once aimed; robot stays braced while shot fires
-     * }</pre>
+     * <ul>
+     *   <li><b>Phase 1</b> — bring robot heading into the valid window (turret can reach target)</li>
+     *   <li><b>Phase 2</b> — X-lock once aimed; robot stays braced while shot fires</li>
+     * </ul>
      *
      * <p>PHYSICAL_TURRET:
      *
-     * <pre>{@code
-     * Phase 1 uses HEADING_BOUND — rotates to the nearest valid heading edge.
+     * <p>Phase 1 uses HEADING_BOUND — rotates to the nearest valid heading edge.
      * Once heading is in bounds the turret can reach the target, so X-lock.
      * If the heading is already in bounds when the button is pressed, skip
      * directly to Phase 2.
-     * }</pre>
      *
      * <p>SWERVE_AS_TURRET:
      *
-     * <pre>{@code
-     * Phase 1 uses POINT_AT — locks the whole robot to face the target exactly.
+     * <p>Phase 1 uses POINT_AT — locks the whole robot to face the target exactly.
      * Once isPointedAtTarget() is true, X-lock.
-     * }</pre>
      *
      * <p>In both cases staticShotLocked latches true once Phase 2 is entered so that
      * minor heading drift after the X-lock does not re-trigger Phase 1. The

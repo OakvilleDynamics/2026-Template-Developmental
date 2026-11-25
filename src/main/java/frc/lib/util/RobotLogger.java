@@ -10,20 +10,21 @@ import edu.wpi.first.wpilibj.DataLogManager;
  *
  * <h2>Storage</h2>
  *
- * <pre>{@code
- * Primary:  /u/  — USB drive plugged into roboRIO (recommended)
- * Fallback: /home/lvuser/logs/ — roboRIO internal flash (limited write cycles)
- * Active path is posted to the dashboard: "Logger/Storage Path"
- * }</pre>
+ * <ul>
+ *   <li><b>Primary</b>: /u/ — USB drive plugged into roboRIO (recommended)</li>
+ *   <li><b>Fallback</b>: /home/lvuser/logs/ — roboRIO internal flash (limited write cycles)</li>
+ * </ul>
+ *
+ * <p>Active path is posted to the dashboard: "Logger/Storage Path"
  *
  * <p>USB drive requirements:
  *
- * <pre>{@code
- * Format: FAT32 (exFAT not supported by roboRIO)
- * Speed:  Class 10 / UHS-I or better
- * Size:   32GB+ recommended for a full season of logs
- * Label:  "ROBOT_LOG" recommended for easy pit identification
- * }</pre>
+ * <ul>
+ *   <li><b>Format</b>: FAT32 (exFAT not supported by roboRIO)</li>
+ *   <li><b>Speed</b>: Class 10 / UHS-I or better</li>
+ *   <li><b>Size</b>: 32GB+ recommended for a full season of logs</li>
+ *   <li><b>Label</b>: "ROBOT_LOG" recommended for easy pit identification</li>
+ * </ul>
  *
  * <h2>File format</h2>
  *
@@ -33,12 +34,12 @@ import edu.wpi.first.wpilibj.DataLogManager;
  *
  * <h2>Entry naming convention</h2>
  *
- * <pre>{@code
- * /Drive/...        — SwerveDrive computed quantities
- * /Swerve/<FL|FR|BL|BR>/...  — per-module analog encoder (CAN signals via .hoot)
- * /Vision/...       — VisionSubsystem estimates and health
- * /Pathfinding/...  — PathfindCommand state
- * }</pre>
+ * <ul>
+ *   <li>{@code /Drive/...} — SwerveDrive computed quantities</li>
+ *   <li>{@code /Swerve/<FL|FR|BL|BR>/...} — per-module analog encoder (CAN signals via .hoot)</li>
+ *   <li>{@code /Vision/...} — VisionSubsystem estimates and health</li>
+ *   <li>{@code /Pathfinding/...} — PathfindCommand state</li>
+ * </ul>
  */
 public final class RobotLogger {
 

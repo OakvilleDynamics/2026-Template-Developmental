@@ -21,11 +21,11 @@ import java.util.Optional;
  *
  * <h2>Condition values</h2>
  *
- * <pre>{@code
- * "always" — ignore this tag regardless of alliance
- * "blue"   — ignore this tag when robot is on BLUE alliance
- * "red"    — ignore this tag when robot is on RED alliance
- * }</pre>
+ * <ul>
+ *   <li><b>"always"</b> — ignore this tag regardless of alliance</li>
+ *   <li><b>"blue"</b> — ignore this tag when robot is on BLUE alliance</li>
+ *   <li><b>"red"</b> — ignore this tag when robot is on RED alliance</li>
+ * </ul>
  *
  * <h2>Alliance detection</h2>
  *
@@ -54,11 +54,12 @@ import java.util.Optional;
  * <p>Update this comment block each season with the tag ID → location mapping
  * so editors know what they're ignoring without needing to look it up.
  *
- * <pre>{@code
- * Tags 1–9:   Red alliance structures (coral station, reef, processor, barge)
- * Tags 10–22: Blue alliance structures (coral station, reef, processor, barge)
- * (Exact mapping TBD — update once 2026 field layout is finalized)
- * }</pre>
+ * <ul>
+ *   <li><b>Tags 1–9</b>: Red alliance structures (coral station, reef, processor, barge)</li>
+ *   <li><b>Tags 10–22</b>: Blue alliance structures (coral station, reef, processor, barge)</li>
+ * </ul>
+ *
+ * <p>(Exact mapping TBD — update once 2026 field layout is finalized)
  *
  * <p>TODO: Fill in tag descriptions once 2026 layout is published.
  */

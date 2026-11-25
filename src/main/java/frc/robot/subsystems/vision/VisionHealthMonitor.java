@@ -12,12 +12,12 @@ import frc.lib.util.Units;
  *
  * <h2>Health status</h2>
  *
- * <pre>{@code
- * UNKNOWN  — not enough data yet (cameras just connected)
- * GOOD     — all checks passing, both cameras healthy
- * WARNING  — degraded but usable (intermittent tag loss, elevated ambiguity)
- * FAULT    — camera lost or pose implausible (action required)
- * }</pre>
+ * <ul>
+ *   <li>{@code UNKNOWN} — not enough data yet (cameras just connected)</li>
+ *   <li>{@code GOOD} — all checks passing, both cameras healthy</li>
+ *   <li>{@code WARNING} — degraded but usable (intermittent tag loss, elevated ambiguity)</li>
+ *   <li>{@code FAULT} — camera lost or pose implausible (action required)</li>
+ * </ul>
  *
  * <h2>Dashboard</h2>
  *

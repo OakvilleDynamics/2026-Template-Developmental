@@ -125,13 +125,11 @@ public final class SwerveConstants {
      *
      * <p>HOW TO MEASURE:
      *
-     * <pre>{@code
-     * 1. Rotate each wheel by hand to face straight forward, all bevel gears
-     *    on the same side
-     * 2. THRIFTY_ANALOG: read "Swerve/FL/Raw Rot" etc. (offset-free, any offsets)
-     *    Other types: deploy with offsets = 0.0 and read "Swerve/FL/Abs Enc Rot"
-     * 3. Paste those values here and redeploy
-     * }</pre>
+     * <ol>
+     *   <li>Rotate each wheel by hand to face straight forward, all bevel gears on the same side</li>
+     *   <li>THRIFTY_ANALOG: read "Swerve/FL/Raw Rot" etc. (offset-free, any offsets). Other types: deploy with offsets = 0.0 and read "Swerve/FL/Abs Enc Rot"</li>
+     *   <li>Paste those values here and redeploy</li>
+     * </ol>
      *
      * <p>Starting values are last season's AnalogEncoder offsets for these modules
      * (ticks of 4096). TODO: re-measure on the robot — they only hold if the

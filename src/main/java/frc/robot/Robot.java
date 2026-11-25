@@ -16,11 +16,11 @@ import frc.lib.util.RobotLogger;
  *
  * <h2>Periodic call order (robotPeriodic, every 20ms)</h2>
  *
- * <pre>{@code
- * 1. CommandScheduler.run()      — runs subsystem periodic() + all active commands
- * 2. updatePoseEstimator()       — fuses latest vision pose into Kalman filter
- * 3. updateCalibrationTab()      — updates field calibration Elastic tab
- * }</pre>
+ * <ol>
+ *   <li>CommandScheduler.run() — runs subsystem periodic() + all active commands</li>
+ *   <li>updatePoseEstimator() — fuses latest vision pose into Kalman filter</li>
+ *   <li>updateCalibrationTab() — updates field calibration Elastic tab</li>
+ * </ol>
  */
 public class Robot extends TimedRobot {
 

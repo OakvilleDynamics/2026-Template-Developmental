@@ -53,11 +53,11 @@ public class RobotContainer {
      * AprilTag field layout for the current game year.
      * Propagates everywhere through the constructor chain.
      *
-     * <pre>{@code
-     * 2026 REBUILT:   AprilTagFields.kDefaultField (update when constant published)
-     * 2025 Reefscape: AprilTagFields.k2025Reefscape
-     * 2024 Crescendo: AprilTagFields.k2024Crescendo
-     * }</pre>
+     * <ul>
+     *   <li><b>2026 REBUILT</b>: AprilTagFields.kDefaultField (update when constant published)</li>
+     *   <li><b>2025 Reefscape</b>: AprilTagFields.k2025Reefscape</li>
+     *   <li><b>2024 Crescendo</b>: AprilTagFields.k2024Crescendo</li>
+     * </ul>
      */
     private static final AprilTagFields GAME_YEAR_FIELD = AprilTagFields.kDefaultField;
 

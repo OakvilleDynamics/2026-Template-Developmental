@@ -6,24 +6,27 @@ package frc.lib.swerve;
  *
  * <h2>Three buckets</h2>
  *
- * <pre>{@code
- * encoderState  — derived from wheel encoders + kinematics only
- *                 Reliable for: short-term linear velocity, distance
- *                 Weakness: accumulates error from wheel slip over time
- * }</pre>
+ * <p>{@code encoderState} — derived from wheel encoders + kinematics only.
  *
- * <pre>{@code
- * imuState      — derived from ADIS16470 IMU only
- *                 Reliable for: angular velocity, angular acceleration, heading
- *                 Weakness: accelerometer drift on linear translation axes
- * }</pre>
+ * <ul>
+ *   <li>Reliable for: short-term linear velocity, distance</li>
+ *   <li>Weakness: accumulates error from wheel slip over time</li>
+ * </ul>
  *
- * <pre>{@code
- * blendedState  — complementary filter combining both sources
- *                 Linear velocity/accel: encoder-dominant (alpha weight)
- *                 Angular velocity/accel: IMU-dominant (1-alpha weight)
- *                 Best general-purpose estimate for most use cases
- * }</pre>
+ * <p>{@code imuState} — derived from ADIS16470 IMU only.
+ *
+ * <ul>
+ *   <li>Reliable for: angular velocity, angular acceleration, heading</li>
+ *   <li>Weakness: accelerometer drift on linear translation axes</li>
+ * </ul>
+ *
+ * <p>{@code blendedState} — complementary filter combining both sources.
+ *
+ * <ul>
+ *   <li>Linear velocity/accel: encoder-dominant (alpha weight)</li>
+ *   <li>Angular velocity/accel: IMU-dominant (1-alpha weight)</li>
+ *   <li>Best general-purpose estimate for most use cases</li>
+ * </ul>
  *
  * <p>Blend weight alpha is tunable live from the dashboard: "Drive/Blend Alpha"
  * 0.0 = pure IMU, 1.0 = pure encoder. Default: 0.7 (encoder-dominant linear)

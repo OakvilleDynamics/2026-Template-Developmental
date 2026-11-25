@@ -10,13 +10,13 @@ package frc.robot.controls;
  * <p>Every axis is raw stick deflection in [−1, 1], before deadband or shaping.
  * Signs are already corrected for the controller, using WPILib's convention:
  *
- * <pre>{@code
- * forward()    +1 = full forward
- * left()       +1 = full left
- * rotate()     +1 = full counter-clockwise
- * corForward() +1 = center of rotation at the front bumper
- * corLeft()    +1 = center of rotation at the left bumper
- * }</pre>
+ * <ul>
+ *   <li>{@code forward()}: +1 = full forward</li>
+ *   <li>{@code left()}: +1 = full left</li>
+ *   <li>{@code rotate()}: +1 = full counter-clockwise</li>
+ *   <li>{@code corForward()}: +1 = center of rotation at the front bumper</li>
+ *   <li>{@code corLeft()}: +1 = center of rotation at the left bumper</li>
+ * </ul>
  */
 public interface IDriverInputs {
 

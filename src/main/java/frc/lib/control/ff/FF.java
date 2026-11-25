@@ -29,21 +29,22 @@ import frc.lib.util.Units;
  *
  * <h2>Units at the interface</h2>
  *
- * <pre>{@code
- * Masses    : lbs  (converted to kg internally)
- * Distances : inches  (converted to meters internally)
- * Angles    : degrees  (matches IFFProvider positionDeg convention)
- * Returns   : volts
- * }</pre>
+ * <ul>
+ *   <li><b>Masses</b>: lbs (converted to kg internally)</li>
+ *   <li><b>Distances</b>: inches (converted to meters internally)</li>
+ *   <li><b>Angles</b>: degrees (matches IFFProvider positionDeg convention)</li>
+ *   <li><b>Returns</b>: volts</li>
+ * </ul>
  *
  * <h2>Tier placement</h2>
  *
- * <pre>{@code
- * Tier 2 (self-contained): springTurret, rotatingArm
- * Tier 3 (cross-system):   gyroscopicTurret, multiStageElevator, pivotingElevator
- *   Tier-3 factories accept Supplier arguments that close over other
- *   subsystem references; build these in RobotContainer.
- * }</pre>
+ * <ul>
+ *   <li><b>Tier 2 (self-contained)</b>: springTurret, rotatingArm</li>
+ *   <li><b>Tier 3 (cross-system)</b>: gyroscopicTurret, multiStageElevator, pivotingElevator</li>
+ * </ul>
+ *
+ * <p>Tier-3 factories accept Supplier arguments that close over other
+ * subsystem references; build these in RobotContainer.
  */
 public final class FF {
 

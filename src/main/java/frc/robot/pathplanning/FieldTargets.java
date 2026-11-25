@@ -14,8 +14,9 @@ import java.util.Map;
  *
  * <pre>{@code
  * Pose2d target = FieldTargets.get("speaker");
- * Throws IllegalArgumentException on unknown key — fail fast, fail loudly.
  * }</pre>
+ *
+ * <p>Throws IllegalArgumentException on unknown key — fail fast, fail loudly.
  *
  * <h2>Adding targets</h2>
  *

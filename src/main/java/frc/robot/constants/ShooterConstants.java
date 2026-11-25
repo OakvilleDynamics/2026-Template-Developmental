@@ -9,12 +9,12 @@ import frc.lib.mechanisms.shooter.ShotProfile.LookupEntry;
  *
  * <h2>What lives here</h2>
  *
- * <pre>{@code
- * LOOKUP_TABLE     — RPM / hood angle / ToF indexed by distance per target type
- * Pivot geometry   — shooter pivot offset in robot frame (inches)
- * Warning threshold — robot speed above which ROBOT_SPEED_TOO_HIGH is flagged
- * PROFILE          — the three above as one ShotProfile
- * }</pre>
+ * <ul>
+ *   <li>{@code LOOKUP_TABLE} — RPM / hood angle / ToF indexed by distance per target type</li>
+ *   <li><b>Pivot geometry</b> — shooter pivot offset in robot frame (inches)</li>
+ *   <li><b>Warning threshold</b> — robot speed above which ROBOT_SPEED_TOO_HIGH is flagged</li>
+ *   <li>{@code PROFILE} — the three above as one ShotProfile</li>
+ * </ul>
  *
  * <h2>In-season tuning</h2>
  *

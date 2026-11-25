@@ -30,29 +30,31 @@ import frc.lib.control.MechanismUnit;
  *
  * <p>SEEKING (initial, and after any setpoint change):
  *
- * <pre>{@code
- * isReady() = false
- * Transitions to READY when all configured sub-mechanisms are simultaneously
- * within their MechanismConfig.setpointDeadband.
- * }</pre>
+ * <b>SEEKING</b> ({@code isReady() == false}):
+ *
+ * <ul>
+ *   <li>→ READY when all configured sub-mechanisms are simultaneously
+ *       within their MechanismConfig.setpointDeadband</li>
+ * </ul>
  *
  * <p>READY:
  *
- * <pre>{@code
- * isReady() = true
- * Returns to SEEKING if flywheel actual RPM drops below
- *   (flywheelSetpointRpm - flywheelHoldThresholdRpm).
- * Returns to SEEKING if any setpoint is changed.
- * }</pre>
+ * <b>READY</b> ({@code isReady() == true}):
+ *
+ * <ul>
+ *   <li>→ SEEKING if flywheel actual RPM drops below
+ *       (flywheelSetpointRpm − flywheelHoldThresholdRpm)</li>
+ *   <li>→ SEEKING if any setpoint is changed</li>
+ * </ul>
  *
  * <h2>Units at this interface</h2>
  *
- * <pre>{@code
- * Flywheel setpoint / default : RPM  (converted to RPS internally)
- * Turret setpoint / default   : degrees
- * Hood setpoint / default     : degrees
- * Hold threshold              : RPM  (converted to RPS internally)
- * }</pre>
+ * <ul>
+ *   <li><b>Flywheel setpoint / default</b>: RPM (converted to RPS internally)</li>
+ *   <li><b>Turret setpoint / default</b>: degrees</li>
+ *   <li><b>Hood setpoint / default</b>: degrees</li>
+ *   <li><b>Hold threshold</b>: RPM (converted to RPS internally)</li>
+ * </ul>
  *
  * <h2>Call pattern</h2>
  *
@@ -308,10 +310,10 @@ public class ShooterMechanism extends SubsystemBase implements IConfigVerifiable
     /**
      * Fluent builder for ShooterMechanism.
      *
-     * Required: withFlywheel(), withFlywheelHoldThresholdRpm().
+     * <p>Required: withFlywheel(), withFlywheelHoldThresholdRpm().
      * Optional: withTurret(), withHood().
      *
-     * Example — flywheel + turret + hood:
+     * <p>Example — flywheel + turret + hood:
      * <pre>{@code
      * ShooterMechanism shooter = new ShooterMechanism.Builder("Shooter")
      *     .withFlywheel(flywheelConfig,  3500.0)
@@ -321,7 +323,7 @@ public class ShooterMechanism extends SubsystemBase implements IConfigVerifiable
      *     .build();
      * }</pre>
      *
-     * Example — flywheel only:
+     * <p>Example — flywheel only:
      * <pre>{@code
      * ShooterMechanism shooter = new ShooterMechanism.Builder("Shooter")
      *     .withFlywheel(flywheelConfig, 3500.0)
@@ -400,7 +402,7 @@ public class ShooterMechanism extends SubsystemBase implements IConfigVerifiable
          * can return true. All configured sub-mechanisms must still be at their
          * setpoints — this gate is an additional AND condition on top of that.
          *
-         * Typical use: prevent firing when robot heading is outside the turret's
+         * <p>Typical use: prevent firing when robot heading is outside the turret's
          * allowed window.
          *
          * <pre>{@code
