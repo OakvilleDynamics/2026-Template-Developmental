@@ -223,6 +223,74 @@ send during a match vs. while tuning) belongs.
 
 ---
 
+## Code Style
+
+### Indentation
+
+4 spaces, never tabs, in every file (Java, Gradle, JSON, Markdown). `.editorconfig` and
+`.vscode/settings.json` enforce this in the editor. Continuation lines may align past the
+4-space grid (e.g. lining up method arguments).
+
+### Javadoc is HTML (WPILib 2026 / Java 17)
+
+VS Code (and every Javadoc tool) renders `/** */` comments as **HTML**: line breaks are
+dropped, indentation is lost, and anything that looks like a tag (`List<Foo>`, `<= 2`) can
+vanish. Write Javadoc with these tags so hovers stay readable:
+
+| Need | Write |
+|---|---|
+| New paragraph | blank ` *` line, then `<p>` at the start of the paragraph (not the first one) |
+| Section heading | `<h2>Title</h2>` in class/interface/enum docs; `<h4>Title</h4>` in method/field docs |
+| Bullet list | `<ul>` / `<li>…</li>` / `</ul>` |
+| Code, tables, formulas, numbered steps — anything whose line layout matters | `<pre>{@code … }</pre>` (layout kept, `<>` safe); if the content has unbalanced `{}` or a line starting with `@`, use plain `<pre>` and escape `<` `>` `&` `@` as `&lt;` `&gt;` `&amp;` `&#64;` |
+| Inline code / identifiers with `<>` | `{@code List<Translation2d>}` |
+| Comparisons in prose | `≤` / `≥` (or `&lt;`); never a bare `<` |
+| Link to another class or method | `{@link SwerveDrive#getPose()}` |
+| Parameters / return | `@param` / `@return` at the end, on the method or constructor (never on a class) |
+
+Do **not** start a file's class comment with `Foo.java` / `PATH: …` lines (the hover already
+shows the class), and do not use `─── TITLE ───` banners or `•` bullets inside `/** */`.
+`// ── Section ──` banners in ordinary `//` comments are fine — they never appear in hovers.
+
+```java
+/**
+ * One-sentence summary of what this class is.
+ *
+ * <p>More detail as a normal paragraph.
+ *
+ * <h2>Usage</h2>
+ *
+ * <pre>{@code
+ * MechanismUnit arm = MechanismUnit.create(config);
+ * arm.setPosition(targetDeg);
+ * }</pre>
+ *
+ * <h2>Units</h2>
+ *
+ * <ul>
+ *   <li>Position: degrees (mechanism shaft)</li>
+ *   <li>Velocity: rotations/second</li>
+ * </ul>
+ */
+```
+
+Check a change with `./gradlew javadoc`: it must report no `error:` lines (missing
+`@param`/`@return` warnings are acceptable).
+
+### WPILib 2027 (Java 25): switch new comments to Markdown
+
+WPILib 2027 moves to Java 25, which supports Markdown documentation comments (JEP 467):
+`///` lines instead of `/** */`, written in CommonMark — blank lines for paragraphs, `-`
+bullets, `## headings`, fenced ``` code blocks, `` `code` `` and `[SwerveDrive#getPose()]`
+links. They render in VS Code hovers once the project compiles at Java 23+.
+
+Once a branch is on WPILib 2027, **Markdown (`///`) is the default for new and rewritten
+comments**. Existing HTML Javadoc keeps working and does not need a bulk conversion; convert a
+comment when you are already editing it. Do not use `///` doc comments on the 2026 branch —
+under Java 17 they are ordinary comments and show nothing on hover.
+
+---
+
 ## Unit Conventions
 
 | Value type | Interface unit | Internal unit | Conversion |
