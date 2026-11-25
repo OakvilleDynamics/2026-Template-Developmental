@@ -7,43 +7,50 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotBase;
 
 /**
- * ConfigVerifier.java
- * PATH: src/main/java/frc/lib/util/ConfigVerifier.java
- *
  * Startup motor config verification registry.
  *
- * ─── USAGE ───────────────────────────────────────────────────────────────────
- * At robot startup, after constructing all subsystems and before enabling:
+ * <h2>Usage</h2>
  *
- *   // Swerve — one call per module
- *   ConfigVerifier.register(frontLeftModule);
- *   ConfigVerifier.register(frontRightModule);
- *   ConfigVerifier.register(backLeftModule);
- *   ConfigVerifier.register(backRightModule);
+ * <p>At robot startup, after constructing all subsystems and before enabling:
  *
- *   // Mechanisms — same interface
- *   ConfigVerifier.register(myShooter);
- *   ConfigVerifier.register(myElevator);
+ * <pre>{@code
+ * // Swerve — one call per module
+ * ConfigVerifier.register(frontLeftModule);
+ * ConfigVerifier.register(frontRightModule);
+ * ConfigVerifier.register(backLeftModule);
+ * ConfigVerifier.register(backRightModule);
  *
- *   ConfigVerifier.runAll();
+ * // Mechanisms — same interface
+ * ConfigVerifier.register(myShooter);
+ * ConfigVerifier.register(myElevator);
  *
- * ─── WHAT IT CHECKS ──────────────────────────────────────────────────────────
- * Each registered device retries its config apply up to 5× with a 50ms delay,
+ * ConfigVerifier.runAll();
+ * }</pre>
+ *
+ * <h2>What it checks</h2>
+ *
+ * <p>Each registered device retries its config apply up to 5× with a 50ms delay,
  * then reads the config back from the device and diffs key fields:
  *
- *   CTRE TalonFX  : inversion, neutralMode, supplyCurrentLimit, statorCurrentLimit
- *   REV Spark     : inversion, idleMode, smartCurrentLimit
- *   ThriftyNova   : inversion, brakeMode, motorType (if withNovaMotorType() was set)
+ * <pre>{@code
+ * CTRE TalonFX  : inversion, neutralMode, supplyCurrentLimit, statorCurrentLimit
+ * REV Spark     : inversion, idleMode, smartCurrentLimit
+ * ThriftyNova   : inversion, brakeMode, motorType (if withNovaMotorType() was set)
+ * }</pre>
  *
- * ─── FAULT SURFACE ───────────────────────────────────────────────────────────
+ * <h2>Fault surface</h2>
+ *
+ * <pre>{@code
  * Dashboard key  "ConfigVerifier/Status"     "OK" or "FAULTS DETECTED"
  * Dashboard key  "ConfigVerifier/Faults"     blank-separated fault details
  * Driver Station console — DriverStation.reportError() for any failure
+ * }</pre>
  *
- * A per-device pass/fail is also pushed under "ConfigVerifier/<DeviceName>".
+ * <p>A per-device pass/fail is also pushed under "ConfigVerifier/&lt;DeviceName>".
  *
- * ─── SIMULATION ──────────────────────────────────────────────────────────────
- * Skipped in simulation: no physical controllers answer, so every apply/readback
+ * <h2>Simulation</h2>
+ *
+ * <p>Skipped in simulation: no physical controllers answer, so every apply/readback
  * would time out and flood the console. Status reads "SKIPPED (simulation)".
  */
 public final class ConfigVerifier {
@@ -66,7 +73,7 @@ public final class ConfigVerifier {
     /**
      * Run verification for all registered devices and surface results.
      * Call once at robot startup, after all register() calls.
-     * Blocks for up to (5 retries × 50ms × device count) — typically < 2s total.
+     * Blocks for up to (5 retries × 50ms × device count) — typically &lt; 2s total.
      */
     public static void runAll() {
         if (RobotBase.isSimulation()) {

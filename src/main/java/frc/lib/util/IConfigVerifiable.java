@@ -3,15 +3,12 @@ package frc.lib.util;
 import java.util.List;
 
 /**
- * IConfigVerifiable.java
- * PATH: src/main/java/frc/lib/util/IConfigVerifiable.java
- *
  * Marker interface for any object that can verify its motor controller
  * configurations were applied correctly. Implemented by MechanismUnit
  * subclasses, SwerveModule, and mechanism wrappers (ElevatorMechanism,
  * ShooterMechanism).
  *
- * Register any IConfigVerifiable with ConfigVerifier.register(), then call
+ * <p>Register any IConfigVerifiable with ConfigVerifier.register(), then call
  * ConfigVerifier.runAll() once at robot startup before enabling motors.
  */
 public interface IConfigVerifiable {

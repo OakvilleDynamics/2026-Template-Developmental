@@ -4,26 +4,26 @@ import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
- * Dashboard.java
- * PATH: src/main/java/frc/lib/util/Dashboard.java
- *
  * The one place robot and lib code talk to the dashboard. Every caller uses
  * Dashboard.log() for values to view and Dashboard.tunable()/toggle() for values
  * an operator edits live — never the WPILib dashboard API directly.
  *
- * This is the WPILib 2026 implementation, on SmartDashboard (NetworkTables
- * /SmartDashboard/<key>). The WPILib 2027 branch has the same API implemented
+ * <p>This is the WPILib 2026 implementation, on SmartDashboard (NetworkTables
+ * /SmartDashboard/&lt;key>). The WPILib 2027 branch has the same API implemented
  * on Telemetry and Tunables, so moving between years changes only this file.
  * It is also the place to add policy later — e.g. limiting what is published
  * during a match.
  *
- * ─── USAGE ───────────────────────────────────────────────────────────────────
- *   Dashboard.log("Drive/Heading (deg)", headingDeg);        // view only
+ * <h2>Usage</h2>
  *
- *   Dashboard.TunableNumber kP = Dashboard.tunable("Arm/PID/kP", 0.5);  // once
- *   double p = kP.get();                                      // every loop
+ * <pre>{@code
+ * Dashboard.log("Drive/Heading (deg)", headingDeg);        // view only
  *
- * Create each tunable once (constructor / init), not every loop. Creating one
+ * Dashboard.TunableNumber kP = Dashboard.tunable("Arm/PID/kP", 0.5);  // once
+ * double p = kP.get();                                      // every loop
+ * }</pre>
+ *
+ * <p>Create each tunable once (constructor / init), not every loop. Creating one
  * publishes its default, overwriting whatever the dashboard currently shows.
  */
 public final class Dashboard {

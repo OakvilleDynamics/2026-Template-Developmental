@@ -1,38 +1,43 @@
 package frc.lib.util;
 
 /**
- * Units.java
- * PATH: src/main/java/frc/lib/util/Units.java
- *
  * Single source of truth for all unit conversions in this codebase.
  * All methods are static — no instantiation needed.
  *
- * ─── NAMING CONVENTION ───────────────────────────────────────────────────────
- * fromUnitToUnit(value):
- *   inchesToMeters()    — inches → meters
- *   feetToMeters()      — feet → meters
- *   metersToInches()    — meters → inches
- *   metersToFeet()      — meters → feet
- *   ftpsToMps()         — feet/s → meters/s
- *   mpsToFtps()         — meters/s → feet/s
- *   ftps2ToMps2()       — ft/s² → m/s²
- *   mps2ToFtps2()       — m/s² → ft/s²
- *   degToRad()          — degrees → radians
- *   radToDeg()          — radians → degrees
- *   lbsToKg()           — pounds → kilograms
- *   lbIn2ToKgM2()       — lb·in² → kg·m²
- *   lbInToNm()          — lb·in → N·m
- *   fieldFeetToMeters() — field coordinate in feet → meters (same math as
- *                         feetToMeters, named distinctly so call sites are
- *                         self-documenting)
+ * <h2>Naming convention</h2>
  *
- * ─── WHERE CONVERSIONS HAPPEN ────────────────────────────────────────────────
- * Conversion occurs ONLY at entry points — never inside control loops:
- *   DriveInput constructor    (ft/s → m/s)
- *   SwerveDrive constructor   (inches → meters)
- *   drivePointAt()            (feet → meters for field target)
+ * <p>fromUnitToUnit(value):
  *
- * WPILib, PathPlanner, Choreo, and PhotonVision all operate in meters.
+ * <pre>{@code
+ * inchesToMeters()    — inches → meters
+ * feetToMeters()      — feet → meters
+ * metersToInches()    — meters → inches
+ * metersToFeet()      — meters → feet
+ * ftpsToMps()         — feet/s → meters/s
+ * mpsToFtps()         — meters/s → feet/s
+ * ftps2ToMps2()       — ft/s² → m/s²
+ * mps2ToFtps2()       — m/s² → ft/s²
+ * degToRad()          — degrees → radians
+ * radToDeg()          — radians → degrees
+ * lbsToKg()           — pounds → kilograms
+ * lbIn2ToKgM2()       — lb·in² → kg·m²
+ * lbInToNm()          — lb·in → N·m
+ * fieldFeetToMeters() — field coordinate in feet → meters (same math as
+ *                       feetToMeters, named distinctly so call sites are
+ *                       self-documenting)
+ * }</pre>
+ *
+ * <h2>Where conversions happen</h2>
+ *
+ * <p>Conversion occurs ONLY at entry points — never inside control loops:
+ *
+ * <pre>{@code
+ * DriveInput constructor    (ft/s → m/s)
+ * SwerveDrive constructor   (inches → meters)
+ * drivePointAt()            (feet → meters for field target)
+ * }</pre>
+ *
+ * <p>WPILib, PathPlanner, Choreo, and PhotonVision all operate in meters.
  * Do not call these conversions anywhere inside the kinematics or PID math.
  */
 public final class Units {

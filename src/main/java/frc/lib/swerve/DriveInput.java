@@ -4,27 +4,31 @@ import edu.wpi.first.math.geometry.Translation2d;
 import frc.lib.util.Units;
 
 /**
- * DriveInput.java
- * PATH: src/main/java/frc/lib/swerve/DriveInput.java
- *
  * Immutable data object passed into SwerveDrive.drive() each loop.
  * The only way to move the robot is to build one of these and hand it in.
  *
- * ─── UNITS AT THIS INTERFACE ─────────────────────────────────────────────────
+ * <h2>Units at this interface</h2>
+ *
+ * <pre>{@code
  * Input  : vx, vy in FEET/SECOND
  *          omega in RADIANS/SECOND
  *          centerOfRotation in METERS (robot-relative from robot center)
  * Stored : all values in METERS/SECOND internally after conversion
+ * }</pre>
  *
- * The conversion happens once here. SwerveDrive never sees ft/s.
+ * <p>The conversion happens once here. SwerveDrive never sees ft/s.
  *
- * ─── FIELD-RELATIVE CONVENTION ───────────────────────────────────────────────
+ * <h2>Field-relative convention</h2>
+ *
+ * <pre>{@code
  * vx  positive → toward the far field wall (away from your alliance station)
  * vy  positive → field left (from driver's perspective facing the field)
  * omega CCW positive when viewed from above
+ * }</pre>
  *
- * ─── CENTER OF ROTATION ──────────────────────────────────────────────────────
- * (0, 0) = robot geometric center — robot pivots in place
+ * <h2>Center of rotation</h2>
+ *
+ * <p>(0, 0) = robot geometric center — robot pivots in place
  * Positive X = toward robot front
  * Positive Y = toward robot left
  * Bounded to bumper corners by TeleopDrive before being passed here

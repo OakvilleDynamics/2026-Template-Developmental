@@ -4,34 +4,41 @@ import edu.wpi.first.util.datalog.*;
 import edu.wpi.first.wpilibj.DataLogManager;
 
 /**
- * RobotLogger.java
- * PATH: src/main/java/frc/lib/util/RobotLogger.java
- *
  * Static singleton that owns the WPILib DataLog instance and all log entry handles.
  * Call RobotLogger.init() once in the Robot constructor before any subsystem uses it.
  * Subsystems call the static log*() methods the same way they call Dashboard.log().
  *
- * ─── STORAGE ─────────────────────────────────────────────────────────────────
+ * <h2>Storage</h2>
+ *
+ * <pre>{@code
  * Primary:  /u/  — USB drive plugged into roboRIO (recommended)
  * Fallback: /home/lvuser/logs/ — roboRIO internal flash (limited write cycles)
  * Active path is posted to the dashboard: "Logger/Storage Path"
+ * }</pre>
  *
- * USB drive requirements:
- *   Format: FAT32 (exFAT not supported by roboRIO)
- *   Speed:  Class 10 / UHS-I or better
- *   Size:   32GB+ recommended for a full season of logs
- *   Label:  "ROBOT_LOG" recommended for easy pit identification
+ * <p>USB drive requirements:
  *
- * ─── FILE FORMAT ─────────────────────────────────────────────────────────────
- * WPILib DataLog writes .wpilog files. Open in AdvantageScope on driver station
+ * <pre>{@code
+ * Format: FAT32 (exFAT not supported by roboRIO)
+ * Speed:  Class 10 / UHS-I or better
+ * Size:   32GB+ recommended for a full season of logs
+ * Label:  "ROBOT_LOG" recommended for easy pit identification
+ * }</pre>
+ *
+ * <h2>File format</h2>
+ *
+ * <p>WPILib DataLog writes .wpilog files. Open in AdvantageScope on driver station
  * laptop. Phoenix 6 SignalLogger writes .hoot files to the same USB path.
  * AdvantageScope can open both simultaneously on a shared timeline.
  *
- * ─── ENTRY NAMING CONVENTION ─────────────────────────────────────────────────
+ * <h2>Entry naming convention</h2>
+ *
+ * <pre>{@code
  * /Drive/...        — SwerveDrive computed quantities
  * /Swerve/<FL|FR|BL|BR>/...  — per-module analog encoder (CAN signals via .hoot)
  * /Vision/...       — VisionSubsystem estimates and health
  * /Pathfinding/...  — PathfindCommand state
+ * }</pre>
  */
 public final class RobotLogger {
 

@@ -1,32 +1,36 @@
 package frc.lib.swerve;
 
 /**
- * DriveOdometryState.java
- * PATH: src/main/java/frc/lib/swerve/DriveOdometryState.java
- *
  * Full snapshot of drivetrain motion state, updated every 20ms loop.
  * Read via SwerveDrive.getOdometryState() from any command or subsystem.
  *
- * ─── THREE BUCKETS ───────────────────────────────────────────────────────────
+ * <h2>Three buckets</h2>
  *
+ * <pre>{@code
  * encoderState  — derived from wheel encoders + kinematics only
  *                 Reliable for: short-term linear velocity, distance
  *                 Weakness: accumulates error from wheel slip over time
+ * }</pre>
  *
+ * <pre>{@code
  * imuState      — derived from ADIS16470 IMU only
  *                 Reliable for: angular velocity, angular acceleration, heading
  *                 Weakness: accelerometer drift on linear translation axes
+ * }</pre>
  *
+ * <pre>{@code
  * blendedState  — complementary filter combining both sources
  *                 Linear velocity/accel: encoder-dominant (alpha weight)
  *                 Angular velocity/accel: IMU-dominant (1-alpha weight)
  *                 Best general-purpose estimate for most use cases
+ * }</pre>
  *
- * Blend weight alpha is tunable live from the dashboard: "Drive/Blend Alpha"
+ * <p>Blend weight alpha is tunable live from the dashboard: "Drive/Blend Alpha"
  * 0.0 = pure IMU, 1.0 = pure encoder. Default: 0.7 (encoder-dominant linear)
  *
- * ─── UNITS ───────────────────────────────────────────────────────────────────
- * All linear values in meters and m/s (SI internally).
+ * <h2>Units</h2>
+ *
+ * <p>All linear values in meters and m/s (SI internally).
  * All angular values in radians and rad/s.
  * All headings in radians (field-relative, 0 = field forward, CCW positive).
  * centerOfRotation x/y in meters, relative to robot center (0,0).

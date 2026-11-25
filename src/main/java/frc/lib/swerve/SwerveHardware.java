@@ -10,21 +10,20 @@ import frc.lib.hardware.motor.MotorVendor;
 import frc.lib.hardware.motor.MotorIOConfig.NovaMotorType;
 
 /**
- * SwerveHardware.java
- * PATH: src/main/java/frc/lib/swerve/SwerveHardware.java
- *
  * Swerve hardware catalog: maps a motor/encoder TYPE to the MotorIOConfig and
  * IAbsoluteEncoderIO that drive it. The per-type current limits, inversion
  * conventions, and ramp rates live here once, so swapping module hardware is a
  * one-value change to the type selected in the robot's SwerveConstants.
  *
- * Returns MotorIOConfig.Builders so the caller can add robot-level settings
+ * <p>Returns MotorIOConfig.Builders so the caller can add robot-level settings
  * (e.g. CAN signal rates) before building.
  *
- *   IMotorIO drive = IMotorIO.create(SwerveHardware
- *       .driveMotorConfig(DriveMotorType.KRAKEN_X60, 1, true, drivePID, 6.75)
- *       .withCanSignals(250, 4, false)
- *       .build());
+ * <pre>{@code
+ * IMotorIO drive = IMotorIO.create(SwerveHardware
+ *     .driveMotorConfig(DriveMotorType.KRAKEN_X60, 1, true, drivePID, 6.75)
+ *     .withCanSignals(250, 4, false)
+ *     .build());
+ * }</pre>
  */
 public final class SwerveHardware {
 
@@ -37,10 +36,13 @@ public final class SwerveHardware {
     /**
      * Drive motor config: velocity control in wheel-shaft units, brake mode.
      *
-     * Current limits (supply / stator):
-     *   Kraken X60 — 60 / 80 A     Kraken X44 — 40 / 60 A
-     *   NEO Vortex — 60 A          NEO        — 50 A
-     *   Nova/Pulsar — 60 A
+     * <p>Current limits (supply / stator):
+     *
+     * <pre>{@code
+     * Kraken X60 — 60 / 80 A     Kraken X44 — 40 / 60 A
+     * NEO Vortex — 60 A          NEO        — 50 A
+     * Nova/Pulsar — 60 A
+     * }</pre>
      *
      * @param type      drive motor type
      * @param canId     controller CAN ID
@@ -77,11 +79,14 @@ public final class SwerveHardware {
      * Steer motor config: position control in module-azimuth rotations with
      * continuous wrap (shortest path across ±0.5 rot), brake mode.
      *
-     * Current limits (supply / stator):
-     *   Kraken X60 — 40 / 60 A     Kraken X44, Minion — 30 / 40 A
-     *   Nova — 30 A   NEO Vortex — 30 A   NEO — 25 A   NEO 550 — 20 A
+     * <p>Current limits (supply / stator):
      *
-     * Inversion is chosen by the robot: positive output must turn the module
+     * <pre>{@code
+     * Kraken X60 — 40 / 60 A     Kraken X44, Minion — 30 / 40 A
+     * Nova — 30 A   NEO Vortex — 30 A   NEO — 25 A   NEO 550 — 20 A
+     * }</pre>
+     *
+     * <p>Inversion is chosen by the robot: positive output must turn the module
      * counter-clockwise viewed from above. Previously validated: TalonFX steer
      * inverted (Clockwise_Positive); REV and Nova non-inverted.
      *

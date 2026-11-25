@@ -19,26 +19,26 @@ import frc.lib.util.RobotLogger;
 import frc.lib.util.Units;
 
 /**
- * SwerveModule.java
- * PATH: src/main/java/frc/lib/swerve/SwerveModule.java
- *
  * One swerve module — vendor-agnostic. Takes its drive motor, steer motor and
  * absolute encoder as already-built IMotorIO / IAbsoluteEncoderIO objects; use
  * SwerveHardware to build them from a motor/encoder type. This class contains
  * no vendor-specific logic and reads no robot constants.
  *
- * ─── UNITS ────────────────────────────────────────────────────────────────────
- * Drive IMotorIO: wheel shaft rotations / rot·s⁻¹ (gear ratio inside IMotorIO)
+ * <h2>Units</h2>
+ *
+ * <p>Drive IMotorIO: wheel shaft rotations / rot·s⁻¹ (gear ratio inside IMotorIO)
  * Steer IMotorIO: module azimuth rotations [-0.5, 0.5], continuous wrap
  * Public API: meters, Rotation2d (WPILib standard)
  *
- * ─── ENCODER SEEDING ─────────────────────────────────────────────────────────
- * The absolute encoder is read once at startup to seed the steer motor's internal
+ * <h2>Encoder seeding</h2>
+ *
+ * <p>The absolute encoder is read once at startup to seed the steer motor's internal
  * high-resolution encoder. Closed-loop steering uses the internal encoder — not
  * the absolute encoder — to avoid noise at 20 ms update rates.
  *
- * ─── PID LIVE TUNING ─────────────────────────────────────────────────────────
- * All PID values are published as dashboard tunables at startup and re-read every
+ * <h2>PID live tuning</h2>
+ *
+ * <p>All PID values are published as dashboard tunables at startup and re-read every
  * loop. When a value changes, applyDashboardPIDUpdates() delegates to the
  * IMotorIO — no vendor-specific logic here.
  */
