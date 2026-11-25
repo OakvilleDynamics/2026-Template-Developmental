@@ -6,17 +6,16 @@ import frc.lib.swerve.SwerveHardware.SteerMotorType;
 import frc.lib.util.Units;
 
 /**
- * SwerveConstants.java
- * PATH: src/main/java/frc/robot/constants/SwerveConstants.java
- *
  * Hardware-fixed constants that don't change between modules or at runtime.
  *
- * ─── WHAT LIVES HERE ─────────────────────────────────────────────────────────
- * CAN IDs, analog ports, steer offsets, gear ratios, speed limits,
+ * <h2>What lives here</h2>
+ *
+ * <p>CAN IDs, analog ports, steer offsets, gear ratios, speed limits,
  * heading PID defaults, blend alpha default.
  *
- * ─── WHAT DOES NOT LIVE HERE ─────────────────────────────────────────────────
- * Per-module PID values → RobotContainer (passed into each SwerveModule constructor)
+ * <h2>What does not live here</h2>
+ *
+ * <p>Per-module PID values → RobotContainer (passed into each SwerveModule constructor)
  * Robot geometry → RobotContainer (passed into SwerveDrive constructor)
  */
 public final class SwerveConstants {
@@ -109,7 +108,7 @@ public final class SwerveConstants {
      * Live-tunable from the dashboard: "Drive/Teleop Speed Scale" and
      * "Drive/Teleop Rotation Scale" (clamped to [0, 1]).
      *
-     * TODO: set both to 1.0 once the drivetrain is validated.
+     * <p>TODO: set both to 1.0 once the drivetrain is validated.
      */
     public static final double TELEOP_SPEED_SCALE    = 0.3;  // ≈ 4.7 ft/s at full stick
     public static final double TELEOP_ROTATION_SCALE = 0.5;  // ≈ 0.5 rot/s at full stick
@@ -124,14 +123,17 @@ public final class SwerveConstants {
      * forward. Used by every ABS_ENCODER_TYPE. Subtracted from the raw reading;
      * the result is wrapped, so any value in [0, 1) or [-0.5, 0.5) works.
      *
-     * HOW TO MEASURE:
-     *   1. Rotate each wheel by hand to face straight forward, all bevel gears
-     *      on the same side
-     *   2. THRIFTY_ANALOG: read "Swerve/FL/Raw Rot" etc. (offset-free, any offsets)
-     *      Other types: deploy with offsets = 0.0 and read "Swerve/FL/Abs Enc Rot"
-     *   3. Paste those values here and redeploy
+     * <p>HOW TO MEASURE:
      *
-     * Starting values are last season's AnalogEncoder offsets for these modules
+     * <pre>{@code
+     * 1. Rotate each wheel by hand to face straight forward, all bevel gears
+     *    on the same side
+     * 2. THRIFTY_ANALOG: read "Swerve/FL/Raw Rot" etc. (offset-free, any offsets)
+     *    Other types: deploy with offsets = 0.0 and read "Swerve/FL/Abs Enc Rot"
+     * 3. Paste those values here and redeploy
+     * }</pre>
+     *
+     * <p>Starting values are last season's AnalogEncoder offsets for these modules
      * (ticks of 4096). TODO: re-measure on the robot — they only hold if the
      * encoders and magnets haven't been remounted.
      */
@@ -196,7 +198,7 @@ public final class SwerveConstants {
      * Input: heading error (radians). Output: omega correction (rad/s).
      * Tunable live from the dashboard: "Drive/HeadingPID/kP" etc.
      *
-     * Tuning: increase kP until robot snaps to heading quickly without oscillating.
+     * <p>Tuning: increase kP until robot snaps to heading quickly without oscillating.
      * Add kD to damp overshoot. kI is rarely needed for heading control.
      */
     public static final double HEADING_PID_kP       = 3.0;

@@ -3,23 +3,26 @@ package frc.robot.constants;
 import frc.lib.util.Units;
 
 /**
- * PathPlannerConstants.java
- * PATH: src/main/java/frc/robot/constants/PathPlannerConstants.java
- *
  * Constants for PathPlanner integration.
  *
- * ─── UNIT CONVENTION ─────────────────────────────────────────────────────────
- * Physical robot properties follow the project pattern:
- *   English values defined first (lbs, lb·in²)
- *   SI values derived immediately below via Units.*
- *   RobotContainer references the _KG and _KGM2 forms only.
+ * <h2>Unit convention</h2>
  *
- * ─── WHAT LIVES HERE ─────────────────────────────────────────────────────────
- * Robot mass, moment of inertia, wheel COF, path constraints,
+ * <p>Physical robot properties follow the project pattern:
+ *
+ * <pre>{@code
+ * English values defined first (lbs, lb·in²)
+ * SI values derived immediately below via Units.*
+ * RobotContainer references the _KG and _KGM2 forms only.
+ * }</pre>
+ *
+ * <h2>What lives here</h2>
+ *
+ * <p>Robot mass, moment of inertia, wheel COF, path constraints,
  * AutoBuilder translation/rotation PID defaults, vision staleness threshold.
  *
- * ─── WHAT DOES NOT LIVE HERE ─────────────────────────────────────────────────
- * Field target poses → FieldTargets.java
+ * <h2>What does not live here</h2>
+ *
+ * <p>Field target poses → FieldTargets.java
  * Alliance zone exclusions → Constants.java (PathPlanning inner class)
  * Module geometry → RobotContainer (derived from WHEEL_BASE_IN, same as SwerveDrive)
  */
@@ -90,7 +93,7 @@ public final class PathPlannerConstants {
 
     /**
      * Dynamic obstacles injected at PathfindCommand initialize.
-     * Each inner List<Translation2d> defines one convex polygon exclusion zone.
+     * Each inner {@code List<Translation2d>} defines one convex polygon exclusion zone.
      * TODO: populate with 2026 field zone polygon vertices once field geometry is published.
      */
     public static final java.util.List<java.util.List<edu.wpi.first.math.geometry.Translation2d>>

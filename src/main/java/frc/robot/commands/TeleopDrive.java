@@ -12,42 +12,48 @@ import frc.lib.util.Dashboard;
 import frc.lib.util.Units;
 
 /**
- * TeleopDrive.java
- * PATH: src/main/java/frc/robot/commands/TeleopDrive.java
- *
  * Default drive command. Runs continuously while no other command requires
  * the SwerveDrive subsystem.
  *
- * ─── DRIVER INPUT ────────────────────────────────────────────────────────────
- * Reads the driver's axes through IDriverInputs, so this command does not know
+ * <h2>Driver input</h2>
+ *
+ * <p>Reads the driver's axes through IDriverInputs, so this command does not know
  * which controller is attached. Controller mappings live in frc.robot.controls:
- *   FlightStickInputs — two Logitech Extreme 3D Pros (with CoR control)
- *   XboxInputs        — one Xbox-style controller (no CoR control)
  *
- *   forward() → vx    — forward/back, field-relative (ft/s)
- *   left()    → vy    — left/right strafe, field-relative (ft/s)
- *   rotate()  → omega — robot rotation rate (rad/s)
- *   corForward() / corLeft() → center of rotation (robot-relative)
+ * <pre>{@code
+ * FlightStickInputs — two Logitech Extreme 3D Pros (with CoR control)
+ * XboxInputs        — one Xbox-style controller (no CoR control)
  *
- * ─── CENTER OF ROTATION ──────────────────────────────────────────────────────
- * corForward()/corLeft() map linearly to CoR bounds (bumper half-dimensions).
+ * forward() → vx    — forward/back, field-relative (ft/s)
+ * left()    → vy    — left/right strafe, field-relative (ft/s)
+ * rotate()  → omega — robot rotation rate (rad/s)
+ * corForward() / corLeft() → center of rotation (robot-relative)
+ * }</pre>
+ *
+ * <h2>Center of rotation</h2>
+ *
+ * <p>corForward()/corLeft() map linearly to CoR bounds (bumper half-dimensions).
  * Full deflection = CoR at bumper corner in that direction.
  * Stick within deadband = CoR at robot center (0,0) = pivot in place.
  * CoR is always robot-relative — independent of field heading.
  *
- * ─── DRIVE MODES ─────────────────────────────────────────────────────────────
+ * <h2>Drive modes</h2>
+ *
+ * <pre>{@code
  * NORMAL           — full driver control (default)
  * POINT_AT         — heading PID locks to a field target; translation free
  * HEADING_BOUND    — driver controls heading freely within [min, max] window;
  *                    PID-holds to nearest bound if heading exits the window
  * STATIC_SHOT_LOCK — wheels X-braced, no translation; for stationary shooting
+ * }</pre>
  *
- * The ShooterAimController sets the active mode each loop via the enable/clear
+ * <p>The ShooterAimController sets the active mode each loop via the enable/clear
  * methods. This is the external driver-input pipeline — driver inputs are read
  * every execute() but the output path is governed by the externally-set mode.
  *
- * ─── INPUT SHAPING ───────────────────────────────────────────────────────────
- * squareInput() squares magnitude while preserving sign.
+ * <h2>Input shaping</h2>
+ *
+ * <p>squareInput() squares magnitude while preserving sign.
  * Gives finer low-speed control without losing full power at full deflection.
  * Translation and rotation are then multiplied by the live-tunable teleop
  * scales ("Drive/Teleop Speed Scale", "Drive/Teleop Rotation Scale").
@@ -144,7 +150,7 @@ public class TeleopDrive extends Command implements IAimDriveModes {
      * provided window. PID-holds to the nearest bound if heading exits the window.
      * Translation remains under full driver control.
      *
-     * Bounds come from ShooterOutput.headingBoundsDeg — the range of robot headings
+     * <p>Bounds come from ShooterOutput.headingBoundsDeg — the range of robot headings
      * within which the turret can reach the target without exceeding its soft stops.
      *
      * @param minAbsHeadingDeg  Minimum allowed absolute robot heading (degrees, field frame).

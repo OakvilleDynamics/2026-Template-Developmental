@@ -7,28 +7,30 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * FieldTargets.java
- * PATH: src/main/java/frc/robot/pathplanning/FieldTargets.java
- *
  * String-keyed lookup table of field target poses for pathfinding.
  * All poses are in field coordinates (meters, WPILib blue-origin convention).
  *
- * ─── USAGE ───────────────────────────────────────────────────────────────────
+ * <h2>Usage</h2>
+ *
+ * <pre>{@code
  * Pose2d target = FieldTargets.get("speaker");
  * Throws IllegalArgumentException on unknown key — fail fast, fail loudly.
+ * }</pre>
  *
- * ─── ADDING TARGETS ──────────────────────────────────────────────────────────
- * Add entries to the static initializer below.
+ * <h2>Adding targets</h2>
+ *
+ * <p>Add entries to the static initializer below.
  * Key: short lowercase string matching how RobotContainer will reference it.
  * Pose: field X (m), field Y (m), heading the robot should face on arrival.
  *
- * ─── COORDINATE CONVENTION ───────────────────────────────────────────────────
- * Origin (0, 0) = blue alliance corner (driver station side, left corner).
+ * <h2>Coordinate convention</h2>
+ *
+ * <p>Origin (0, 0) = blue alliance corner (driver station side, left corner).
  * +X toward red alliance wall, +Y toward left when standing at blue station.
  * Heading 0° = facing red alliance wall (field forward).
  * PathPlanner handles alliance flipping — define all targets from blue origin.
  *
- * TODO: populate with real 2026 field target coordinates once field geometry is published.
+ * <p>TODO: populate with real 2026 field target coordinates once field geometry is published.
  */
 public final class FieldTargets {
 

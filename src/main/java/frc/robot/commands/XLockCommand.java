@@ -4,21 +4,21 @@ import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.swerveDrive.SwerveDrive;
 
 /**
- * XLockCommand.java
- * PATH: src/main/java/frc/robot/commands/XLockCommand.java
- *
  * Sets all four swerve modules to an X brace pattern and holds zero
  * drive speed. The robot resists being pushed from any direction.
  *
- * Bound as whileTrue() — active only while the button is held.
+ * <p>Bound as whileTrue() — active only while the button is held.
  * Releasing cancels this command and the default drive command resumes.
  *
- * Wheel angles (robot-relative):
- *   FL:  45°  FR: -45°
- *       \       /
- *        X     X
- *       /       \
- *   BL: -45°  BR:  45°
+ * <p>Wheel angles (robot-relative):
+ *
+ * <pre>{@code
+ * FL:  45°  FR: -45°
+ *     \       /
+ *      X     X
+ *     /       \
+ * BL: -45°  BR:  45°
+ * }</pre>
  */
 public class XLockCommand extends Command {
 

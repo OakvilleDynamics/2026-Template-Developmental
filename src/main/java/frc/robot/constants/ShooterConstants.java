@@ -4,29 +4,31 @@ import frc.lib.mechanisms.shooter.ShotProfile;
 import frc.lib.mechanisms.shooter.ShotProfile.LookupEntry;
 
 /**
- * ShooterConstants.java
- * PATH: src/main/java/frc/robot/constants/ShooterConstants.java
- *
  * Shot profile lookup table and shooter geometry constants for THIS robot.
  * Bundled into PROFILE and passed to ShooterCalculator from RobotContainer.
  *
- * ─── WHAT LIVES HERE ─────────────────────────────────────────────────────────
+ * <h2>What lives here</h2>
+ *
+ * <pre>{@code
  * LOOKUP_TABLE     — RPM / hood angle / ToF indexed by distance per target type
  * Pivot geometry   — shooter pivot offset in robot frame (inches)
  * Warning threshold — robot speed above which ROBOT_SPEED_TOO_HIGH is flagged
  * PROFILE          — the three above as one ShotProfile
+ * }</pre>
  *
- * ─── IN-SEASON TUNING ────────────────────────────────────────────────────────
- * Edit LOOKUP_TABLE entries to tune shot profiles without touching the calculator.
+ * <h2>In-season tuning</h2>
  *
- * Columns: targetType | rpm | hoodAngle | distance (ft) | xExitVel (ft/s) | ToF (s)
+ * <p>Edit LOOKUP_TABLE entries to tune shot profiles without touching the calculator.
+ *
+ * <p>Columns: targetType | rpm | hoodAngle | distance (ft) | xExitVel (ft/s) | ToF (s)
  * ToF column: populate with measured values — 0.0 is a placeholder.
  *
- * Multiple hood angle groups per target type are supported. The interpolator
+ * <p>Multiple hood angle groups per target type are supported. The interpolator
  * picks the group whose bracket midpoint best matches the actual distance.
  *
- * ─── TURRET LIMITS ───────────────────────────────────────────────────────────
- * Turret soft limits live in the turret's MechanismConfig (single source of
+ * <h2>Turret limits</h2>
+ *
+ * <p>Turret soft limits live in the turret's MechanismConfig (single source of
  * truth); ShooterCalculator reads them from there.
  */
 public final class ShooterConstants {

@@ -19,32 +19,34 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * AprilTagFieldCal.java
- * PATH: src/main/java/frc/robot/util/AprilTagFieldCal.java
- *
  * Per-field AprilTag offset system and field geometry reference.
  * Wraps the WPILib AprilTagFieldLayout and applies per-tag corrections.
  *
- * ─── CONSTRUCTOR ─────────────────────────────────────────────────────────────
- * Receives an AprilTagFields enum value from RobotContainer via VisionSubsystem.
+ * <h2>Constructor</h2>
+ *
+ * <p>Receives an AprilTagFields enum value from RobotContainer via VisionSubsystem.
  * This is the single point where game year is bound to the layout.
  *
- * ─── OFFSET SYSTEM ───────────────────────────────────────────────────────────
- * setTagOffset() registers a correction for a specific tag.
+ * <h2>Offset system</h2>
+ *
+ * <p>setTagOffset() registers a correction for a specific tag.
  * getCalibratedLayout() returns a layout with all corrections applied.
  * Call rebuildLayout() after changing offsets — VisionSubsystem handles this.
  *
- * ─── TAG IGNORE INTEGRATION ──────────────────────────────────────────────────
- * getCalibratedLayout() automatically excludes tags that AprilTagIgnore marks
+ * <h2>Tag ignore integration</h2>
+ *
+ * <p>getCalibratedLayout() automatically excludes tags that AprilTagIgnore marks
  * as ignored for the current alliance. The pose estimators never see
  * ignored tags, so they can't contribute to or corrupt pose estimates.
  *
- * ─── OFFSET UNITS ────────────────────────────────────────────────────────────
- * setTagOffset() accepts INCHES and DEGREES — units your team can measure.
+ * <h2>Offset units</h2>
+ *
+ * <p>setTagOffset() accepts INCHES and DEGREES — units your team can measure.
  * Stored and applied internally in meters/radians.
  *
- * ─── IMPORTANT NOTE ──────────────────────────────────────────────────────────
- * Offsets should be small (≤ 2 inches, ≤ 2 degrees).
+ * <h2>Important note</h2>
+ *
+ * <p>Offsets should be small (≤ 2 inches, ≤ 2 degrees).
  * Larger corrections usually mean the camera transform is wrong, not the field.
  * Fix VisionConstants camera transforms before applying large field offsets.
  */

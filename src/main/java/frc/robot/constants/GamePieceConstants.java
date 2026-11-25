@@ -6,55 +6,68 @@ import edu.wpi.first.math.geometry.Translation3d;
 import frc.lib.util.Units;
 
 /**
- * GamePieceConstants.java
- * PATH: src/main/java/frc/robot/constants/GamePieceConstants.java
- *
  * Configuration for the game piece detection camera and hunt behavior.
  * This camera is separate from the two AprilTag pose estimation cameras and
  * runs on its own dedicated OrangePi 5 (GAME_PIECE_COPROCESSOR_IP).
  * It is mounted on the intake side of the robot and points toward the floor.
  *
- * ─── COPROCESSOR NETWORK ─────────────────────────────────────────────────────
- * Game piece OrangePi 5 static IP: 10.87.19.12
- *   Camera: intake_cam (OV9782 — color sensor for game piece ML detection)
- *   PhotonVision UI: http://10.87.19.12:5800
+ * <h2>Coprocessor network</h2>
  *
- * The AprilTag coprocessor (10.87.19.11) is configured in VisionConstants.java.
+ * <p>Game piece OrangePi 5 static IP: 10.87.19.12
+ * Camera: intake_cam (OV9782 — color sensor for game piece ML detection)
+ * PhotonVision UI: http://10.87.19.12:5800
+ *
+ * <p>The AprilTag coprocessor (10.87.19.11) is configured in VisionConstants.java.
  * Both coprocessors connect to the roboRIO's NetworkTables server as NT clients.
  * PhotonCamera("intake_cam") resolves through NT transparently — no robot code
  * structural change is required to run cameras on separate physical devices.
  *
- * ─── SEASON SETUP CHECKLIST ──────────────────────────────────────────────────
- * Each new season:
- *   1. GAME_PIECE_HEIGHT_M   — update for the game piece's height above carpet
- *   2. GAME_PIECE_CAMERA_TRANSFORM — remeasure if robot geometry changed
- *   3. CLUSTER_RADIUS_M      — tune based on how pieces are distributed on field
- *   4. DETECTION_CONFIDENCE_MIN — adjust based on PhotonVision pipeline accuracy
+ * <h2>Season setup checklist</h2>
  *
- * ─── EVENT SETUP CHECKLIST ───────────────────────────────────────────────────
- * At each competition event:
- *   1. Verify GAME_PIECE_CAMERA_NAME matches exactly what is set in PhotonVision UI
- *   2. Confirm stream URL is reachable from driver station
- *   3. Pre-match check: place a game piece ~1–2 m in front of intake, confirm
- *      "Piece Detected" reads true on Elastic "Vision Health" tab
+ * <p>Each new season:
  *
- * ─── CAMERA TRANSFORM CONVENTION ─────────────────────────────────────────────
- * Transform3d encodes camera position and orientation relative to robot center:
- *   Translation3d(x, y, z) — robot center to camera (meters, robot frame)
- *     +x = forward, +y = left, +z = up
- *   Rotation3d(roll, pitch, yaw) — camera pointing direction
- *     Negative pitch = camera tilted down (pointing toward floor)
- *     Yaw 0 = facing forward (same as robot)
+ * <pre>{@code
+ * 1. GAME_PIECE_HEIGHT_M   — update for the game piece's height above carpet
+ * 2. GAME_PIECE_CAMERA_TRANSFORM — remeasure if robot geometry changed
+ * 3. CLUSTER_RADIUS_M      — tune based on how pieces are distributed on field
+ * 4. DETECTION_CONFIDENCE_MIN — adjust based on PhotonVision pipeline accuracy
+ * }</pre>
  *
- * ─── BACK-PROJECTION MATH ────────────────────────────────────────────────────
- * GamePieceVisionSubsystem uses getYaw() and getPitch() from PhotonVision targets
+ * <h2>Event setup checklist</h2>
+ *
+ * <p>At each competition event:
+ *
+ * <pre>{@code
+ * 1. Verify GAME_PIECE_CAMERA_NAME matches exactly what is set in PhotonVision UI
+ * 2. Confirm stream URL is reachable from driver station
+ * 3. Pre-match check: place a game piece ~1–2 m in front of intake, confirm
+ *    "Piece Detected" reads true on Elastic "Vision Health" tab
+ * }</pre>
+ *
+ * <h2>Camera transform convention</h2>
+ *
+ * <p>Transform3d encodes camera position and orientation relative to robot center:
+ *
+ * <pre>{@code
+ * Translation3d(x, y, z) — robot center to camera (meters, robot frame)
+ *   +x = forward, +y = left, +z = up
+ * Rotation3d(roll, pitch, yaw) — camera pointing direction
+ *   Negative pitch = camera tilted down (pointing toward floor)
+ *   Yaw 0 = facing forward (same as robot)
+ * }</pre>
+ *
+ * <h2>Back-projection math</h2>
+ *
+ * <p>GamePieceVisionSubsystem uses getYaw() and getPitch() from PhotonVision targets
  * to project detected pieces to field coordinates:
  *
- *   verticalAngleRad = cameraMountPitchRad - Math.toRadians(target.getPitch())
- *   horizontalDist   = (cameraHeight_m - GAME_PIECE_HEIGHT_M) / Math.tan(verticalAngleRad)
- *   bearingFieldRad  = cameraYawFieldRad + Math.toRadians(target.getYaw())
- *   pieceX           = cameraX + horizontalDist * cos(bearingFieldRad)
- *   pieceY           = cameraY + horizontalDist * sin(bearingFieldRad)
+ * <pre>{@code
+ * verticalAngleRad = cameraMountPitchRad - Math.toRadians(target.getPitch())
+ * horizontalDist   = (cameraHeight_m - GAME_PIECE_HEIGHT_M) / Math.tan(verticalAngleRad)
+ * bearingFieldRad  = cameraYawFieldRad + Math.toRadians(target.getYaw())
+ * pieceX           = cameraX + horizontalDist * cos(bearingFieldRad)
+ * pieceY           = cameraY + horizontalDist * sin(bearingFieldRad)
+ * }</pre>
  */
 public final class GamePieceConstants {
 
@@ -84,11 +97,11 @@ public final class GamePieceConstants {
     /**
      * Pose of the camera relative to robot center.
      *
-     * TODO: Fill in actual mounting position after robot is built.
-     *   Translation: distance along intake side (forward) and height above carpet.
-     *   Rotation: pitch angle (negative = tilted down toward floor).
+     * <p>TODO: Fill in actual mounting position after robot is built.
+     * Translation: distance along intake side (forward) and height above carpet.
+     * Rotation: pitch angle (negative = tilted down toward floor).
      *
-     * Example below: camera 14 inches forward, 0 lateral, 18 inches up,
+     * <p>Example below: camera 14 inches forward, 0 lateral, 18 inches up,
      * tilted 35° downward toward the intake zone.
      */
     public static final Transform3d GAME_PIECE_CAMERA_TRANSFORM = new Transform3d(
@@ -113,7 +126,7 @@ public final class GamePieceConstants {
      * Used in the floor-intersection back-projection calculation.
      * Set to 0.0 for flat pieces resting on carpet.
      *
-     * TODO: Update for the 2026 game piece once known.
+     * <p>TODO: Update for the 2026 game piece once known.
      */
     public static final double GAME_PIECE_HEIGHT_M = 0.0;
 
@@ -143,7 +156,7 @@ public final class GamePieceConstants {
      * Maximum distance (meters) between two pieces for them to be grouped
      * into the same cluster. Tune based on how field pieces are distributed.
      *
-     * 1.5 m is appropriate for most FRC note/ring-style stacks at half-field.
+     * <p>1.5 m is appropriate for most FRC note/ring-style stacks at half-field.
      * Individual pieces separated by more than this form their own clusters.
      */
     public static final double CLUSTER_RADIUS_M = 1.5;
@@ -157,7 +170,7 @@ public final class GamePieceConstants {
      * Adjusts for intake not being exactly on the robot's forward axis.
      * 0.0 if intake faces forward. Positive = CCW rotation of intake heading.
      *
-     * TODO: Set after measuring intake direction on physical robot.
+     * <p>TODO: Set after measuring intake direction on physical robot.
      */
     public static final double APPROACH_HEADING_OFFSET_DEG = 0.0;
 

@@ -32,15 +32,14 @@ import frc.robot.subsystems.vision.RobotPoseEstimate;
 import frc.robot.subsystems.vision.VisionSubsystem;
 
 /**
- * RobotContainer.java
- * PATH: src/main/java/frc/robot/RobotContainer.java
+ * <h2>Season change — one line</h2>
  *
- * ─── SEASON CHANGE — ONE LINE ────────────────────────────────────────────────
- * Update GAME_YEAR_FIELD each season. Propagates to VisionSubsystem →
+ * <p>Update GAME_YEAR_FIELD each season. Propagates to VisionSubsystem →
  * AprilTagFieldCal → PhotonPoseEstimators → everywhere.
  *
- * ─── EVENT CHANGE — AprilTagIgnore.java ──────────────────────────────────────
- * To ignore a problem tag at a specific event, edit AprilTagIgnore.java
+ * <h2>Event change — AprilTagIgnore.java</h2>
+ *
+ * <p>To ignore a problem tag at a specific event, edit AprilTagIgnore.java
  * and redeploy. No other files need to change.
  */
 public class RobotContainer {
@@ -54,9 +53,11 @@ public class RobotContainer {
      * AprilTag field layout for the current game year.
      * Propagates everywhere through the constructor chain.
      *
+     * <pre>{@code
      * 2026 REBUILT:   AprilTagFields.kDefaultField (update when constant published)
      * 2025 Reefscape: AprilTagFields.k2025Reefscape
      * 2024 Crescendo: AprilTagFields.k2024Crescendo
+     * }</pre>
      */
     private static final AprilTagFields GAME_YEAR_FIELD = AprilTagFields.kDefaultField;
 

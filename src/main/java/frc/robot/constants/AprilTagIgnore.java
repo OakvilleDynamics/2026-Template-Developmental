@@ -9,54 +9,67 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * AprilTagIgnore.java
- * PATH: src/main/java/frc/robot/constants/AprilTagIgnore.java
- *
  * Standalone file defining which AprilTags to ignore during pose estimation.
  *
- * ─── HOW TO USE ───────────────────────────────────────────────────────────────
- * Edit the IGNORED_TAGS map below and redeploy.
+ * <h2>How to use</h2>
+ *
+ * <p>Edit the IGNORED_TAGS map below and redeploy.
  * No other files need to change.
  *
- * This file is intentionally simple and self-contained so it can be
+ * <p>This file is intentionally simple and self-contained so it can be
  * edited quickly at competition without risk of breaking anything else.
  *
- * ─── CONDITION VALUES ────────────────────────────────────────────────────────
+ * <h2>Condition values</h2>
+ *
+ * <pre>{@code
  * "always" — ignore this tag regardless of alliance
  * "blue"   — ignore this tag when robot is on BLUE alliance
  * "red"    — ignore this tag when robot is on RED alliance
+ * }</pre>
  *
- * ─── ALLIANCE DETECTION ──────────────────────────────────────────────────────
- * Alliance color is read from DriverStation.getAlliance() at runtime.
+ * <h2>Alliance detection</h2>
+ *
+ * <p>Alliance color is read from DriverStation.getAlliance() at runtime.
  * If the alliance is not yet assigned by FMS (Optional is empty — common
  * before a match is loaded), ALL tags are used. This is the safe default.
  *
- * ─── EXAMPLE ENTRIES ─────────────────────────────────────────────────────────
- * Tag 1 on the opposing alliance wall, always causing noise:
- *   IGNORED_TAGS.put(1, "always");
+ * <h2>Example entries</h2>
  *
- * Tags on the red alliance side (ignore when we are red, to avoid
+ * <p>Tag 1 on the opposing alliance wall, always causing noise:
+ *
+ * <pre>{@code
+ * IGNORED_TAGS.put(1, "always");
+ * }</pre>
+ *
+ * <p>Tags on the red alliance side (ignore when we are red, to avoid
  * self-referential pose confusion near our own structures):
- *   IGNORED_TAGS.put(6, "red");
- *   IGNORED_TAGS.put(7, "red");
  *
- * ─── 2026 REBUILT TAG LAYOUT REFERENCE ───────────────────────────────────────
- * Update this comment block each season with the tag ID → location mapping
+ * <pre>{@code
+ * IGNORED_TAGS.put(6, "red");
+ * IGNORED_TAGS.put(7, "red");
+ * }</pre>
+ *
+ * <h2>2026 REBUILT tag layout reference</h2>
+ *
+ * <p>Update this comment block each season with the tag ID → location mapping
  * so editors know what they're ignoring without needing to look it up.
  *
+ * <pre>{@code
  * Tags 1–9:   Red alliance structures (coral station, reef, processor, barge)
  * Tags 10–22: Blue alliance structures (coral station, reef, processor, barge)
  * (Exact mapping TBD — update once 2026 field layout is finalized)
+ * }</pre>
  *
- * TODO: Fill in tag descriptions once 2026 layout is published.
+ * <p>TODO: Fill in tag descriptions once 2026 layout is published.
  */
 public final class AprilTagIgnore {
 
     /**
      * Map of tag ID → ignore condition.
      *
-     * ─── EDIT THIS SECTION AT COMPETITION ────────────────────────────────────
-     * Add entries here for tags causing problems. Remove them when resolved.
+     * <h4>Edit this section at competition</h4>
+     *
+     * <p>Add entries here for tags causing problems. Remove them when resolved.
      * Valid conditions: "always", "blue", "red"
      */
     private static final Map<Integer, String> IGNORED_TAGS = new HashMap<>() {{
@@ -76,7 +89,7 @@ public final class AprilTagIgnore {
      * Returns true if the given tag ID should be ignored given the current
      * alliance assignment.
      *
-     * When alliance is unknown (FMS not connected, pre-match),
+     * <p>When alliance is unknown (FMS not connected, pre-match),
      * returns false for all tags — use everything until we know better.
      *
      * @param tagId  AprilTag ID to check

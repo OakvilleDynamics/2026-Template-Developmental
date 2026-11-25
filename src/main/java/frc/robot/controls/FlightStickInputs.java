@@ -3,21 +3,24 @@ package frc.robot.controls;
 import edu.wpi.first.wpilibj.Joystick;
 
 /**
- * FlightStickInputs.java
- * PATH: src/main/java/frc/robot/controls/FlightStickInputs.java
- *
  * Two Logitech Extreme 3D Pro flight sticks.
  *
- * LEFT STICK:
- *   Axis 1 (Y)     → forward/back translation
- *   Axis 0 (X)     → left/right strafe
+ * <p>LEFT STICK:
  *
- * RIGHT STICK:
- *   Axis 2 (twist) → rotation
- *   Axis 1 (Y)     → center of rotation forward/back
- *   Axis 0 (X)     → center of rotation left/right
+ * <pre>{@code
+ * Axis 1 (Y)     → forward/back translation
+ * Axis 0 (X)     → left/right strafe
+ * }</pre>
  *
- * Raw stick Y is negative when pushed forward and X/twist are positive to the
+ * <p>RIGHT STICK:
+ *
+ * <pre>{@code
+ * Axis 2 (twist) → rotation
+ * Axis 1 (Y)     → center of rotation forward/back
+ * Axis 0 (X)     → center of rotation left/right
+ * }</pre>
+ *
+ * <p>Raw stick Y is negative when pushed forward and X/twist are positive to the
  * right, so every axis is negated to match the IDriverInputs convention.
  */
 public class FlightStickInputs implements IDriverInputs {

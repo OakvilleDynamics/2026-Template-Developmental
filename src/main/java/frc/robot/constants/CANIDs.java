@@ -1,19 +1,20 @@
 package frc.robot.constants;
 
 /**
- * CANIDs.java
- * PATH: src/main/java/frc/robot/constants/CANIDs.java
- *
  * Single source of truth for ALL CAN bus IDs.
  * Update this file when rewiring the robot — no other files need to change.
  * roboRIO analog/digital/PWM port assignments live in PortIDs.java.
  *
- * ─── VERIFICATION PROCEDURE ──────────────────────────────────────────────────
- * Before first deploy, verify each ID against the physical device:
- *   CTRE devices (Kraken, Pigeon 2): use Phoenix Tuner X (Self-Test Snapshot)
- *   Thrifty Nova: use ThriftyBot app or Nova's built-in LED blink pattern
+ * <h2>Verification procedure</h2>
  *
- * TODO: confirm all IDs match physical wiring before first deploy.
+ * <p>Before first deploy, verify each ID against the physical device:
+ *
+ * <pre>{@code
+ * CTRE devices (Kraken, Pigeon 2): use Phoenix Tuner X (Self-Test Snapshot)
+ * Thrifty Nova: use ThriftyBot app or Nova's built-in LED blink pattern
+ * }</pre>
+ *
+ * <p>TODO: confirm all IDs match physical wiring before first deploy.
  */
 public final class CANIDs {
 

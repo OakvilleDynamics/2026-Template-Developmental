@@ -7,55 +7,63 @@ import edu.wpi.first.math.geometry.Translation3d;
 import frc.lib.util.Units;
 
 /**
- * VisionConstants.java
- * PATH: src/main/java/frc/robot/constants/VisionConstants.java
- *
  * All PhotonVision and field vision configuration in one place.
  *
- * ─── SEASON SETUP CHECKLIST ──────────────────────────────────────────────────
- * Each new season, update:
- *   1. GAME_YEAR_FIELD  — change the AprilTagFields enum value in RobotContainer
- *                         (not here — VisionConstants holds the default reference only)
- *   2. Camera transforms — remeasure if robot geometry changed
- *   3. Stream URLs       — verify port numbers in PhotonVision UI
- *   4. AprilTagIgnore.java — review tag IDs for new field layout
+ * <h2>Season setup checklist</h2>
  *
- * ─── EVENT SETUP CHECKLIST ───────────────────────────────────────────────────
- * At each competition event:
- *   1. Verify stream URLs are reachable from driver station laptop
- *   2. Confirm camera names match exactly what is set in PhotonVision UI
- *   3. Run field calibration procedure via "Field Calibration" Elastic tab
- *   4. Apply any needed tag offsets and generate the offsets file
+ * <p>Each new season, update:
  *
- * ─── CAMERA TRANSFORM COORDINATE FRAME ───────────────────────────────────────
- * Robot center (0,0,0) is at floor level, geometric center of frame.
+ * <pre>{@code
+ * 1. GAME_YEAR_FIELD  — change the AprilTagFields enum value in RobotContainer
+ *                       (not here — VisionConstants holds the default reference only)
+ * 2. Camera transforms — remeasure if robot geometry changed
+ * 3. Stream URLs       — verify port numbers in PhotonVision UI
+ * 4. AprilTagIgnore.java — review tag IDs for new field layout
+ * }</pre>
+ *
+ * <h2>Event setup checklist</h2>
+ *
+ * <p>At each competition event:
+ *
+ * <pre>{@code
+ * 1. Verify stream URLs are reachable from driver station laptop
+ * 2. Confirm camera names match exactly what is set in PhotonVision UI
+ * 3. Run field calibration procedure via "Field Calibration" Elastic tab
+ * 4. Apply any needed tag offsets and generate the offsets file
+ * }</pre>
+ *
+ * <h2>Camera transform coordinate frame</h2>
+ *
+ * <p>Robot center (0,0,0) is at floor level, geometric center of frame.
  * X = forward, Y = left, Z = up (WPILib right-hand rule)
  * Rotation: roll (X axis), pitch (Y axis), yaw (Z axis) — all in radians
  * Negative pitch = camera tilted downward toward field (typical mounting)
  * Yaw of 180° = camera faces rearward
  *
- * ─── COPROCESSOR NETWORK ─────────────────────────────────────────────────────
- * This file covers the AprilTag pose estimation coprocessor only.
+ * <h2>Coprocessor network</h2>
+ *
+ * <p>This file covers the AprilTag pose estimation coprocessor only.
  * Game piece detection runs on a separate coprocessor — see GamePieceConstants.
  *
- * AprilTag OrangePi 5 static IP: 10.87.19.11
- *   Cameras: front_cam (OV9281), rear_cam (OV9281)
- *   PhotonVision UI: http://10.87.19.11:5800
- *   Stream ports assigned by PhotonVision: 1182, 1184, etc.
- *   Verify exact ports in the PhotonVision UI under camera settings.
+ * <p>AprilTag OrangePi 5 static IP: 10.87.19.11
+ * Cameras: front_cam (OV9281), rear_cam (OV9281)
+ * PhotonVision UI: http://10.87.19.11:5800
+ * Stream ports assigned by PhotonVision: 1182, 1184, etc.
+ * Verify exact ports in the PhotonVision UI under camera settings.
  *
- * Replace 87.19 with your team number digits (team 8719 → 87.19).
+ * <p>Replace 87.19 with your team number digits (team 8719 → 87.19).
  *
- * ─── WHY TWO COPROCESSORS ────────────────────────────────────────────────────
- * AprilTag detection (OV9281, global shutter, grayscale) and game piece ML
+ * <h2>Why two coprocessors</h2>
+ *
+ * <p>AprilTag detection (OV9281, global shutter, grayscale) and game piece ML
  * detection (OV9782, color) are on separate OrangePi 5 units for:
- *   1. Isolation — a game piece pipeline crash or overload cannot affect pose
- *      estimation reliability.
- *   2. Headroom — leaves full NPU/CPU available per role; no pipeline contention.
- *   3. Scalability — adding a 2nd game piece camera (2nd intake side) stays on
- *      the game piece coprocessor; AprilTag side is untouched.
+ * 1. Isolation — a game piece pipeline crash or overload cannot affect pose
+ * estimation reliability.
+ * 2. Headroom — leaves full NPU/CPU available per role; no pipeline contention.
+ * 3. Scalability — adding a 2nd game piece camera (2nd intake side) stays on
+ * the game piece coprocessor; AprilTag side is untouched.
  *
- * Both coprocessors connect to the roboRIO's NetworkTables server as NT clients.
+ * <p>Both coprocessors connect to the roboRIO's NetworkTables server as NT clients.
  * PhotonCamera() constructor uses camera name only — it resolves through NT
  * transparently regardless of which physical device the camera is on.
  * No robot code structural change is required to split coprocessors.
@@ -171,11 +179,14 @@ public final class VisionConstants {
      * Threshold (inches) below which a tag delta is considered within tolerance.
      * Used by AprilTagFieldCalTab recommendation logic.
      *
-     * Above threshold — recommendation depends on camera agreement:
-     *   Both cameras agree but both off from WPILib → apply field offset
-     *   Cameras disagree with each other → check camera transform
+     * <p>Above threshold — recommendation depends on camera agreement:
      *
-     * Default: 1.0 inch. Adjustable live from "Cal Tolerance (in)" slider
+     * <pre>{@code
+     * Both cameras agree but both off from WPILib → apply field offset
+     * Cameras disagree with each other → check camera transform
+     * }</pre>
+     *
+     * <p>Default: 1.0 inch. Adjustable live from "Cal Tolerance (in)" slider
      * on the Field Calibration Elastic tab.
      */
     public static final double CALIBRATION_TOLERANCE_INCHES = 1.0;

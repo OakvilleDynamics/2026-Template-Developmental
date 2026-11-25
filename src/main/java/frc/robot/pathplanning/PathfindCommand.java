@@ -18,29 +18,30 @@ import frc.lib.util.RobotLogger;
 import java.util.function.Supplier;
 
 /**
- * PathfindCommand.java
- * PATH: src/main/java/frc/robot/pathplanning/PathfindCommand.java
- *
  * On-the-fly pathfinding to a field target pose using PathPlanner's AD* algorithm.
  * Requires SwerveDrive — interrupts TeleopDrive on schedule, restores it on end.
  *
- * ─── USAGE ───────────────────────────────────────────────────────────────────
- * Bind with .whileTrue() in RobotContainer. Button release ends the command and
+ * <h2>Usage</h2>
+ *
+ * <p>Bind with .whileTrue() in RobotContainer. Button release ends the command and
  * the scheduler automatically resumes TeleopDrive as the default command.
  *
- * ─── TWO-PHASE NAVIGATION ────────────────────────────────────────────────────
- * Currently uses pathfindToPose() — AD* on-the-fly pathfinding only.
+ * <h2>Two-phase navigation</h2>
+ *
+ * <p>Currently uses pathfindToPose() — AD* on-the-fly pathfinding only.
  * TODO: switch to pathfindThenFollowPath() once final-approach .path files are
  * authored in the PathPlanner GUI for each scoring position. The path file name
  * should match the FieldTargets key (e.g. "speaker.path").
  *
- * ─── VISION STALENESS ────────────────────────────────────────────────────────
- * At initialize(), checks whether the most recent accepted vision pose is fresh.
+ * <h2>Vision staleness</h2>
+ *
+ * <p>At initialize(), checks whether the most recent accepted vision pose is fresh.
  * If stale (older than VISION_STALENESS_THRESHOLD_S), raises a dashboard Alert.
  * The command still runs — odometry-only navigation is acceptable, just flagged.
  *
- * ─── ALLIANCE ZONE EXCLUSIONS ────────────────────────────────────────────────
- * Dynamic obstacle polygons from PathPlannerConstants.ALLIANCE_ZONE_EXCLUSIONS
+ * <h2>Alliance zone exclusions</h2>
+ *
+ * <p>Dynamic obstacle polygons from PathPlannerConstants.ALLIANCE_ZONE_EXCLUSIONS
  * are injected at initialize(). Currently an empty list — populate in
  * PathPlannerConstants.java once 2026 field zone geometry is published.
  */

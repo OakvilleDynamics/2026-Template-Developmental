@@ -21,48 +21,59 @@ import java.util.Optional;
 import java.util.function.BooleanSupplier;
 
 /**
- * GamePieceHuntCommand.java
- * PATH: src/main/java/frc/robot/pathplanning/GamePieceHuntCommand.java
- *
  * Autonomously navigates to and collects game pieces detected by the intake camera.
  * Uses PathPlanner AD* pathfinding for navigation and a state machine to sequence
  * through the four hunt modes.
  *
- * ─── HUNT MODES ──────────────────────────────────────────────────────────────
+ * <h2>Hunt modes</h2>
+ *
+ * <pre>{@code
  * NEAREST_PIECE       — drive to the nearest piece, trigger intake, stop.
  * SEQUENTIAL_PIECES   — intake nearest piece, then next nearest, repeat until none.
  * NEAREST_CLUSTER     — drive to the centroid of the nearest cluster, intake all, stop.
  * SEQUENTIAL_CLUSTERS — intake nearest cluster, then next, repeat until none.
+ * }</pre>
  *
- * ─── STATE MACHINE ───────────────────────────────────────────────────────────
- *   FINDING      — poll gamePieceVision for a target.
- *                  No piece found within HUNT_NO_PIECE_TIMEOUT_SECS → DONE.
- *                  Piece found → compute arrival Pose2d, start pathfinder → PATHFINDING.
- *   PATHFINDING  — inner AutoBuilder command runs via CommandScheduler.
- *                  Pathfinder finishes → trigger intakeTrigger → INTAKING.
- *   INTAKING     — wait for intakeComplete or INTAKE_TIMEOUT_SECS.
- *                  NEAREST_PIECE / NEAREST_CLUSTER → DONE.
- *                  SEQUENTIAL_* → mark target consumed → FINDING.
- *   DONE         — isFinished() returns true.
+ * <h2>State machine</h2>
  *
- * ─── ARRIVAL HEADING ─────────────────────────────────────────────────────────
- * The target Pose2d heading is computed so the robot's intake side faces the
+ * <pre>{@code
+ * FINDING      — poll gamePieceVision for a target.
+ *                No piece found within HUNT_NO_PIECE_TIMEOUT_SECS → DONE.
+ *                Piece found → compute arrival Pose2d, start pathfinder → PATHFINDING.
+ * PATHFINDING  — inner AutoBuilder command runs via CommandScheduler.
+ *                Pathfinder finishes → trigger intakeTrigger → INTAKING.
+ * INTAKING     — wait for intakeComplete or INTAKE_TIMEOUT_SECS.
+ *                NEAREST_PIECE / NEAREST_CLUSTER → DONE.
+ *                SEQUENTIAL_* → mark target consumed → FINDING.
+ * DONE         — isFinished() returns true.
+ * }</pre>
+ *
+ * <h2>Arrival heading</h2>
+ *
+ * <p>The target Pose2d heading is computed so the robot's intake side faces the
  * game piece as it drives over it:
  *
- *   targetHeading = atan2(pieceY − robotY, pieceX − robotX) + APPROACH_HEADING_OFFSET_DEG
+ * <pre>{@code
+ * targetHeading = atan2(pieceY − robotY, pieceX − robotX) + APPROACH_HEADING_OFFSET_DEG
+ * }</pre>
  *
- * APPROACH_HEADING_OFFSET_DEG in GamePieceConstants compensates for intakes
+ * <p>APPROACH_HEADING_OFFSET_DEG in GamePieceConstants compensates for intakes
  * not exactly on the robot's forward axis.
  *
- * ─── INTAKE INTERFACE ────────────────────────────────────────────────────────
- * The command is decoupled from any specific intake subsystem. It takes:
- *   intakeTrigger  — Runnable called once when the robot arrives at the piece.
- *   intakeComplete — BooleanSupplier that returns true when the piece is collected.
+ * <h2>Intake interface</h2>
  *
- * Wire these in RobotContainer once the intake subsystem exists.
+ * <p>The command is decoupled from any specific intake subsystem. It takes:
  *
- * ─── REQUIREMENTS ────────────────────────────────────────────────────────────
- * Requires SwerveDrive — preempts TeleopDrive while active.
+ * <pre>{@code
+ * intakeTrigger  — Runnable called once when the robot arrives at the piece.
+ * intakeComplete — BooleanSupplier that returns true when the piece is collected.
+ * }</pre>
+ *
+ * <p>Wire these in RobotContainer once the intake subsystem exists.
+ *
+ * <h2>Requirements</h2>
+ *
+ * <p>Requires SwerveDrive — preempts TeleopDrive while active.
  * GamePieceVisionSubsystem is read-only (not declared as a requirement).
  */
 public class GamePieceHuntCommand extends Command {

@@ -1,21 +1,22 @@
 package frc.robot.controls;
 
 /**
- * IDriverInputs.java
- * PATH: src/main/java/frc/robot/controls/IDriverInputs.java
- *
  * The driver's drive axes, independent of which controller produces them.
  * TeleopDrive reads only this interface, so swapping controllers never touches
  * drive behavior. Add a new controller by implementing this interface.
  *
- * ─── CONVENTIONS ─────────────────────────────────────────────────────────────
- * Every axis is raw stick deflection in [−1, 1], before deadband or shaping.
+ * <h2>Conventions</h2>
+ *
+ * <p>Every axis is raw stick deflection in [−1, 1], before deadband or shaping.
  * Signs are already corrected for the controller, using WPILib's convention:
- *   forward()    +1 = full forward
- *   left()       +1 = full left
- *   rotate()     +1 = full counter-clockwise
- *   corForward() +1 = center of rotation at the front bumper
- *   corLeft()    +1 = center of rotation at the left bumper
+ *
+ * <pre>{@code
+ * forward()    +1 = full forward
+ * left()       +1 = full left
+ * rotate()     +1 = full counter-clockwise
+ * corForward() +1 = center of rotation at the front bumper
+ * corLeft()    +1 = center of rotation at the left bumper
+ * }</pre>
  */
 public interface IDriverInputs {
 

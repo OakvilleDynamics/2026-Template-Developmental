@@ -22,21 +22,18 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * VisionSubsystem.java
- * PATH: src/main/java/frc/robot/subsystems/vision/VisionSubsystem.java
- *
  * Single public interface for all vision data.
  * AprilTagFieldCalTab, RobotContainer, and all commands/middleware
  * read from this class only — nothing reaches into internal objects directly.
  *
- * ─── CONSTRUCTOR ─────────────────────────────────────────────────────────────
- * @param gameYearField  AprilTagFields enum — passed from RobotContainer.
- *                       One change in RobotContainer propagates everywhere.
+ * <h2>Internal objects</h2>
  *
- * ─── INTERNAL OBJECTS ────────────────────────────────────────────────────────
+ * <pre>{@code
  * AprilTagFieldCal    — field layout, per-tag offsets, geometry
  * VisionHealthMonitor — pre-match validation, health tracking
- * These are not accessible from outside — all access goes through
+ * }</pre>
+ *
+ * <p>These are not accessible from outside — all access goes through
  * the public methods below.
  */
 public class VisionSubsystem extends SubsystemBase {
@@ -240,9 +237,9 @@ public class VisionSubsystem extends SubsystemBase {
     /**
      * Generates a formatted Java code snippet representing all current
      * non-zero tag offsets. Published to three destinations:
-     *   1. NetworkTables key (AprilTagFieldCalWatch.py saves to file on laptop)
-     *   2. NetworkTables clipboard key (AprilTagFieldCalWatch.py copies to clipboard)
-     *   3. File on roboRIO at VisionConstants.OFFSETS_ROBORIO_PATH
+     * 1. NetworkTables key (AprilTagFieldCalWatch.py saves to file on laptop)
+     * 2. NetworkTables clipboard key (AprilTagFieldCalWatch.py copies to clipboard)
+     * 3. File on roboRIO at VisionConstants.OFFSETS_ROBORIO_PATH
      */
     public void generateOffsetsOutput() {
         String snippet = buildOffsetsSnippet();

@@ -1,21 +1,19 @@
 package frc.robot.constants;
 
 /**
- * PortIDs.java
- * PATH: src/main/java/frc/robot/constants/PortIDs.java
- *
  * Single source of truth for ALL roboRIO non-CAN port assignments:
  * analog inputs (AI), analog outputs (AO), digital inputs (DI),
  * digital outputs (DO), and PWM.
  *
- * Update this file when rewiring the robot — no other files need to change.
+ * <p>Update this file when rewiring the robot — no other files need to change.
  * CAN bus IDs live in CANIDs.java.
  *
- * ─── VERIFICATION PROCEDURE ──────────────────────────────────────────────────
- * Trace wires from each sensor/device to the physical roboRIO port before deploy.
+ * <h2>Verification procedure</h2>
+ *
+ * <p>Trace wires from each sensor/device to the physical roboRIO port before deploy.
  * roboRIO port layout: https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/
  *
- * TODO: confirm all ports match physical wiring before first deploy.
+ * <p>TODO: confirm all ports match physical wiring before first deploy.
  */
 public final class PortIDs {
 

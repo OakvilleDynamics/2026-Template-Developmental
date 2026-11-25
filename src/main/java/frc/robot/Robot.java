@@ -12,15 +12,15 @@ import frc.robot.subsystems.vision.VisionHealthMonitor.HealthStatus;
 import frc.lib.util.RobotLogger;
 
 /**
- * Robot.java
- * PATH: src/main/java/frc/robot/Robot.java
- *
  * Top-level robot lifecycle class. All periodic calls flow from here.
  *
- * ─── PERIODIC CALL ORDER (robotPeriodic, every 20ms) ─────────────────────────
+ * <h2>Periodic call order (robotPeriodic, every 20ms)</h2>
+ *
+ * <pre>{@code
  * 1. CommandScheduler.run()      — runs subsystem periodic() + all active commands
  * 2. updatePoseEstimator()       — fuses latest vision pose into Kalman filter
  * 3. updateCalibrationTab()      — updates field calibration Elastic tab
+ * }</pre>
  */
 public class Robot extends TimedRobot {
 

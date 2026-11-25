@@ -7,27 +7,29 @@ import frc.lib.util.Dashboard;
 import frc.lib.util.Units;
 
 /**
- * VisionHealthMonitor.java
- * PATH: src/main/java/frc/robot/subsystems/vision/VisionHealthMonitor.java
- *
  * Pre-match validation and continuous vision health tracking.
  * Updated every loop by VisionSubsystem via update().
  *
- * ─── HEALTH STATUS ───────────────────────────────────────────────────────────
+ * <h2>Health status</h2>
+ *
+ * <pre>{@code
  * UNKNOWN  — not enough data yet (cameras just connected)
  * GOOD     — all checks passing, both cameras healthy
  * WARNING  — degraded but usable (intermittent tag loss, elevated ambiguity)
  * FAULT    — camera lost or pose implausible (action required)
+ * }</pre>
  *
- * ─── DASHBOARD ───────────────────────────────────────────────────────────────
- * Publishes status indicators through Dashboard under "Vision Health/" for the
+ * <h2>Dashboard</h2>
+ *
+ * <p>Publishes status indicators through Dashboard under "Vision Health/" for the
  * Elastic "Vision Health" tab. Widget type, colors and placement live in the
  * Elastic layout file, not in code.
  * Drive team should check this tab before every match.
  * Green = good, Yellow = warning, Red = fault.
  *
- * ─── PRE-MATCH POSE CHECK ────────────────────────────────────────────────────
- * Call setExpectedStartPose() once the robot is placed on the field.
+ * <h2>Pre-match pose check</h2>
+ *
+ * <p>Call setExpectedStartPose() once the robot is placed on the field.
  * The monitor compares incoming vision poses against this expected pose
  * and flags if they disagree by more than POSE_PLAUSIBILITY_TOLERANCE_M.
  * Call clearExpectedStartPose() at match start so normal movement

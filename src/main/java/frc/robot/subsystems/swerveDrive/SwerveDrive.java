@@ -37,35 +37,39 @@ import frc.lib.swerve.SwerveModule;
 import frc.lib.util.Units;
 
 /**
- * SwerveDrive.java
- * PATH: src/main/java/frc/robot/subsystems/swerveDrive/SwerveDrive.java
- *
  * Owns the four swerve modules and IMU. The only way to move the robot
  * is through drive(), drivePointAt(), lockWheelsX(), or stop().
  *
- * ─── CONSTRUCTOR GEOMETRY INPUTS (all in INCHES) ─────────────────────────────
+ * <h2>Constructor geometry inputs (all in inches)</h2>
+ *
+ * <pre>{@code
  * wheelBaseInches    double[2] { x, y } — wheel steering axis center-to-center
  * frameInches        double[2] { x, y } — outer frame, no bumpers
  * bumperInches       double[2] { x, y } — outer dimensions with bumpers
  * wheelDiamInches    double    — drive wheel diameter
  * headingPID         double[3] { kP, kI, kD } — point-at-target heading controller
+ * }</pre>
  *
- * All values converted to meters internally on entry.
+ * <p>All values converted to meters internally on entry.
  *
- * ─── GEOMETRY QUERY ──────────────────────────────────────────────────────────
- * getDimension(String key) — "wheel-base", "frame-perimeter", "bumper-perimeter"
+ * <h2>Geometry query</h2>
+ *
+ * <p>getDimension(String key) — "wheel-base", "frame-perimeter", "bumper-perimeter"
  * Returns DimensionResult with .inches[] and .meters[] fields.
  *
- * ─── ODOMETRY STATE ──────────────────────────────────────────────────────────
- * getOdometryState() — returns DriveOdometryState updated every loop.
+ * <h2>Odometry state</h2>
+ *
+ * <p>getOdometryState() — returns DriveOdometryState updated every loop.
  * Three buckets: encoderState, imuState, blendedState.
  *
- * ─── POINT-AT-TARGET ─────────────────────────────────────────────────────────
- * drivePointAt() — driver controls translation, heading PID controls omega.
+ * <h2>Point-at-target</h2>
+ *
+ * <p>drivePointAt() — driver controls translation, heading PID controls omega.
  * Target in feet, offset in degrees. futureStatePoseM = null uses odometry.
  *
- * ─── X-LOCK ──────────────────────────────────────────────────────────────────
- * lockWheelsX() — sets all four modules to X brace pattern, zero drive speed.
+ * <h2>X-lock</h2>
+ *
+ * <p>lockWheelsX() — sets all four modules to X brace pattern, zero drive speed.
  */
 public class SwerveDrive extends SubsystemBase implements IAimDriveState {
 
@@ -366,15 +370,18 @@ public class SwerveDrive extends SubsystemBase implements IAimDriveState {
     /**
      * Heading-bounded drive.
      *
-     * Driver retains full translation and rotation control while the robot heading
+     * <p>Driver retains full translation and rotation control while the robot heading
      * stays within [minAbsHeadingDeg, maxAbsHeadingDeg] (field frame, degrees).
      *
-     * Behavior:
-     *   Heading within bounds  → passes driver omega through unchanged (full control)
-     *   Heading below minDeg   → PID-holds to minAbsHeadingDeg (overrides driver omega)
-     *   Heading above maxDeg   → PID-holds to maxAbsHeadingDeg (overrides driver omega)
+     * <p>Behavior:
      *
-     * Reuses the same headingPID and HEADING_PID_MAX_OMEGA as drivePointAt().
+     * <pre>{@code
+     * Heading within bounds  → passes driver omega through unchanged (full control)
+     * Heading below minDeg   → PID-holds to minAbsHeadingDeg (overrides driver omega)
+     * Heading above maxDeg   → PID-holds to maxAbsHeadingDeg (overrides driver omega)
+     * }</pre>
+     *
+     * <p>Reuses the same headingPID and HEADING_PID_MAX_OMEGA as drivePointAt().
      * Bounds come from ShooterOutput.headingBoundsDeg — the range of robot headings
      * within which the turret can reach the target without exceeding its soft stops.
      *
@@ -427,12 +434,15 @@ public class SwerveDrive extends SubsystemBase implements IAimDriveState {
      * No drive speed. Robot resists being pushed from any direction.
      * Called by XLockCommand every loop while defense button is held.
      *
-     * Wheel angles (robot-relative, 0° = robot front):
-     *   FL:  45°    FR: -45°
-     *       \           /
-     *        X         X
-     *       /           \
-     *   BL: -45°    BR:  45°
+     * <p>Wheel angles (robot-relative, 0° = robot front):
+     *
+     * <pre>{@code
+     * FL:  45°    FR: -45°
+     *     \           /
+     *      X         X
+     *     /           \
+     * BL: -45°    BR:  45°
+     * }</pre>
      */
     public void lockWheelsX() {
         modules[0].setDesiredState(new SwerveModuleState(0.0, Rotation2d.fromDegrees( 45.0))); // FL
@@ -451,7 +461,7 @@ public class SwerveDrive extends SubsystemBase implements IAimDriveState {
      * Called exclusively by PathPlanner via the AutoBuilder lambda — not by driver commands.
      * Unlike drive(), no field-relative yaw rotation is applied; speeds go straight to modules.
      *
-     * Note: this is an intentional exception to the DriveInput-only command pattern.
+     * <p>Note: this is an intentional exception to the DriveInput-only command pattern.
      * PathPlanner outputs robot-relative speeds directly; routing through DriveInput would
      * require a coordinate-frame roundtrip for no benefit. See CLAUDE.md.
      *
@@ -475,7 +485,7 @@ public class SwerveDrive extends SubsystemBase implements IAimDriveState {
      * Configures PathPlanner's AutoBuilder using this subsystem's own geometry and state.
      * Call once from RobotContainer after SwerveDrive is constructed, before any path commands.
      *
-     * Module positions are recomputed from wheelBaseM — same math as the constructor.
+     * <p>Module positions are recomputed from wheelBaseM — same math as the constructor.
      * All PathPlanner dependencies are contained within SwerveDrive; RobotContainer
      * remains unaware of PathPlanner internals.
      */
@@ -573,11 +583,11 @@ public class SwerveDrive extends SubsystemBase implements IAimDriveState {
     /**
      * Returns the estimated robot pose at or nearest to the given FPGA timestamp.
      *
-     * Linearly interpolates between the two ring-buffer entries that bracket the
+     * <p>Linearly interpolates between the two ring-buffer entries that bracket the
      * requested timestamp. Falls back to the chronologically nearest stored entry
      * if the timestamp is outside the buffered window (~80 ms at 50 Hz).
      *
-     * Used by GamePieceVisionSubsystem to back-project game piece detections to
+     * <p>Used by GamePieceVisionSubsystem to back-project game piece detections to
      * field coordinates at the exact moment the camera frame was captured.
      *
      * @param timestampSecs  FPGA timestamp of the camera frame (seconds)

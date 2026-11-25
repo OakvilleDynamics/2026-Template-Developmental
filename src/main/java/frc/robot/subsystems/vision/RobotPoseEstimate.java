@@ -3,21 +3,23 @@ package frc.robot.subsystems.vision;
 import edu.wpi.first.math.geometry.Pose3d;
 
 /**
- * RobotPoseEstimate.java
- * PATH: src/main/java/frc/robot/subsystems/vision/RobotPoseEstimate.java
- *
  * Immutable snapshot of a single robot pose estimate from one camera.
  * Carries the full 3D pose plus metadata about the quality of the estimate.
  *
- * ─── FIELDS ──────────────────────────────────────────────────────────────────
+ * <h2>Fields</h2>
+ *
+ * <pre>{@code
  * pose           — full 3D pose: x, y, z (meters) + roll, pitch, yaw (radians)
  * timestampSecs  — FPGA time when this estimate was captured (for latency compensation)
  * ambiguity      — PhotonVision ambiguity score (0.0 = perfect, 1.0 = worst)
  * tagCount       — number of AprilTags used to produce this estimate
  * cameraName     — which camera produced this estimate ("front_cam" / "rear_cam")
  * isValid        — false if no tags were visible or estimate was filtered out
+ * }</pre>
  *
- * ─── ACCESSING INDIVIDUAL VALUES ─────────────────────────────────────────────
+ * <h2>Accessing individual values</h2>
+ *
+ * <pre>{@code
  * pose.getX()                       — field X position (meters, field-relative)
  * pose.getY()                       — field Y position (meters, field-relative)
  * pose.getZ()                       — height above field floor (meters)
@@ -25,14 +27,18 @@ import edu.wpi.first.math.geometry.Pose3d;
  * pose.getRotation().getY()         — pitch (radians)
  * pose.getRotation().getZ()         — yaw   (radians, field-relative heading)
  * pose.toPose2d()                   — flattened 2D pose for odometry fusion later
+ * }</pre>
  *
- * ─── USAGE ───────────────────────────────────────────────────────────────────
+ * <h2>Usage</h2>
+ *
+ * <pre>{@code
  * RobotPoseEstimate best = vision.getBestPose();
  * if (best.isValid) {
  *     double x   = best.pose.getX();               // meters
  *     double y   = best.pose.getY();               // meters
  *     double yaw = best.pose.getRotation().getZ(); // radians
  * }
+ * }</pre>
  */
 public class RobotPoseEstimate {
 
@@ -90,12 +96,15 @@ public class RobotPoseEstimate {
     /**
      * Returns the better of two estimates.
      *
-     * Selection priority:
-     *   1. Valid over invalid
-     *   2. More tags over fewer tags (multi-tag is more reliable)
-     *   3. Lower ambiguity over higher ambiguity
+     * <p>Selection priority:
      *
-     * Used by VisionSubsystem to pick the best estimate from two cameras.
+     * <pre>{@code
+     * 1. Valid over invalid
+     * 2. More tags over fewer tags (multi-tag is more reliable)
+     * 3. Lower ambiguity over higher ambiguity
+     * }</pre>
+     *
+     * <p>Used by VisionSubsystem to pick the best estimate from two cameras.
      */
     public static RobotPoseEstimate best(RobotPoseEstimate a, RobotPoseEstimate b) {
         if (!a.isValid) return b;

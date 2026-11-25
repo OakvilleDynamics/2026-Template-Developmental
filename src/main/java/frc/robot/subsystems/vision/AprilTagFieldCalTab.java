@@ -11,42 +11,46 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * AprilTagFieldCalTab.java
- * PATH: src/main/java/frc/robot/subsystems/vision/AprilTagFieldCalTab.java
- *
  * Publishes the data behind the "Field Calibration" Elastic tab.
  * Only talks to VisionSubsystem — no direct access to internal vision objects.
  *
- * Widget placement, sizes and types are defined in the Elastic layout file, not
+ * <p>Widget placement, sizes and types are defined in the Elastic layout file, not
  * in code. Values and operator inputs are published through Dashboard under
  * "Field Calibration/" (see Dashboard for the NetworkTables root).
  *
- * ─── TAB LAYOUT (build in Elastic) ───────────────────────────────────────────
+ * <h2>Tab layout (build in Elastic)</h2>
  *
+ * <pre>{@code
  * TOP HALF — Camera feeds
  *   Left:  Front camera MJPEG stream (PhotonVision native annotation)
  *   Right: Rear camera MJPEG stream  (PhotonVision native annotation)
  *   Add as Camera Stream widgets from the /CameraPublisher topics.
+ * }</pre>
  *
- * MIDDLE — Tag calibration table (published to NetworkTables for Glass)
- *   Three rows per tag: Cam1, Cam2, Blend
- *   Tags not visible to a camera: read pose shown as N/A
- *   Offset input fields pre-populated with recommended values
+ * <p>MIDDLE — Tag calibration table (published to NetworkTables for Glass)
+ * Three rows per tag: Cam1, Cam2, Blend
+ * Tags not visible to a camera: read pose shown as N/A
+ * Offset input fields pre-populated with recommended values
  *
- * BOTTOM STRIP — Five equally-spaced groups:
- *   Blended POSE x/y/theta (deg) |
- *   Front cam POSE x/y/theta (deg) |
- *   Rear cam POSE x/y/theta (deg) |
- *   Far corner x/y (ft) |
- *   [Generate Offsets File] button + threshold slider
+ * <p>BOTTOM STRIP — Five equally-spaced groups:
  *
- * ─── GLASS TABLE ─────────────────────────────────────────────────────────────
- * Tag table data published to NetworkTables under /FieldCalibration/Tags/
+ * <pre>{@code
+ * Blended POSE x/y/theta (deg) |
+ * Front cam POSE x/y/theta (deg) |
+ * Rear cam POSE x/y/theta (deg) |
+ * Far corner x/y (ft) |
+ * [Generate Offsets File] button + threshold slider
+ * }</pre>
+ *
+ * <h2>Glass table</h2>
+ *
+ * <p>Tag table data published to NetworkTables under /FieldCalibration/Tags/
  * Open Glass (WPILib tool) on second monitor to view the full scrollable table.
  * Launch: C:\Users\Public\wpilib\2026\tools\glass.exe
  *
- * ─── USAGE ───────────────────────────────────────────────────────────────────
- * Construct once in RobotContainer.
+ * <h2>Usage</h2>
+ *
+ * <p>Construct once in RobotContainer.
  * Call update() from RobotContainer.updateCalibrationTab() every loop.
  */
 public class AprilTagFieldCalTab {

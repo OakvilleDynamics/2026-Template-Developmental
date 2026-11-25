@@ -22,39 +22,45 @@ import frc.robot.constants.GamePieceConstants;
 import frc.robot.subsystems.swerveDrive.SwerveDrive;
 
 /**
- * GamePieceVisionSubsystem.java
- * PATH: src/main/java/frc/robot/subsystems/vision/GamePieceVisionSubsystem.java
- *
  * Tracks game pieces on the field using an intake-mounted PhotonVision camera.
  * Converts raw pixel detections to field-relative positions using robot pose
  * history from SwerveDrive.getPoseAtTime() for latency compensation.
  *
- * ─── DETECTION PIPELINE ──────────────────────────────────────────────────────
- * Every loop:
- *   1. Pull the latest PhotonPipelineResult from the intake camera.
- *   2. Retrieve the robot pose at the frame's capture timestamp.
- *   3. Back-project each detected target from pixel angles (yaw, pitch) to a
- *      field-relative Translation2d using floor-intersection geometry.
- *   4. Merge new detections into the tracked list (update existing nearby entries
- *      or add new ones). Expire stale entries.
+ * <h2>Detection pipeline</h2>
  *
- * ─── BACK-PROJECTION MATH ────────────────────────────────────────────────────
- *   verticalAngleRad = cameraMountPitchRad - toRadians(target.getPitch())
- *   horizontalDist   = (cameraHeight - GAME_PIECE_HEIGHT) / tan(verticalAngle)
- *   bearingField     = cameraYawField + toRadians(target.getYaw())
- *   pieceX           = cameraX + horizontalDist * cos(bearingField)
- *   pieceY           = cameraY + horizontalDist * sin(bearingField)
+ * <p>Every loop:
  *
- * ─── HEALTH MONITORING ───────────────────────────────────────────────────────
- * isCameraConnected() — true if the camera has streamed any result this session.
+ * <pre>{@code
+ * 1. Pull the latest PhotonPipelineResult from the intake camera.
+ * 2. Retrieve the robot pose at the frame's capture timestamp.
+ * 3. Back-project each detected target from pixel angles (yaw, pitch) to a
+ *    field-relative Translation2d using floor-intersection geometry.
+ * 4. Merge new detections into the tracked list (update existing nearby entries
+ *    or add new ones). Expire stale entries.
+ * }</pre>
+ *
+ * <h2>Back-projection math</h2>
+ *
+ * <pre>{@code
+ * verticalAngleRad = cameraMountPitchRad - toRadians(target.getPitch())
+ * horizontalDist   = (cameraHeight - GAME_PIECE_HEIGHT) / tan(verticalAngle)
+ * bearingField     = cameraYawField + toRadians(target.getYaw())
+ * pieceX           = cameraX + horizontalDist * cos(bearingField)
+ * pieceY           = cameraY + horizontalDist * sin(bearingField)
+ * }</pre>
+ *
+ * <h2>Health monitoring</h2>
+ *
+ * <p>isCameraConnected() — true if the camera has streamed any result this session.
  * hasPieceDetection() — true if at least one piece is currently tracked.
  * publishHealthStatus() — called from Robot.disabledPeriodic() for pre-match UI.
  *
- * Pre-match driver check: place a game piece 1–2 m in front of the intake and
+ * <p>Pre-match driver check: place a game piece 1–2 m in front of the intake and
  * confirm "Piece Detected" shows true on the Elastic "Vision Health" tab.
  *
- * ─── CLUSTERING ──────────────────────────────────────────────────────────────
- * getClusters() groups tracked pieces by proximity (CLUSTER_RADIUS_M).
+ * <h2>Clustering</h2>
+ *
+ * <p>getClusters() groups tracked pieces by proximity (CLUSTER_RADIUS_M).
  * Uses a greedy sweep: nearest unassigned piece starts each cluster; remaining
  * pieces within CLUSTER_RADIUS_M join it. Clusters are sorted by centroid
  * distance from the robot, nearest first.
@@ -232,11 +238,11 @@ public class GamePieceVisionSubsystem extends SubsystemBase {
      * Returns game pieces grouped into clusters, sorted by cluster centroid
      * distance from the robot (nearest cluster first).
      *
-     * Clustering: greedy sweep — nearest unassigned piece starts each cluster,
+     * <p>Clustering: greedy sweep — nearest unassigned piece starts each cluster,
      * then all remaining pieces within CLUSTER_RADIUS_M join it. Repeats until
      * all pieces are assigned.
      *
-     * Each inner list contains the field positions of all pieces in that cluster.
+     * <p>Each inner list contains the field positions of all pieces in that cluster.
      * An empty outer list means no pieces are tracked.
      *
      * @param robotPose  Current robot pose (from SwerveDrive.getPose())
