@@ -241,8 +241,9 @@ vanish. Write Javadoc with these tags so hovers stay readable:
 |---|---|
 | New paragraph | blank ` *` line, then `<p>` at the start of the paragraph (not the first one) |
 | Section heading | `<h2>Title</h2>` in class/interface/enum docs; `<h4>Title</h4>` in method/field docs |
-| Bullet list | `<ul>` / `<li>…</li>` / `</ul>` |
-| Code, tables, formulas, numbered steps — anything whose line layout matters | `<pre>{@code … }</pre>` (layout kept, `<>` safe); if the content has unbalanced `{}` or a line starting with `@`, use plain `<pre>` and escape `<` `>` `&` `@` as `&lt;` `&gt;` `&amp;` `&#64;` |
+| Bullet list — including "name — description" and "key : value" tables (enum values, fields, units, modes) | `<ul>` / `<li>…</li>` / `</ul>`; one `<li>` per row, name first: `<li>{@code ENCODER_SYNC} — description</li>` for identifiers, `<li><b>Position</b>: degrees</li>` for plain words |
+| Numbered steps | `<ol>` / `<li>…</li>` / `</ol>` |
+| Code examples, formulas, ASCII diagrams — only things that must keep their exact line layout | `<pre>{@code … }</pre>` (layout kept, `<>` safe); if the content has unbalanced `{}` or a line starting with `@`, use plain `<pre>` and escape `<` `>` `&` `@` as `&lt;` `&gt;` `&amp;` `&#64;`. Never use `<pre>` for prose or lists — it renders as a code block. |
 | Inline code / identifiers with `<>` | `{@code List<Translation2d>}` |
 | Comparisons in prose | `≤` / `≥` (or `&lt;`); never a bare `<` |
 | Link to another class or method | `{@link SwerveDrive#getPose()}` |
