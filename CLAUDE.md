@@ -22,7 +22,7 @@ From-scratch swerve drive robot codebase for **FRC Team 8719**, built using:
 - **Drive motors:** Kraken X60 (TalonFX, Phoenix 6)
 - **Steer motors:** Minion (TalonFX, Phoenix 6)
 - **Steer encoders:** Thrifty absolute analog encoders (0–3.3V, roboRIO analog ports)
-- **IMU:** CTRE Pigeon 2.0 (CAN ID: `SwerveConstants.PIGEON2_CAN_ID`; Phoenix 6 API — `getYaw().getValueAsDouble()`, `getAngularVelocityZDevice()`, `getAccelerationX/Y()`; calibration done via Phoenix Tuner X, not in code)
+- **IMU:** CTRE Pigeon 2.0 (CAN ID: `CANIDs.PIGEON2`; accessed through `IGyroIO` / `CTREPigeon2Gyro`; calibration done via Phoenix Tuner X, not in code)
 
 ### Vision
 Two dedicated OrangePi 5 coprocessors — isolated by role for reliability and headroom:
@@ -63,9 +63,12 @@ src/main/java/frc/lib/
 │   │   ├── MotorVendor.java                ← CTRE_TALONFX | REV_SPARKMAX | REV_SPARKFLEX | THRIFTYBOT_NOVA
 │   │   ├── CTREMotor.java / REVMotor.java / NovaMotor.java
 │   │   └── MotorModels.java                ← motor datasheet constants (kT, stall, free speed)
-│   └── encoder/
-│       ├── IAbsoluteEncoderIO.java
-│       └── ThriftyAnalogEncoder.java / CTRECANcoderEncoder.java / REVThroughBoreEncoder.java
+│   ├── encoder/
+│   │   ├── IAbsoluteEncoderIO.java
+│   │   └── ThriftyAnalogEncoder.java / CTRECANcoderEncoder.java / REVThroughBoreEncoder.java
+│   └── gyro/
+│       ├── IGyroIO.java
+│       └── CTREPigeon2Gyro.java
 │
 ├── control/
 │   ├── MechanismUnit.java                  ← leader + followers on IMotorIO; FF, ramps, sync, limits, homing

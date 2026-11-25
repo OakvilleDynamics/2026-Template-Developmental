@@ -42,7 +42,8 @@ src/main/java/frc/lib/
 ├── util/                   ← units, Dashboard, RobotLogger, ConfigVerifier
 ├── hardware/
 │   ├── motor/              ← IMotorIO interface + CTREMotor / REVMotor / NovaMotor, MotorIOConfig, MotorModels
-│   └── encoder/            ← IAbsoluteEncoderIO + Thrifty analog / CANcoder / Through Bore
+│   ├── encoder/            ← IAbsoluteEncoderIO + Thrifty analog / CANcoder / Through Bore
+│   └── gyro/               ← IGyroIO + CTREPigeon2Gyro
 ├── control/
 │   ├── MechanismUnit       ← One mechanism's motor group on IMotorIO (FF, ramps, sync, limits, homing)
 │   ├── MechanismConfig     ← Immutable config (Builder); derives one MotorIOConfig per motor

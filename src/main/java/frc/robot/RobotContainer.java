@@ -21,6 +21,7 @@ import frc.robot.pathplanning.GamePieceHuntCommand.HuntMode;
 import frc.robot.pathplanning.PathfindCommand;
 import frc.robot.subsystems.swerveDrive.SwerveDrive;
 import frc.lib.hardware.encoder.IAbsoluteEncoderIO;
+import frc.lib.hardware.gyro.CTREPigeon2Gyro;
 import frc.lib.hardware.motor.IMotorIO;
 import frc.lib.swerve.SwerveHardware;
 import frc.lib.swerve.SwerveModule;
@@ -194,6 +195,7 @@ public class RobotContainer {
 
         drive = new SwerveDrive(
             new SwerveModule[]{ flModule, frModule, blModule, brModule },
+            new CTREPigeon2Gyro(CANIDs.PIGEON2),
             WHEEL_BASE_IN, FRAME_IN, BUMPER_IN, WHEEL_DIAM_IN, HEADING_PID
         );
 

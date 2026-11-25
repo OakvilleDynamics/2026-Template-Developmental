@@ -19,7 +19,6 @@ import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.util.sendable.SendableBuilder;
 
-import com.ctre.phoenix6.hardware.Pigeon2;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -27,10 +26,10 @@ import edu.wpi.first.wpilibj.Timer;
 import frc.lib.util.Dashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.PathPlannerConstants;
-import frc.robot.constants.CANIDs;
 import frc.robot.constants.SwerveConstants;
 import frc.robot.constants.VisionConstants;
 import frc.lib.util.RobotLogger;
+import frc.lib.hardware.gyro.IGyroIO;
 import frc.lib.mechanisms.shooter.IAimDriveState;
 import frc.lib.swerve.DriveInput;
 import frc.lib.swerve.DriveOdometryState;
@@ -94,7 +93,7 @@ public class SwerveDrive extends SubsystemBase implements IAimDriveState {
     // Hardware
     // ─────────────────────────────────────────────────────────────────────────
     private final SwerveModule[] modules;
-    private final Pigeon2 imu = new Pigeon2(CANIDs.PIGEON2);
+    private final IGyroIO gyro;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Kinematics and pose estimation
@@ -152,7 +151,8 @@ public class SwerveDrive extends SubsystemBase implements IAimDriveState {
 
     /**
      * @param modules          [FL, FR, BL, BR] — constructed in RobotContainer
-     * @param wheelBaseInches  double[2] { x, y } — steering axis spacing in INCHES
+     * @param gyro             drivetrain IMU — constructed in RobotContainer
+     * @param wheelBaseInches double[2] { x, y } — steering axis spacing in INCHES
      * @param frameInches      double[2] { x, y } — frame outer dimensions in INCHES
      * @param bumperInches     double[2] { x, y } — bumper outer dimensions in INCHES
      * @param wheelDiamInches  Drive wheel diameter in INCHES
@@ -160,6 +160,7 @@ public class SwerveDrive extends SubsystemBase implements IAimDriveState {
      */
     public SwerveDrive(
             SwerveModule[] modules,
+            IGyroIO gyro,
             double[] wheelBaseInches,
             double[] frameInches,
             double[] bumperInches,
@@ -167,6 +168,7 @@ public class SwerveDrive extends SubsystemBase implements IAimDriveState {
             double[] headingPID) {
 
         this.modules = modules;
+        this.gyro    = gyro;
 
         // Convert all geometry to meters on entry
         this.wheelBaseM       = new double[]{ Units.inchesToMeters(wheelBaseInches[0]),
@@ -208,8 +210,6 @@ public class SwerveDrive extends SubsystemBase implements IAimDriveState {
         headingKdTunable  = Dashboard.tunable("Drive/HeadingPID/kD", headingPID[2]);
         blendAlphaTunable = Dashboard.tunable("Drive/Blend Alpha", blendAlpha);
 
-        // Pigeon 2 self-calibrates on power-up. Temperature calibration is performed
-        // once in Phoenix Tuner X — no runtime calibrate() call needed.
         publishGeometry();
 
         // Add swerve module states to Elastic
@@ -566,9 +566,8 @@ public class SwerveDrive extends SubsystemBase implements IAimDriveState {
 
     public Pose2d    getPose()              { return poseEstimator.getEstimatedPosition(); }
     public Rotation2d getYaw() {
-        // Pigeon 2 reports yaw in degrees, CCW positive (NWU).
-        // WPILib also assumes CCW+ (NWU coordinate frame)
-        return Rotation2d.fromDegrees(imu.getYaw().getValueAsDouble());
+        // IGyroIO reports CCW positive, matching WPILib's NWU frame
+        return Rotation2d.fromDegrees(gyro.getYawDeg());
     }
 
     /**
@@ -654,7 +653,7 @@ public class SwerveDrive extends SubsystemBase implements IAimDriveState {
         );
     }
 
-    public void zeroYaw() { imu.setYaw(0.0); }
+    public void zeroYaw() { gyro.setYawDeg(0.0); }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Internal helpers
@@ -712,11 +711,11 @@ public class SwerveDrive extends SubsystemBase implements IAimDriveState {
             new double[]{corX, corY}, new double[]{corVx, corVy}, new double[]{corAx, corAy}
         );
 
-        // Pigeon 2: getAngularVelocityZDevice() → deg/s, getAcceleration*() → g's
-        double imuAngVelRad   = Math.toRadians(imu.getAngularVelocityZDevice().getValueAsDouble());
+        // IGyroIO: yaw rate in deg/s, acceleration in g
+        double imuAngVelRad   = Math.toRadians(gyro.getYawRateDps());
         double imuAngAccel    = (imuAngVelRad - prevImuAngVel) / dt;
-        double imuAxMs2       = imu.getAccelerationX().getValueAsDouble() * 9.81;
-        double imuAyMs2       = imu.getAccelerationY().getValueAsDouble() * 9.81;
+        double imuAxMs2       = gyro.getAccelXG() * 9.81;
+        double imuAyMs2       = gyro.getAccelYG() * 9.81;
         double imuLinAccelMag = Math.hypot(imuAxMs2, imuAyMs2);
         double imuLinAccelHdg = Math.atan2(imuAyMs2, imuAxMs2);
         double imuLinVelX     = prevLinVelX + imuAxMs2 * dt;
