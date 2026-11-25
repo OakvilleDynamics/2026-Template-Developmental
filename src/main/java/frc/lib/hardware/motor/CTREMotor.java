@@ -23,28 +23,30 @@ import java.util.List;
 import frc.lib.util.ConfigVerifyResult;
 
 /**
- * CTREMotor.java
- * PATH: src/main/java/frc/lib/hardware/motor/CTREMotor.java
- *
  * IMotorIO for CTRE TalonFX (Phoenix 6). Covers Kraken X60, Kraken X44, Minion.
  *
- * ─── GEAR RATIO ──────────────────────────────────────────────────────────────
- * Applied via SensorToMechanismRatio, so every Phoenix 6 position/velocity
+ * <h2>Gear ratio</h2>
+ *
+ * <p>Applied via SensorToMechanismRatio, so every Phoenix 6 position/velocity
  * signal reports in mechanism-shaft units natively.
  *
- * ─── FEED-FORWARD ────────────────────────────────────────────────────────────
- * kS/kV/kA run on-controller in Slot0. Rio-computed FF is injected each cycle
+ * <h2>Feed-forward</h2>
+ *
+ * <p>kS/kV/kA run on-controller in Slot0. Rio-computed FF is injected each cycle
  * via .withFeedForward() on every velocity/position request.
  *
- * ─── MOTION MAGIC ────────────────────────────────────────────────────────────
- * setPosition() uses MotionMagicVoltage when motionCruiseVelocityRps > 0,
+ * <h2>Motion magic</h2>
+ *
+ * <p>setPosition() uses MotionMagicVoltage when motionCruiseVelocityRps > 0,
  * PositionVoltage otherwise. S-curve when motionJerkRpss3 > 0.
  *
- * ─── CONTINUOUS WRAP ─────────────────────────────────────────────────────────
- * ClosedLoopGeneral.ContinuousWrap — Phoenix 6 takes the shortest path.
+ * <h2>Continuous wrap</h2>
  *
- * ─── CTRE-ONLY EXTRAS ────────────────────────────────────────────────────────
- * setTorqueCurrent(), setMotionMagicExpoPosition(), setNeutralMode(),
+ * <p>ClosedLoopGeneral.ContinuousWrap — Phoenix 6 takes the shortest path.
+ *
+ * <h2>CTRE-only extras</h2>
+ *
+ * <p>setTorqueCurrent(), setMotionMagicExpoPosition(), setNeutralMode(),
  * getTalonFX() — reach them by casting a IMotorIO to CTREMotor.
  */
 public class CTREMotor implements IMotorIO {

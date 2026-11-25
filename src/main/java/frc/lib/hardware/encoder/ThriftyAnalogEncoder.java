@@ -6,17 +6,14 @@ import edu.wpi.first.wpilibj.AnalogInput;
 import edu.wpi.first.wpilibj.RobotController;
 
 /**
- * ThriftyAnalogEncoder.java
- * PATH: src/main/java/frc/lib/hardware/encoder/ThriftyAnalogEncoder.java
- *
  * IAbsoluteEncoderIO for the Thrifty absolute magnetic encoder wired to a
  * roboRIO analog port.
  *
- * The encoder runs on the roboRIO's 5 V rail and its output is ratiometric:
+ * <p>The encoder runs on the roboRIO's 5 V rail and its output is ratiometric:
  * one full turn spans 0 V to the rail voltage. (A jumper selects 3.3 V
  * operation, mainly for FTC — leave it in the default 5 V position.)
  *
- * Reading is delegated to WPILib's AnalogEncoder, which divides by the
+ * <p>Reading is delegated to WPILib's AnalogEncoder, which divides by the
  * measured 5 V rail each read, so rail sag does not shift the angle. Units are
  * rotations (fullRange = 1); the offset is the raw rotation reading when the
  * module points in its zero direction.

@@ -1,15 +1,12 @@
 package frc.lib.hardware.gyro;
 
 /**
- * IGyroIO.java
- * PATH: src/main/java/frc/lib/hardware/gyro/IGyroIO.java
- *
  * Vendor-agnostic interface for the drivetrain IMU.
  *
- * Yaw and yaw rate are counter-clockwise positive viewed from above (WPILib's
+ * <p>Yaw and yaw rate are counter-clockwise positive viewed from above (WPILib's
  * NWU convention). Acceleration is in g along the device X and Y axes.
  *
- * Implementations: CTREPigeon2Gyro.
+ * <p>Implementations: CTREPigeon2Gyro.
  */
 public interface IGyroIO {
 

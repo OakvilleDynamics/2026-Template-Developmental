@@ -13,29 +13,31 @@ import java.util.List;
 import frc.lib.util.ConfigVerifyResult;
 
 /**
- * NovaMotor.java
- * PATH: src/main/java/frc/lib/hardware/motor/NovaMotor.java
- *
  * IMotorIO for the ThriftyBot Nova controller (NEO, Minion, Pulsar, brushed).
  *
- * ─── GEAR RATIO — MANUAL SCALING ─────────────────────────────────────────────
- * Nova has no conversion-factor API. Setpoints are multiplied by gearRatio
+ * <h2>Gear ratio — manual scaling</h2>
+ *
+ * <p>Nova has no conversion-factor API. Setpoints are multiplied by gearRatio
  * before being sent; feedback is divided by gearRatio on readback.
  *
- * ─── FEED-FORWARD ────────────────────────────────────────────────────────────
- * kS maps to Nova's pid0 FF term (closest static-FF equivalent). kV/kA are not
+ * <h2>Feed-forward</h2>
+ *
+ * <p>kS maps to Nova's pid0 FF term (closest static-FF equivalent). kV/kA are not
  * configurable on-controller. Rio-computed FF is injected natively as volts via
  * setVelocity(rps, ffVolts) / setPosition(rot, ffVolts).
  *
- * ─── MOTION PROFILE ──────────────────────────────────────────────────────────
- * No MotionMagic/MAXMotion equivalent — hasHardwareMotionProfile() is false,
+ * <h2>Motion profile</h2>
+ *
+ * <p>No MotionMagic/MAXMotion equivalent — hasHardwareMotionProfile() is false,
  * so MechanismUnit applies its software setpoint step-limiter instead.
  *
- * ─── CONTINUOUS WRAP ─────────────────────────────────────────────────────────
- * No hardware wrap — setPosition() computes the shortest path in software.
+ * <h2>Continuous wrap</h2>
  *
- * ─── FOLLOWERS ───────────────────────────────────────────────────────────────
- * follow() mirrors the leader's CAN output. Inverted follow is not supported in
+ * <p>No hardware wrap — setPosition() computes the shortest path in software.
+ *
+ * <h2>Followers</h2>
+ *
+ * <p>follow() mirrors the leader's CAN output. Inverted follow is not supported in
  * software (use physical mounting). ENCODER_SYNC is not supported — independent
  * encoder readback on a following Nova is not reliable.
  */

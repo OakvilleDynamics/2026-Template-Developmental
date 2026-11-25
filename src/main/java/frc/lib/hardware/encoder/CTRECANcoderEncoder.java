@@ -3,17 +3,14 @@ package frc.lib.hardware.encoder;
 import com.ctre.phoenix6.hardware.CANcoder;
 
 /**
- * CTRECANcoderEncoder.java
- * PATH: src/main/java/frc/lib/hardware/encoder/CTRECANcoderEncoder.java
- *
  * IAbsoluteEncoderIO for the CTRE CANcoder (Phoenix 6).
  * Operates on the standard roboRIO CAN bus — no CANivore required.
  *
- * getAbsolutePosition() returns rotations in [-0.5, 0.5). The mounting-angle
+ * <p>getAbsolutePosition() returns rotations in [-0.5, 0.5). The mounting-angle
  * offset is subtracted and the result is normalized to [0, 1) before converting
  * to radians, so zero radians always corresponds to the zero direction.
  *
- * NOTE: For pure seed-at-startup use, FusedCANcoder / SyncCANcoder (which provide
+ * <p>NOTE: For pure seed-at-startup use, FusedCANcoder / SyncCANcoder (which provide
  * continuous position tracking) are not configured here. If the steer motor is also
  * CTRE TalonFX, consider enabling FusedCANcoder in CTREMotor to eliminate
  * encoder drift over long matches (TODO).

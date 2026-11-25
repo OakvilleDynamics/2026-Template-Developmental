@@ -1,36 +1,40 @@
 package frc.lib.hardware.motor;
 
 /**
- * MotorIOConfig.java
- * PATH: src/main/java/frc/lib/hardware/motor/MotorIOConfig.java
- *
  * Immutable hardware settings for ONE motor controller. Build with
  * MotorIOConfig.builder(canId, vendor), then pass to IMotorIO.create().
  *
- * Everything a vendor implementation needs is in this object — no IMotorIO
+ * <p>Everything a vendor implementation needs is in this object — no IMotorIO
  * implementation reads robot constants. That is what lets a mechanism be copied
  * into another robot project without dragging this robot's constants along.
  *
- * ─── UNIT CONTRACT ───────────────────────────────────────────────────────────
- *   Position      : rotations (mechanism shaft, after gear ratio)
- *   Velocity      : rotations/second (mechanism shaft)
- *   Soft limits   : rotations (mechanism shaft); Double.NaN = disabled
- *   Current       : amps
- *   Ramp / time   : seconds
+ * <h2>Unit contract</h2>
  *
- * ─── GEAR RATIO CONVENTION ───────────────────────────────────────────────────
- *   gearRatio = motor rotations per mechanism shaft rotation (10:1 reduction → 10.0).
- *   Matches Phoenix 6 SensorToMechanismRatio. Applied per vendor so every
- *   IMotorIO reads and commands in mechanism-shaft units.
+ * <pre>{@code
+ * Position      : rotations (mechanism shaft, after gear ratio)
+ * Velocity      : rotations/second (mechanism shaft)
+ * Soft limits   : rotations (mechanism shaft); Double.NaN = disabled
+ * Current       : amps
+ * Ramp / time   : seconds
+ * }</pre>
  *
- * ─── VENDOR SUPPORT NOTES ────────────────────────────────────────────────────
- *   statorCurrentLimitAmps : CTRE only (REV/Nova use the supply limit)
- *   motionJerkRpss3        : CTRE MotionMagic S-curve only
- *   kS / kA                : REV and Nova do not run these on-controller
- *                            (Nova maps kS to its FF term)
- *   continuousWrap         : hardware on CTRE/REV, software on Nova
- *   signal rates / optimizeCanUtilization : CTRE only
- *   novaMotorType          : Nova only — checked by ConfigVerifier
+ * <h2>Gear ratio convention</h2>
+ *
+ * <p>gearRatio = motor rotations per mechanism shaft rotation (10:1 reduction → 10.0).
+ * Matches Phoenix 6 SensorToMechanismRatio. Applied per vendor so every
+ * IMotorIO reads and commands in mechanism-shaft units.
+ *
+ * <h2>Vendor support notes</h2>
+ *
+ * <pre>{@code
+ * statorCurrentLimitAmps : CTRE only (REV/Nova use the supply limit)
+ * motionJerkRpss3        : CTRE MotionMagic S-curve only
+ * kS / kA                : REV and Nova do not run these on-controller
+ *                          (Nova maps kS to its FF term)
+ * continuousWrap         : hardware on CTRE/REV, software on Nova
+ * signal rates / optimizeCanUtilization : CTRE only
+ * novaMotorType          : Nova only — checked by ConfigVerifier
+ * }</pre>
  */
 public final class MotorIOConfig {
 
@@ -254,6 +258,7 @@ public final class MotorIOConfig {
 
         /**
          * CAN status signal rates (CTRE only).
+         *
          * @param updateHz         velocity / position / current / voltage signals
          * @param tempUpdateHz     temperature signal
          * @param optimizeCanUsage true = silence un-registered signals (flip only

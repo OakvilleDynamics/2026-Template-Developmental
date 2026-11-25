@@ -26,34 +26,37 @@ import java.util.List;
 import frc.lib.util.ConfigVerifyResult;
 
 /**
- * REVMotor.java
- * PATH: src/main/java/frc/lib/hardware/motor/REVMotor.java
- *
  * IMotorIO for REV SparkMax (NEO, NEO 550) and SparkFlex (NEO Vortex), REVLib 2026.
  * The vendor value selects the controller: REV_SPARKMAX or REV_SPARKFLEX.
  *
- * ─── GEAR RATIO ──────────────────────────────────────────────────────────────
- * positionConversionFactor = 1 / gearRatio (rotations)
+ * <h2>Gear ratio</h2>
+ *
+ * <p>positionConversionFactor = 1 / gearRatio (rotations)
  * velocityConversionFactor = 1 / (gearRatio × 60) (RPS, not RPM)
  * All encoder reads return mechanism-shaft units natively.
  *
- * ─── FEED-FORWARD ────────────────────────────────────────────────────────────
- * kP/kI/kD and kV run on-controller in slot 0. kS/kA are not set on-controller.
+ * <h2>Feed-forward</h2>
+ *
+ * <p>kP/kI/kD and kV run on-controller in slot 0. kS/kA are not set on-controller.
  * Rio-computed FF injected via setSetpoint(..., arbFF, ArbFFUnits.kVoltage).
  *
- * ─── MOTION PROFILE ──────────────────────────────────────────────────────────
- * MAXMotion (trapezoidal) when motionCruiseVelocityRps > 0. Jerk is ignored.
+ * <h2>Motion profile</h2>
  *
- * ─── CONTINUOUS WRAP ─────────────────────────────────────────────────────────
- * positionWrappingEnabled over [-0.5, 0.5) mechanism rotations.
+ * <p>MAXMotion (trapezoidal) when motionCruiseVelocityRps > 0. Jerk is ignored.
  *
- * ─── LIVE PID TUNING ─────────────────────────────────────────────────────────
- * Gain updates use kNoResetSafeParameters + kNoPersistParameters — no flash
+ * <h2>Continuous wrap</h2>
+ *
+ * <p>positionWrappingEnabled over [-0.5, 0.5) mechanism rotations.
+ *
+ * <h2>Live PID tuning</h2>
+ *
+ * <p>Gain updates use kNoResetSafeParameters + kNoPersistParameters — no flash
  * wear and no other settings touched. A configure() call briefly occupies CAN,
  * so avoid repeated gain changes in time-critical match code.
  *
- * ─── THROUGH BORE ENCODER ────────────────────────────────────────────────────
- * getSpark() exposes the controller so REVThroughBoreEncoder can share it.
+ * <h2>Through bore encoder</h2>
+ *
+ * <p>getSpark() exposes the controller so REVThroughBoreEncoder can share it.
  */
 public class REVMotor implements IMotorIO {
 

@@ -6,17 +6,14 @@ import frc.lib.hardware.motor.IMotorIO;
 import frc.lib.hardware.motor.REVMotor;
 
 /**
- * REVThroughBoreEncoder.java
- * PATH: src/main/java/frc/lib/hardware/encoder/REVThroughBoreEncoder.java
- *
  * IAbsoluteEncoderIO for the REV Through Bore encoder wired to the data port of
  * a SparkMax or SparkFlex.
  *
- * The encoder is read through the motor controller it is plugged into, so it is
+ * <p>The encoder is read through the motor controller it is plugged into, so it is
  * built from that controller's IMotorIO — there is exactly one controller
  * instance per CAN ID. Only valid with a REV IMotorIO (REV_SPARKMAX / REV_SPARKFLEX).
  *
- * getPosition() returns [0, 1) rotations. The mounting-angle offset is subtracted
+ * <p>getPosition() returns [0, 1) rotations. The mounting-angle offset is subtracted
  * and the result is normalized to [0, 1) before converting to radians, so zero
  * radians always corresponds to the zero direction.
  */

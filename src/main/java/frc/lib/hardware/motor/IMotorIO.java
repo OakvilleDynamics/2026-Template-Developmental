@@ -3,28 +3,31 @@ package frc.lib.hardware.motor;
 import frc.lib.util.ConfigVerifyResult;
 
 /**
- * IMotorIO.java
- * PATH: src/main/java/frc/lib/hardware/motor/IMotorIO.java
- *
  * The single vendor-agnostic interface for ONE motor controller. Every motor on
  * the robot — swerve drive, swerve steer, and every mechanism motor — is a IMotorIO.
  *
- *   IMotorIO motor = IMotorIO.create(MotorIOConfig.builder(12, MotorVendor.REV_SPARKMAX)
- *       .withGearRatio(25.0)
- *       .build());
+ * <pre>{@code
+ * IMotorIO motor = IMotorIO.create(MotorIOConfig.builder(12, MotorVendor.REV_SPARKMAX)
+ *     .withGearRatio(25.0)
+ *     .build());
+ * }</pre>
  *
- * Swapping a motor to a different vendor is a one-value change: the MotorVendor
+ * <p>Swapping a motor to a different vendor is a one-value change: the MotorVendor
  * in its MotorIOConfig. Nothing above this interface imports a vendor library.
  *
- * ─── IMPLEMENTATIONS ─────────────────────────────────────────────────────────
- *   CTREMotor — TalonFX (Phoenix 6)
- *   REVMotor  — SparkMax / SparkFlex (REVLib)
- *   NovaMotor — ThriftyBot Nova (ThriftyLib)
- *   FakeMotorIO (src/test) — in-memory stand-in for unit tests, no HAL required
+ * <h2>Implementations</h2>
  *
- * ─── UNITS ───────────────────────────────────────────────────────────────────
- *   Mechanism shaft rotations and rotations/second (gear ratio applied inside).
- *   Feed-forward addends in volts.
+ * <pre>{@code
+ * CTREMotor — TalonFX (Phoenix 6)
+ * REVMotor  — SparkMax / SparkFlex (REVLib)
+ * NovaMotor — ThriftyBot Nova (ThriftyLib)
+ * FakeMotorIO (src/test) — in-memory stand-in for unit tests, no HAL required
+ * }</pre>
+ *
+ * <h2>Units</h2>
+ *
+ * <p>Mechanism shaft rotations and rotations/second (gear ratio applied inside).
+ * Feed-forward addends in volts.
  */
 public interface IMotorIO {
 
@@ -57,6 +60,7 @@ public interface IMotorIO {
 
     /**
      * Closed-loop velocity (slot 0).
+     *
      * @param velocityRps mechanism shaft rotations/second
      * @param ffVolts     Rio-computed feed-forward addend (volts)
      */
@@ -66,6 +70,7 @@ public interface IMotorIO {
      * Closed-loop position (slot 0). Uses the hardware motion profile when one
      * is configured and supported, and shortest-path routing when
      * continuousWrap is enabled.
+     *
      * @param positionRot mechanism shaft rotations
      * @param ffVolts     Rio-computed feed-forward addend (volts)
      */
@@ -77,6 +82,7 @@ public interface IMotorIO {
     /**
      * Mirror another controller's output in hardware. The leader must be the
      * same vendor family.
+     *
      * @param leader       controller to follow
      * @param opposeLeader true = spin opposite to the leader
      */

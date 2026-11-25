@@ -1,45 +1,54 @@
 package frc.lib.hardware.motor;
 
 /**
- * MotorModels.java
- * PATH: src/main/java/frc/lib/hardware/motor/MotorModels.java
- *
  * Catalog of approved FRC motors with vendor-datasheet specifications.
  * Used by MechanismUnit.FF to derive feed-forward voltages from first principles
  * rather than empirical calibration constants.
  *
- * ─── HOW TO USE ──────────────────────────────────────────────────────────────
- * Pass a MotorModel constant as the first argument to any MechanismUnit.FF factory:
+ * <h2>How to use</h2>
  *
- *   MechanismUnit.FF.rotatingArm(MotorModels.NEO, gearRatio, ...)
- *   MechanismUnit.FF.multiStageElevator(MotorModels.KRAKEN_X60, gearRatio, ...)
+ * <p>Pass a MotorModel constant as the first argument to any MechanismUnit.FF factory:
  *
- * ─── HOW TO VERIFY SPECS ─────────────────────────────────────────────────────
- * Before competition, cross-check each constant against the current vendor
+ * <pre>{@code
+ * MechanismUnit.FF.rotatingArm(MotorModels.NEO, gearRatio, ...)
+ * MechanismUnit.FF.multiStageElevator(MotorModels.KRAKEN_X60, gearRatio, ...)
+ * }</pre>
+ *
+ * <h2>How to verify specs</h2>
+ *
+ * <p>Before competition, cross-check each constant against the current vendor
  * datasheet. Motor specs occasionally change between manufacturing runs.
  * Source URLs are noted per constant below.
  *
- * ─── ADDING NEW MOTORS ───────────────────────────────────────────────────────
- * Add a new public static final MotorModel field following the pattern below.
+ * <h2>Adding new motors</h2>
+ *
+ * <p>Add a new public static final MotorModel field following the pattern below.
  * All spec values must come from the official vendor datasheet, not derived
  * or estimated. If a value is uncertain, leave a // TODO comment.
  *
- * ─── DERIVED VALUES ──────────────────────────────────────────────────────────
- * MotorModel computes the following at construction — no need to supply them:
- *   kT          = stallTorqueNm / stallCurrentA       (N·m per amp)
- *   resistance  = 12.0 / stallCurrentA                (Ω, at 12V nominal)
- *   kE          = 12.0 / (freeSpeedRpm × 2π/60)       (V·s/rad, back-EMF constant)
+ * <h2>Derived values</h2>
  *
- * ─── FF VOLTAGE FORMULA ──────────────────────────────────────────────────────
- * For a gravity or spring load requiring torque τ_mech at the mechanism shaft:
+ * <p>MotorModel computes the following at construction — no need to supply them:
  *
- *   V_ff = τ_mech × 12V / (gearRatio × stallTorqueNm)
+ * <pre>{@code
+ * kT          = stallTorqueNm / stallCurrentA       (N·m per amp)
+ * resistance  = 12.0 / stallCurrentA                (Ω, at 12V nominal)
+ * kE          = 12.0 / (freeSpeedRpm × 2π/60)       (V·s/rad, back-EMF constant)
+ * }</pre>
  *
- * This reduces to τ_mech × R / kT / gearRatio, using the motor's 12V
+ * <h2>FF voltage formula</h2>
+ *
+ * <p>For a gravity or spring load requiring torque τ_mech at the mechanism shaft:
+ *
+ * <pre>{@code
+ * V_ff = τ_mech × 12V / (gearRatio × stallTorqueNm)
+ * }</pre>
+ *
+ * <p>This reduces to τ_mech × R / kT / gearRatio, using the motor's 12V
  * rated stall point. On-controller kV (Tier 1) handles dynamic back-EMF;
  * these factories cover the static/quasi-static load component only.
  *
- * All spec values are at 12V nominal unless otherwise noted.
+ * <p>All spec values are at 12V nominal unless otherwise noted.
  */
 public final class MotorModels {
 
@@ -176,7 +185,7 @@ public final class MotorModels {
      * ThriftyBot Pulsar 775 (go-forward mechanism motor; paired with Nova controller).
      * Source: https://www.thethriftybot.com/products/pulsar-775
      * Verify: stall torque 3.1 N·m, stall current 189 A, free speed 7500 RPM,
-     *         free current 2.7 A.
+     * free current 2.7 A.
      */
     public static final MotorModel PULSAR_775 = new MotorModel(
         "ThriftyBot Pulsar 775", 3.1, 189, 7500, 2.7);
