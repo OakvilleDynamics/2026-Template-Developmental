@@ -16,66 +16,87 @@ import frc.lib.hardware.motor.MotorModels;
 import frc.lib.util.Units;
 
 /**
- * ElevatorMechanism.java
- * PATH: src/main/java/frc/lib/mechanisms/elevator/ElevatorMechanism.java
- *
  * Pre-packaged elevator mechanism supporting:
- *   - Elevator  (required) — linear lift driven by a fixed-radius timing belt pulley.
- *                            Position interface in inches; converted to shaft degrees
- *                            internally via pulley radius.
- *   - Pivot     (optional) — rotational base. When present, gravity and drivetrain
- *                            inertia FF automatically account for the changing angle.
  *
- * ─── LINEAR ↔ ROTATIONAL CONVERSION ────────────────────────────────────────────
- * The elevator motor drives a timing belt via a pulley of fixed radius.
+ * <ul>
+ *   <li>Elevator  (required) — linear lift driven by a fixed-radius timing belt pulley. Position interface in inches; converted to shaft degrees internally via pulley radius.</li>
+ *   <li>Pivot     (optional) — rotational base. When present, gravity and drivetrain inertia FF automatically account for the changing angle.</li>
+ * </ul>
+ *
+ * <h2>Linear ↔ rotational conversion</h2>
+ *
+ * <p>The elevator motor drives a timing belt via a pulley of fixed radius.
  * No spool accumulation — radius is constant.
  *
- *   linear travel (in) = shaft rotations × 2π × pulleyRadiusIn
- *   shaft degrees       = (positionIn / (2π × pulleyRadiusIn)) × 360
+ * <pre>{@code
+ * linear travel (in) = shaft rotations × 2π × pulleyRadiusIn
+ * shaft degrees       = (positionIn / (2π × pulleyRadiusIn)) × 360
+ * }</pre>
  *
- * pulleyRadiusIn is provided in the Builder and never touches MechanismConfig.
+ * <p>pulleyRadiusIn is provided in the Builder and never touches MechanismConfig.
  *
- * ─── ANGLE RESOLUTION ───────────────────────────────────────────────────────────
- * The elevator angle relative to ground drives the gravity FF calculation.
- * Three cases, all resolved to the same Supplier<Double> at construction:
+ * <h2>Angle resolution</h2>
  *
- *   Fixed vertical (no pivot, no external supplier):  () -> 90.0
- *   Internal pivot sub-mechanism:                     pivot::getPositionDeg
- *   External pivot / angle source:                    withExternalAngleSupplier(...)
+ * <p>The elevator angle relative to ground drives the gravity FF calculation.
+ * Three cases, all resolved to the same {@code Supplier<Double>} at construction:
  *
- * ─── FEED-FORWARD ───────────────────────────────────────────────────────────────
- * All FF is wired inside build() — no external wiring in RobotContainer required.
+ * <pre>{@code
+ * Fixed vertical (no pivot, no external supplier):  () -> 90.0
+ * Internal pivot sub-mechanism:                     pivot::getPositionDeg
+ * External pivot / angle source:                    withExternalAngleSupplier(...)
+ * }</pre>
  *
- * Elevator FF (Tier 3 on elevator motor):
- *   - Gravity: totalMass × g × sin(elevatorAngle) via pulley torque
- *   - Drivetrain linear inertia projected onto lift axis
- *   - Centripetal term
- *   - Friction offset (deadbanded)
+ * <h2>Feed-forward</h2>
  *
- * Pivot FF (Tier 3 on pivot motor, when present):
- *   - Gravity: totalMass × g × cgDist × cos(pivotAngle)
- *   - Drivetrain linear inertia projected onto pivot load axis
- *   - Centripetal term
+ * <p>All FF is wired inside build() — no external wiring in RobotContainer required.
  *
- * Both use the drivetrain odometry and heading suppliers provided at construction.
+ * <p>Elevator FF (Tier 3 on elevator motor):
  *
- * ─── READY STATE ────────────────────────────────────────────────────────────────
- * SEEKING (initial, after any setpoint change):
- *   isReady() = false
- *   → READY when all configured sub-mechanisms are within setpointDeadband
+ * <ul>
+ *   <li>Gravity: totalMass × g × sin(elevatorAngle) via pulley torque</li>
+ *   <li>Drivetrain linear inertia projected onto lift axis</li>
+ *   <li>Centripetal term</li>
+ *   <li>Friction offset (deadbanded)</li>
+ * </ul>
  *
- * READY:
- *   isReady() = true
- *   → SEEKING if elevator position drops more than holdThresholdIn below setpoint
- *   → SEEKING if any setpoint is changed
+ * <p>Pivot FF (Tier 3 on pivot motor, when present):
  *
- * ─── UNITS AT THIS INTERFACE ────────────────────────────────────────────────────
- *   Elevator position / default  : inches
- *   Pivot position / default     : degrees
- *   Hold threshold               : inches
+ * <ul>
+ *   <li>Gravity: totalMass × g × cgDist × cos(pivotAngle)</li>
+ *   <li>Drivetrain linear inertia projected onto pivot load axis</li>
+ *   <li>Centripetal term</li>
+ * </ul>
  *
- * ─── CALL PATTERN ───────────────────────────────────────────────────────────────
- * Instantiate in RobotContainer. Register as a subsystem — periodic() is called
+ * <p>Both use the drivetrain odometry and heading suppliers provided at construction.
+ *
+ * <h2>Ready state</h2>
+ *
+ * <p>SEEKING (initial, after any setpoint change):
+ *
+ * <pre>{@code
+ * isReady() = false
+ * → READY when all configured sub-mechanisms are within setpointDeadband
+ * }</pre>
+ *
+ * <p>READY:
+ *
+ * <pre>{@code
+ * isReady() = true
+ * → SEEKING if elevator position drops more than holdThresholdIn below setpoint
+ * → SEEKING if any setpoint is changed
+ * }</pre>
+ *
+ * <h2>Units at this interface</h2>
+ *
+ * <pre>{@code
+ * Elevator position / default  : inches
+ * Pivot position / default     : degrees
+ * Hold threshold               : inches
+ * }</pre>
+ *
+ * <h2>Call pattern</h2>
+ *
+ * <p>Instantiate in RobotContainer. Register as a subsystem — periodic() is called
  * automatically by CommandScheduler each loop. No additional per-loop calls needed;
  * encoder sync, FF, PID tuning, and telemetry are all automatic inside set*().
  */

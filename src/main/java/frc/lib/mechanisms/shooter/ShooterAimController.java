@@ -7,36 +7,49 @@ import frc.lib.mechanisms.shooter.ShooterCalculator.ShooterOutput;
 import frc.lib.util.Units;
 
 /**
- * ShooterAimController.java
- * PATH: src/main/java/frc/lib/mechanisms/shooter/ShooterAimController.java
- *
  * Orchestration middleware between the drivetrain, ShooterCalculator, and
  * ShooterMechanism. Runs every loop as a SubsystemBase.
  *
- * ─── RESPONSIBILITIES ─────────────────────────────────────────────────────────
- * 1. Reads robot pose and odometry state from the drivetrain (IAimDriveState) each loop.
+ * <h2>Responsibilities</h2>
+ *
+ * <p>1. Reads robot pose and odometry state from the drivetrain (IAimDriveState) each loop.
  * 2. Calls ShooterCalculator with the live state to produce setpoints.
  * 3. Pushes RPM, hood angle, and (if PHYSICAL_TURRET) turret angle to ShooterMechanism.
  * 4. Directs the driver drive command (IAimDriveModes) into the appropriate drive mode:
- *      STATIC_SHOT    → X-lock (physical turret) or aim-then-lock (swerve turret)
- *      ON_THE_MOVE    → heading-bounded driver control
- *      IDLE           → full driver control (no override)
  *
- * ─── WIRING ──────────────────────────────────────────────────────────────────
- * Instantiate in RobotContainer. Register as a subsystem (periodic runs automatically).
+ * <pre>{@code
+ * STATIC_SHOT    → X-lock (physical turret) or aim-then-lock (swerve turret)
+ * ON_THE_MOVE    → heading-bounded driver control
+ * IDLE           → full driver control (no override)
+ * }</pre>
  *
- * Button bindings (whileHeld pattern):
- *   button.whileTrue(Commands.runOnce(() -> aimController.setAimMode(AimMode.ON_THE_MOVE))
- *                   .andThen(Commands.idle())
- *                   .finallyDo(interrupted -> aimController.clearAimMode()));
+ * <h2>Wiring</h2>
  *
- * Target selection:
- *   aimController.setTarget("Hub", targetFeetX, targetFeetY);
+ * <p>Instantiate in RobotContainer. Register as a subsystem (periodic runs automatically).
  *
- * Ready gate (wire into ShooterMechanism.Builder):
- *   .withReadyGate(() -> aimController.getLastResult().isHeadingInBounds())
+ * <p>Button bindings (whileHeld pattern):
  *
- * ─── TURRET MODES ─────────────────────────────────────────────────────────────
+ * <pre>{@code
+ * button.whileTrue(Commands.runOnce(() -> aimController.setAimMode(AimMode.ON_THE_MOVE))
+ *                 .andThen(Commands.idle())
+ *                 .finallyDo(interrupted -> aimController.clearAimMode()));
+ * }</pre>
+ *
+ * <p>Target selection:
+ *
+ * <pre>{@code
+ * aimController.setTarget("Hub", targetFeetX, targetFeetY);
+ * }</pre>
+ *
+ * <p>Ready gate (wire into ShooterMechanism.Builder):
+ *
+ * <pre>{@code
+ * .withReadyGate(() -> aimController.getLastResult().isHeadingInBounds())
+ * }</pre>
+ *
+ * <h2>Turret modes</h2>
+ *
+ * <pre>{@code
  * PHYSICAL_TURRET   — a physical turret motor rotates to aim; robot heading is
  *                     guided within the allowed window but not locked.
  *                     Static shot: wheels X-lock immediately while turret aims.
@@ -44,9 +57,11 @@ import frc.lib.util.Units;
  * SWERVE_AS_TURRET  — no physical turret; the robot heading IS the aim direction.
  *                     ShooterCalculator receives turretAngle = 0° always.
  *                     Static shot: two-phase — robot aims (POINT_AT) then X-locks.
+ * }</pre>
  *
- * ─── UNIT CONVERSIONS ─────────────────────────────────────────────────────────
- * DriveOdometryState is SI (m, m/s, m/s², rad, rad/s, rad/s²).
+ * <h2>Unit conversions</h2>
+ *
+ * <p>DriveOdometryState is SI (m, m/s, m/s², rad, rad/s, rad/s²).
  * ShooterCalculator expects English (ft, ft/s, ft/s², deg, deg/s, deg/s²).
  * All conversions use Units.java methods at the entry point here.
  */
@@ -140,9 +155,11 @@ public class ShooterAimController extends SubsystemBase {
     private double     targetFeetY      = 0.0;
 
     /**
+     * <pre>{@code
      * For SWERVE_AS_TURRET + STATIC_SHOT: two-phase state machine.
      * Phase 1 (false) = aiming with POINT_AT.
      * Phase 2 (true)  = X-locked after heading acquired.
+     * }</pre>
      */
     private boolean    staticShotLocked = false;
 
@@ -152,9 +169,10 @@ public class ShooterAimController extends SubsystemBase {
      * Tracks where the turret is parked when robot heading has drifted outside
      * the valid window and the target is temporarily unreachable.
      *
-     * IN_BOUNDS
-     *   Heading within headingBoundsDeg. Turret aims normally. isReady() can fire.
+     * <p>IN_BOUNDS
+     * Heading within headingBoundsDeg. Turret aims normally. isReady() can fire.
      *
+     * <pre>{@code
      * WAITING_AT_FORWARD_LIMIT
      *   Heading went CCW past headingBoundsDeg[0] — target would require the turret
      *   to exceed softMax. Turret parks at softMax and waits.
@@ -163,11 +181,14 @@ public class ShooterAimController extends SubsystemBase {
      *     threshold (X% of the dead zone from softMax toward softMin side).
      *     Turret traverses to softMin; once heading enters the valid window from
      *     that side the turret backs off softMin and aims normally.
+     * }</pre>
      *
+     * <pre>{@code
      * WAITING_AT_REVERSE_LIMIT
      *   Symmetric: heading went CW past headingBoundsDeg[1]. Turret parks at softMin.
      *   → Back to IN_BOUNDS if heading returns inside the valid window.
      *   → Flips to WAITING_AT_FORWARD_LIMIT if heading drifts CW past the flip threshold.
+     * }</pre>
      */
     private enum TurretBoundState {
         IN_BOUNDS,
@@ -182,9 +203,9 @@ public class ShooterAimController extends SubsystemBase {
      * limit to the other. Measured from the soft limit the turret is currently
      * parked at, toward the opposite limit.
      *
-     * 0.5 = flip at the midpoint of the dead zone (break-even point — neither
-     *   rotation direction is shorter). Good default for symmetric turrets.
-     * < 0.5 = flip sooner; > 0.5 = wait longer before committing.
+     * <p>0.5 = flip at the midpoint of the dead zone (break-even point — neither
+     * rotation direction is shorter). Good default for symmetric turrets.
+     * &lt; 0.5 = flip sooner; > 0.5 = wait longer before committing.
      * Range: (0.0, 1.0).
      */
     private final double flipThresholdPct;
@@ -281,7 +302,10 @@ public class ShooterAimController extends SubsystemBase {
     /**
      * Returns the most recent aim calculation result.
      * Use for telemetry and as the ShooterMechanism ready gate:
-     *   .withReadyGate(() -> aimController.getLastResult().isHeadingInBounds())
+     *
+     * <pre>{@code
+     * .withReadyGate(() -> aimController.getLastResult().isHeadingInBounds())
+     * }</pre>
      */
     public ShooterAimOutput getLastResult() {
         return lastResult;
@@ -418,21 +442,30 @@ public class ShooterAimController extends SubsystemBase {
     /**
      * Static shot drive mode.
      *
-     * Both turret modes use a two-phase approach:
-     *   Phase 1 — bring robot heading into the valid window (turret can reach target)
-     *   Phase 2 — X-lock once aimed; robot stays braced while shot fires
+     * <p>Both turret modes use a two-phase approach:
      *
-     * PHYSICAL_TURRET:
-     *   Phase 1 uses HEADING_BOUND — rotates to the nearest valid heading edge.
-     *   Once heading is in bounds the turret can reach the target, so X-lock.
-     *   If the heading is already in bounds when the button is pressed, skip
-     *   directly to Phase 2.
+     * <pre>{@code
+     * Phase 1 — bring robot heading into the valid window (turret can reach target)
+     * Phase 2 — X-lock once aimed; robot stays braced while shot fires
+     * }</pre>
      *
-     * SWERVE_AS_TURRET:
-     *   Phase 1 uses POINT_AT — locks the whole robot to face the target exactly.
-     *   Once isPointedAtTarget() is true, X-lock.
+     * <p>PHYSICAL_TURRET:
      *
-     * In both cases staticShotLocked latches true once Phase 2 is entered so that
+     * <pre>{@code
+     * Phase 1 uses HEADING_BOUND — rotates to the nearest valid heading edge.
+     * Once heading is in bounds the turret can reach the target, so X-lock.
+     * If the heading is already in bounds when the button is pressed, skip
+     * directly to Phase 2.
+     * }</pre>
+     *
+     * <p>SWERVE_AS_TURRET:
+     *
+     * <pre>{@code
+     * Phase 1 uses POINT_AT — locks the whole robot to face the target exactly.
+     * Once isPointedAtTarget() is true, X-lock.
+     * }</pre>
+     *
+     * <p>In both cases staticShotLocked latches true once Phase 2 is entered so that
      * minor heading drift after the X-lock does not re-trigger Phase 1. The
      * readyGate on ShooterMechanism handles the case where drift causes the turret
      * to fall out of range after locking — isReady() will return false and prevent
@@ -475,22 +508,26 @@ public class ShooterAimController extends SubsystemBase {
      * during ON_THE_MOVE mode when the robot heading may drift outside the valid
      * aiming window.
      *
-     * When in bounds: returns result.turretAngleRobotDeg (normal aim).
+     * <p>When in bounds: returns result.turretAngleRobotDeg (normal aim).
      *
-     * When out of bounds: parks the turret at the soft limit corresponding to
+     * <p>When out of bounds: parks the turret at the soft limit corresponding to
      * which side the heading exited from, and waits. isReady() stays false since
      * the turret is not at its aim setpoint. Three possible transitions:
-     *   - Heading returns inside bounds → turretBoundState = IN_BOUNDS, aim resumes.
-     *   - Heading drifts further past the flip threshold → turret traverses to the
-     *     opposite soft limit (turretBoundState flips). Once heading returns inside
-     *     bounds from that side, aim resumes from the new approach angle.
-     *   - Heading reverses from the new waiting position → same logic in reverse.
      *
-     * Threshold math:
-     *   deadZoneDeg     = 360° − (boundsMax − boundsMin)  [valid window complement]
-     *   flipThresholdDeg = deadZoneDeg × flipThresholdPct
-     *   overshoot       = angular distance heading has traveled past the bound edge,
-     *                     computed with normalizeAngleDeg() for wrap-correctness.
+     * <ul>
+     *   <li>Heading returns inside bounds → turretBoundState = IN_BOUNDS, aim resumes.</li>
+     *   <li>Heading drifts further past the flip threshold → turret traverses to the opposite soft limit (turretBoundState flips). Once heading returns inside bounds from that side, aim resumes from the new approach angle.</li>
+     *   <li>Heading reverses from the new waiting position → same logic in reverse.</li>
+     * </ul>
+     *
+     * <p>Threshold math:
+     *
+     * <pre>{@code
+     * deadZoneDeg     = 360° − (boundsMax − boundsMin)  [valid window complement]
+     * flipThresholdDeg = deadZoneDeg × flipThresholdPct
+     * overshoot       = angular distance heading has traveled past the bound edge,
+     *                   computed with normalizeAngleDeg() for wrap-correctness.
+     * }</pre>
      */
     private double computeTurretCommandOTM(ShooterOutput result, double robotHdgDeg) {
         double boundsMin = result.headingBoundsDeg[0];

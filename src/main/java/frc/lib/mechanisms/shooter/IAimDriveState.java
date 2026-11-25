@@ -5,9 +5,6 @@ import edu.wpi.first.math.geometry.Pose2d;
 import frc.lib.swerve.DriveOdometryState;
 
 /**
- * IAimDriveState.java
- * PATH: src/main/java/frc/lib/mechanisms/shooter/IAimDriveState.java
- *
  * The drivetrain state ShooterAimController reads each loop. Implemented by
  * frc.robot.subsystems.swerveDrive.SwerveDrive; tests implement it with fixed values.
  */

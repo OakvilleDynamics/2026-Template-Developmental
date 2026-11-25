@@ -1,38 +1,26 @@
 package frc.lib.mechanisms.shooter;
 
 /**
- * ShotProfile.java
- * PATH: src/main/java/frc/lib/mechanisms/shooter/ShotProfile.java
- *
  * Robot-specific shooter data handed to ShooterCalculator: the shot lookup
  * table, the shooter pivot location, and the on-the-move speed warning limit.
  * The robot defines one in its constants (e.g. ShooterConstants.PROFILE); the
  * calculator itself holds no robot data, so it can be reused and unit-tested
  * with any table.
  *
- * ─── LOOKUP TABLE ────────────────────────────────────────────────────────────
- * Columns: targetType | rpm | hoodAngle | distance (ft) | xExitVel (ft/s) | ToF (s)
+ * <h2>Lookup table</h2>
+ *
+ * <p>Columns: targetType | rpm | hoodAngle | distance (ft) | xExitVel (ft/s) | ToF (s)
  * Rows need not be sorted. Multiple hood-angle groups per target type are
  * supported; the interpolator picks the group whose bracket best fits.
  *
- * ─── PIVOT FRAME ─────────────────────────────────────────────────────────────
- * Robot-local inches: +X = right of robot center, +Y = forward of robot center.
+ * <h2>Pivot frame</h2>
+ *
+ * <p>Robot-local inches: +X = right of robot center, +Y = forward of robot center.
  * All table distances are measured from this point.
  */
 public final class ShotProfile {
 
-    /**
-     * One row of the shot profile lookup table.
-     *
-     * @param targetType    String key — must match the targetType passed to
-     *                      ShooterCalculator.calculate*() at the call site.
-     * @param rpm           Flywheel shaft speed (RPM) at this distance.
-     * @param hoodAngle     Hood angle (degrees) at this distance.
-     * @param distance      Distance from shooter pivot to target (feet).
-     * @param xExitVelocity Horizontal ball exit velocity (ft/s) — for future use.
-     * @param timeOfFlight  Ball time-of-flight (seconds). Use 0.0 as a placeholder
-     *                      until measured; OnTheMove accuracy requires real values.
-     */
+    /** One row of the shot profile lookup table. */
     public static class LookupEntry {
 
         public final String targetType;
@@ -42,6 +30,16 @@ public final class ShotProfile {
         public final double xExitVelocity;   // ft/s — stored for future use
         public final double timeOfFlight;    // seconds (0.0 = placeholder)
 
+        /**
+         * @param targetType    String key — must match the targetType passed to
+         *                      ShooterCalculator.calculate*() at the call site.
+         * @param rpm           Flywheel shaft speed (RPM) at this distance.
+         * @param hoodAngle     Hood angle (degrees) at this distance.
+         * @param distance      Distance from shooter pivot to target (feet).
+         * @param xExitVelocity Horizontal ball exit velocity (ft/s) — for future use.
+         * @param timeOfFlight  Ball time-of-flight (seconds). Use 0.0 as a placeholder
+         *                      until measured; OnTheMove accuracy requires real values.
+         */
         public LookupEntry(
                 String targetType,
                 double rpm,

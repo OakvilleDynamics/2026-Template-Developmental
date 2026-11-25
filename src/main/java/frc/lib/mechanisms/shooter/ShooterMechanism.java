@@ -11,44 +11,55 @@ import frc.lib.control.MechanismConfig;
 import frc.lib.control.MechanismUnit;
 
 /**
- * ShooterMechanism.java
- * PATH: src/main/java/frc/lib/mechanisms/shooter/ShooterMechanism.java
- *
  * Pre-packaged shooter mechanism supporting up to three sub-mechanisms:
- *   - Flywheel  (required) — velocity controlled, RPM at interface
- *   - Turret    (optional) — position controlled, degrees
- *   - Hood      (optional) — position controlled, degrees
  *
- * Each sub-mechanism is configured via a full MechanismConfig (motor vendor,
+ * <ul>
+ *   <li>Flywheel  (required) — velocity controlled, RPM at interface</li>
+ *   <li>Turret    (optional) — position controlled, degrees</li>
+ *   <li>Hood      (optional) — position controlled, degrees</li>
+ * </ul>
+ *
+ * <p>Each sub-mechanism is configured via a full MechanismConfig (motor vendor,
  * CAN IDs, PID, FF, soft limits, setpointDeadband, etc.). The ShooterMechanism
  * instantiates MechanismUnit instances internally — callers never touch the
  * vendor layer directly.
  *
- * ─── READY STATE ─────────────────────────────────────────────────────────────
- * Two states: SEEKING and READY.
+ * <h2>Ready state</h2>
  *
- * SEEKING (initial, and after any setpoint change):
- *   isReady() = false
- *   Transitions to READY when all configured sub-mechanisms are simultaneously
- *   within their MechanismConfig.setpointDeadband.
+ * <p>Two states: SEEKING and READY.
  *
- * READY:
- *   isReady() = true
- *   Returns to SEEKING if flywheel actual RPM drops below
- *     (flywheelSetpointRpm - flywheelHoldThresholdRpm).
- *   Returns to SEEKING if any setpoint is changed.
+ * <p>SEEKING (initial, and after any setpoint change):
  *
- * ─── UNITS AT THIS INTERFACE ─────────────────────────────────────────────────
- *   Flywheel setpoint / default : RPM  (converted to RPS internally)
- *   Turret setpoint / default   : degrees
- *   Hood setpoint / default     : degrees
- *   Hold threshold              : RPM  (converted to RPS internally)
+ * <pre>{@code
+ * isReady() = false
+ * Transitions to READY when all configured sub-mechanisms are simultaneously
+ * within their MechanismConfig.setpointDeadband.
+ * }</pre>
  *
- * ─── CALL PATTERN ────────────────────────────────────────────────────────────
- * Instantiate in RobotContainer. Register as a subsystem — periodic() is called
+ * <p>READY:
+ *
+ * <pre>{@code
+ * isReady() = true
+ * Returns to SEEKING if flywheel actual RPM drops below
+ *   (flywheelSetpointRpm - flywheelHoldThresholdRpm).
+ * Returns to SEEKING if any setpoint is changed.
+ * }</pre>
+ *
+ * <h2>Units at this interface</h2>
+ *
+ * <pre>{@code
+ * Flywheel setpoint / default : RPM  (converted to RPS internally)
+ * Turret setpoint / default   : degrees
+ * Hood setpoint / default     : degrees
+ * Hold threshold              : RPM  (converted to RPS internally)
+ * }</pre>
+ *
+ * <h2>Call pattern</h2>
+ *
+ * <p>Instantiate in RobotContainer. Register as a subsystem — periodic() is called
  * automatically by CommandScheduler each loop.
  *
- * Optional: set Tier-3 FF on the turret config (e.g. gyroscopicTurret) in
+ * <p>Optional: set Tier-3 FF on the turret config (e.g. gyroscopicTurret) in
  * RobotContainer before passing the config to the Builder, since RobotContainer
  * is where both flywheel and turret references co-exist.
  */

@@ -10,40 +10,47 @@ import frc.lib.mechanisms.shooter.ShotProfile.LookupEntry;
 import frc.lib.control.MechanismConfig;
 
 /**
- * ShooterCalculator.java
- * PATH: src/main/java/frc/lib/mechanisms/shooter/ShooterCalculator.java
- *
  * Pure-math shooting calculator — no hardware, no WPILib dependencies.
  * Testable in isolation from a standard Java main().
  *
- * Two entry points:
- *   calculateStaticShot()  — robot is fully stopped when firing
- *   calculateOnTheMove()   — robot is moving; compensates for robot and
- *                            turret motion during ball flight
+ * <p>Two entry points:
  *
- * Shot profiles (RPM, hood angle, ToF), pivot geometry and the speed warning
+ * <pre>{@code
+ * calculateStaticShot()  — robot is fully stopped when firing
+ * calculateOnTheMove()   — robot is moving; compensates for robot and
+ *                          turret motion during ball flight
+ * }</pre>
+ *
+ * <p>Shot profiles (RPM, hood angle, ToF), pivot geometry and the speed warning
  * threshold come from the ShotProfile passed to the constructor; turret limits
  * are constructor parameters too. Nothing here reads robot constants, so tests
  * can supply any table (see ShooterCalculatorTest).
  *
- * ─── UNITS AT THIS INTERFACE ─────────────────────────────────────────────────
+ * <h2>Units at this interface</h2>
+ *
+ * <pre>{@code
  * Angles           : degrees
  * Linear distances : feet
  * Linear velocities: ft/s
  * Linear accels    : ft/s²
  * Angular velocities  : deg/s
  * Angular accelerations: deg/s²
+ * }</pre>
  *
- * ─── OUTPUT ──────────────────────────────────────────────────────────────────
- * ShooterOutput contains:
- *   rpm, hoodAngle         — feed directly to ShooterMechanism
- *   turretAngleRobotDeg    — commanded turret angle (robot-relative)
- *   shooterHeadingFieldDeg — absolute field heading from pivot to target
- *   shooterHeadingRobotDeg — same, robot-relative
- *   headingBoundsDeg       — [min, max] absolute robot headings that keep the
- *                            turret within its soft stops; used by
- *                            ShooterAimController to bound drive heading
- *   warnings               — set of ShooterWarning flags
+ * <h2>Output</h2>
+ *
+ * <p>ShooterOutput contains:
+ *
+ * <pre>{@code
+ * rpm, hoodAngle         — feed directly to ShooterMechanism
+ * turretAngleRobotDeg    — commanded turret angle (robot-relative)
+ * shooterHeadingFieldDeg — absolute field heading from pivot to target
+ * shooterHeadingRobotDeg — same, robot-relative
+ * headingBoundsDeg       — [min, max] absolute robot headings that keep the
+ *                          turret within its soft stops; used by
+ *                          ShooterAimController to bound drive heading
+ * warnings               — set of ShooterWarning flags
+ * }</pre>
  */
 public class ShooterCalculator {
 
@@ -63,15 +70,15 @@ public class ShooterCalculator {
      * Convenience constructor — reads turret soft limits directly from the turret's
      * MechanismConfig so the values stay in one place.
      *
-     * MechanismConfig.softLimitReverseDeg → soft min (most-negative allowed angle)
+     * <p>MechanismConfig.softLimitReverseDeg → soft min (most-negative allowed angle)
      * MechanismConfig.softLimitForwardDeg → soft max (most-positive allowed angle)
      *
-     * Hard limits are set equal to the soft limits since MechanismConfig has no
+     * <p>Hard limits are set equal to the soft limits since MechanismConfig has no
      * separate hard-stop field — motor-controller hard limits are enforced in hardware,
      * not here. The TURRET_ANGLE_EXCEEDS_LIMITS warning will therefore fire at the
      * same threshold as the soft limits.
      *
-     * For SWERVE_AS_TURRET (no physical turret), use the full constructor and pass
+     * <p>For SWERVE_AS_TURRET (no physical turret), use the full constructor and pass
      * softMin = softMax = hardMin = hardMax = 0.0. The heading bounds will collapse
      * to a tight window around the exact aim heading.
      *
@@ -200,15 +207,18 @@ public class ShooterCalculator {
          * Absolute robot heading bounds [min, max] (degrees, field frame) within
          * which the turret can reach the target without exceeding its soft stops.
          *
-         * Derivation: turretAngle_robot = aimFieldDeg − robotHeadingDeg.
+         * <p>Derivation: turretAngle_robot = aimFieldDeg − robotHeadingDeg.
          * Rearranging for robotHeadingDeg within [softMin, softMax]:
-         *   bounds[0] = normalize(aimFieldDeg − softLimitMax)  ← min robot heading
-         *   bounds[1] = normalize(aimFieldDeg − softLimitMin)  ← max robot heading
          *
-         * Pass these to TeleopDrive.enableHeadingBound() so the driver
+         * <pre>{@code
+         * bounds[0] = normalize(aimFieldDeg − softLimitMax)  ← min robot heading
+         * bounds[1] = normalize(aimFieldDeg − softLimitMin)  ← max robot heading
+         * }</pre>
+         *
+         * <p>Pass these to TeleopDrive.enableHeadingBound() so the driver
          * retains translation freedom while heading stays within the valid window.
          *
-         * For swerve-as-turret (softMin == softMax == 0°) the bounds collapse to
+         * <p>For swerve-as-turret (softMin == softMax == 0°) the bounds collapse to
          * [aimFieldDeg, aimFieldDeg] — robot must face the target exactly.
          */
         public final double[] headingBoundsDeg;   // [min, max]
@@ -242,10 +252,10 @@ public class ShooterCalculator {
         /**
          * True when the robot heading is within headingBoundsDeg.
          *
-         * Uses a wrap-aware arc check so results are correct when the valid window
+         * <p>Uses a wrap-aware arc check so results are correct when the valid window
          * crosses the ±180° boundary (e.g., bounds = [150°, -160°]).
          *
-         * Arc convention: the valid window is the CW arc from bounds[0] to bounds[1].
+         * <p>Arc convention: the valid window is the CW arc from bounds[0] to bounds[1].
          * If bounds[0] ≤ bounds[1] the arc does not wrap; otherwise it crosses ±180°.
          */
         public boolean isHeadingInBounds(double robotHeadingDeg) {
